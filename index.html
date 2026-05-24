@@ -3124,7 +3124,9 @@ function autoFill(){
     const agentsAS = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&!ag.secteurFixe)
       .sort((a,b)=>a.grp-b.grp||a.nom.localeCompare(b.nom,'fr'));
 
-    // Étape 1 : Affecter la semaine CANTOU + rotation NORD/SUD
+    // Étape 1 : Affecter rotation NORD/SUD + 1 bloc 3 jours CANTOU
+    // Règle : S1-S3 (j0-j20) = secBase, S4-S6 (j21-j41) = secAutre
+    // + 1 bloc de 3 jours consécutifs au CANTOU par cycle (décalé par agent)
     agentsAS.forEach((ag, agIdx) => {
       if(!secteurJour[ag.id]) secteurJour[ag.id]={};
       const workDays=[];
@@ -3132,14 +3134,47 @@ function autoFill(){
         if(planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J') workDays.push(d);
       }
       if(!workDays.length) return;
+
+      const secBase  = rotIds[agIdx % rotIds.length];       // ex: 'nord'
+      const secAutre = rotIds[(agIdx+1) % rotIds.length];   // ex: 'sud'
+
+      // Affecter d'abord le secteur mensuel (S1-S3 / S4-S6)
+      workDays.forEach(d => {
+        secteurJour[ag.id][d] = d < 21 ? secBase : secAutre;
+      });
+
+      // Trouver le bloc de 3 jours consécutifs pour le CANTOU
+      // G2 : chercher bloc SDL (Sam-Dim-Lun)
+      // G1 : chercher S-D puis prendre le L suivant
       const blocs = buildBlocs([...workDays].sort((a,b)=>a-b));
-      const cantouBlocIdx = agIdx % blocs.length;
-      const secBase  = rotIds[agIdx % rotIds.length];
-      const secAutre = rotIds[(agIdx+1) % rotIds.length];
-      blocs.forEach((bloc, bi) => {
-        bloc.forEach(d => {
-          secteurJour[ag.id][d] = (bi===cantouBlocIdx) ? cantouId : (d < 21 ? secBase : secAutre);
-        });
+      
+      // Chercher un bloc de longueur >= 3 pour le CANTOU
+      // Décaler par rang agent pour ne pas tous au même moment
+      const blocs3 = blocs.filter(b=>b.length>=3);
+      const blocs2 = blocs.filter(b=>b.length===2);
+      
+      let cantouDays = [];
+      
+      if(blocs3.length > 0){
+        // Prendre un bloc de 3 jours, décalé par rang
+        const bloc = blocs3[agIdx % blocs3.length];
+        cantouDays = bloc.slice(0,3);
+      } else if(blocs2.length >= 2){
+        // G1 : prendre les 2 derniers jours d'un bloc S-D + le 1er jour du bloc suivant
+        const blocIdx = agIdx % blocs2.length;
+        const bloc = blocs2[blocIdx];
+        cantouDays = bloc.slice(-2); // S-D
+        // Chercher le bloc suivant pour ajouter le L
+        const nextBloc = blocs.find(b=>b[0]===bloc[bloc.length-1]+1||b[0]===bloc[bloc.length-1]+2);
+        if(nextBloc) cantouDays.push(nextBloc[0]);
+      } else if(blocs.length > 0){
+        // Fallback : premier bloc disponible
+        cantouDays = blocs[agIdx % blocs.length].slice(0,3);
+      }
+
+      // Appliquer le CANTOU sur ces 3 jours
+      cantouDays.forEach(d => {
+        secteurJour[ag.id][d] = cantouId;
       });
     });
 
@@ -7040,9 +7075,11 @@ function updateCadreNom(i, val){
 }
 window.updateCadreNom = updateCadreNom;
 
-//  STOCKAGE LOCAL (localStorage)
+//  SUPABASE — Synchronisation planning
 // ═══════════════════════════════════════════════════
-const LS_KEY = 'planning_airelles_data';
+const SUPA_URL  = 'https://qdyaanaetisiqvppfxps.supabase.co';
+const SUPA_KEY  = 'sb_publishable_HYp2Ar98K7Rzfb_lzDK9lw_kwIwQUXT';
+const SUPA_ETAB = 'les-airelles';
 
 function setSyncStatus(msg, color){
   var el = document.getElementById('sync-status');
@@ -7051,7 +7088,8 @@ function setSyncStatus(msg, color){
   el.style.color = color || '#888';
 }
 
-function supabaseSave(){
+async function supabaseSave(){
+  setSyncStatus('⏳ Sauvegarde…', '#facc15');
   try {
     const data = {
       planning: planning, mods: mods, secteurJour: secteurJour,
@@ -7060,21 +7098,37 @@ function supabaseSave(){
       cadres: CADRES_LIST,
       startDate: document.getElementById('startDate')?.value || ''
     };
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
-    setSyncStatus('✓ Sauvegardé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
+    const payload = { etablissement: SUPA_ETAB, data, updated_at: new Date().toISOString() };
+    const res = await fetch(SUPA_URL + '/rest/v1/plannings?etablissement=eq.' + SUPA_ETAB, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const existing = await res.json();
+    const method = (existing && existing.length > 0) ? 'PATCH' : 'POST';
+    const endpoint = method === 'PATCH'
+      ? SUPA_URL + '/rest/v1/plannings?etablissement=eq.' + SUPA_ETAB
+      : SUPA_URL + '/rest/v1/plannings';
+    await fetch(endpoint, {
+      method,
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(method === 'POST' ? payload : { data: payload.data, updated_at: payload.updated_at })
+    });
+    setSyncStatus('✓ Synchronisé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
   } catch(e) {
-    setSyncStatus('✗ Erreur sauvegarde', '#f87171');
+    setSyncStatus('✗ Erreur sync', '#f87171');
   }
 }
 
 async function supabaseLoad(){
+  setSyncStatus('⏳ Chargement…', '#facc15');
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw){ renderAll(); renderAgents(); updatePlanBadges(); try{ renderRemplacants(); }catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
-    const d = JSON.parse(raw);
+    const res = await fetch(SUPA_URL + '/rest/v1/plannings?etablissement=eq.' + SUPA_ETAB + '&limit=1', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const rows = await res.json();
+    if(!rows || !rows.length){ renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
+    const d = rows[0].data;
     if(d.planning)    Object.assign(planning, d.planning);
     if(d.mods)        Object.assign(mods, d.mods);
-    if(d.secteurJour) Object.assign(secteurJour, d.secteurJour);
     if(d.agents && d.agents.length > 0){
       AGENTS.length = 0;
       d.agents.forEach(function(a){ AGENTS.push(a); });
@@ -7087,19 +7141,20 @@ async function supabaseLoad(){
     if(d.rules)   Object.assign(RULES, d.rules);
     if(d.secteurs && d.secteurs.length > 0){ SECTEURS.length=0; d.secteurs.forEach(function(s){ SECTEURS.push(s); }); }
     if(d.remplacants && typeof REMPLACANTS !== 'undefined'){ REMPLACANTS.length=0; d.remplacants.forEach(function(r){ REMPLACANTS.push(r); }); }
-    // Normaliser secteurJour : convertir les clés string en number
+    // Normaliser secteurJour
     if(d.secteurJour){
       Object.keys(secteurJour).forEach(function(k){ delete secteurJour[k]; });
       Object.keys(d.secteurJour).forEach(function(agId){
         secteurJour[agId]={};
         Object.keys(d.secteurJour[agId]).forEach(function(dayStr){
           secteurJour[agId][parseInt(dayStr)]=d.secteurJour[agId][dayStr];
+          secteurJour[agId][dayStr]=d.secteurJour[agId][dayStr];
         });
       });
     }
     if(d.cadres && d.cadres.length > 0){ d.cadres.forEach(function(c,i){ if(CADRES_LIST[i]) CADRES_LIST[i].nom = c.nom; }); }
     if(d.startDate){ var sd=document.getElementById('startDate'); if(sd) sd.value=d.startDate; }
-    renderAll(); renderAgents(); updatePlanBadges(); try{ renderRemplacants(); }catch(e){};
+    renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){};
     setSyncStatus('✓ Chargé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
   } catch(e) {
     renderAll(); renderAgents(); updatePlanBadges();
