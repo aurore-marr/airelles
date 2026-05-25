@@ -3184,8 +3184,9 @@ function autoFill(){
       }
     });
 
-    // ── Étape finale : équilibrer les horaires M/S/J dans chaque secteur ──
-    // Pour chaque jour, chaque secteur doit avoir idéalement 1M+1S+1J
+    // ── Étape finale : équilibrer M/S/J par secteur en ajustant les SECTEURS ──
+    // On ne touche PAS aux horaires (ça casserait le roulement).
+    // On échange les secteurs entre agents de même horaire pour avoir 1M+1S+1J/secteur.
     const SHIFTS=['M','S','J'];
     const secIds=SECTEURS.map(s=>s.id);
     for(let d=0;d<42;d++){
@@ -3193,36 +3194,52 @@ function autoFill(){
         (planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J'));
       if(workers.length<3) continue;
 
-      // Grouper par secteur
-      secIds.forEach(sec=>{
-        const inSec=workers.filter(ag=>{
-          const s=secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
-          return s===sec;
-        });
-        // Compter les horaires
-        const shiftCount={M:[],S:[],J:[]};
-        inSec.forEach(ag=>{
-          const v=planning[ag.id][d];
-          if(shiftCount[v]) shiftCount[v].push(ag);
-        });
-        // Si un horaire a 2+ et un autre 0, équilibrer en échangeant l'horaire
-        // (on ne change PAS le secteur, juste le code horaire si possible)
-        SHIFTS.forEach(sh=>{
-          while(shiftCount[sh].length>=2){
-            // Trouver un horaire manquant
-            const missing=SHIFTS.find(s2=>shiftCount[s2].length===0);
-            if(!missing) break;
-            // Déplacer un agent de sh vers missing
-            const ag=shiftCount[sh].pop();
-            // Vérifier que l'agent n'a pas de contrainte sur cet horaire
-            if(ag.contraintes&&ag.contraintes.horaireInterdit===missing){
-              shiftCount[sh].push(ag); break;
+      const getSecOf=ag=>secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
+      const setSecOf=(ag,sec)=>{
+        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+        secteurJour[ag.id][d]=sec; secteurJour[ag.id][String(d)]=sec;
+      };
+
+      // Plusieurs passes pour converger vers 1 de chaque horaire par secteur
+      for(let pass=0;pass<6;pass++){
+        let changed=false;
+        // Pour chaque horaire, vérifier qu'il est réparti 1 par secteur
+        for(const sh of SHIFTS){
+          // agents de cet horaire groupés par secteur
+          const bySecForShift={};
+          secIds.forEach(s=>{bySecForShift[s]=[];});
+          workers.filter(ag=>planning[ag.id][d]===sh).forEach(ag=>{
+            const s=getSecOf(ag);
+            if(s&&bySecForShift[s]) bySecForShift[s].push(ag);
+          });
+          // Secteur avec 2+ de cet horaire → secteur avec 0
+          const secTrop=secIds.find(s=>bySecForShift[s].length>=2);
+          const secVide=secIds.find(s=>bySecForShift[s].length===0);
+          if(secTrop&&secVide){
+            // Trouver dans secVide un agent d'un autre horaire (en surplus) à échanger
+            const otherSh=SHIFTS.find(sh2=>{
+              if(sh2===sh) return false;
+              const cnt=workers.filter(ag=>planning[ag.id][d]===sh2&&getSecOf(ag)===secVide).length;
+              return cnt>=2;
+            });
+            if(otherSh){
+              // Échange : un agent (sh,secTrop) ↔ un agent (otherSh,secVide)
+              const a1=bySecForShift[secTrop].find(ag=>!ag.secteurFixe);
+              const a2=workers.find(ag=>planning[ag.id][d]===otherSh&&getSecOf(ag)===secVide&&!ag.secteurFixe);
+              if(a1&&a2){
+                setSecOf(a1,secVide);
+                setSecOf(a2,secTrop);
+                changed=true;
+              }
+            } else {
+              // Pas d'échange possible, juste déplacer un agent non-fixe
+              const a1=bySecForShift[secTrop].find(ag=>!ag.secteurFixe);
+              if(a1){ setSecOf(a1,secVide); changed=true; }
             }
-            planning[ag.id][d]=missing;
-            shiftCount[missing].push(ag);
           }
-        });
-      });
+        }
+        if(!changed) break;
+      }
     }
   })();
 
