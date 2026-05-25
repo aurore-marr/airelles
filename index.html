@@ -3160,16 +3160,19 @@ function autoFill(){
         });
       });
 
-      // ── Échange de blocs : agents NORD/SUD font 1 bloc au CANTOU ──
-      // En échange un agent CANTOU prend leur bloc dans NORD/SUD
+      // ── Échange de blocs : chaque agent NORD/SUD fait 1 SEUL bloc au CANTOU ──
+      // En échange un agent CANTOU du mois prend ce bloc dans NORD/SUD
+      // Ainsi les agents gardent leur secteur mensuel, avec 1 seul bloc d'échange
       const cantouMoisAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===cantouId);
       const nordSudAgents = nonFixes.filter(ag=>moisSecteur[ag.id]!==cantouId);
 
-      if(cantouMoisAgents.length>0){
-        blocs.forEach((bloc, blocIdx)=>{
-          const switcher = nordSudAgents[blocIdx % nordSudAgents.length];
-          const taker = cantouMoisAgents[blocIdx % cantouMoisAgents.length];
-          if(!switcher||!taker) return;
+      if(cantouMoisAgents.length>0 && nordSudAgents.length>0){
+        nordSudAgents.forEach((switcher, idx)=>{
+          // Chaque agent NORD/SUD switche exactement 1 bloc (le sien)
+          const bloc = blocs[idx % blocs.length];
+          // Un agent CANTOU du mois prend sa place (rotation)
+          const taker = cantouMoisAgents[idx % cantouMoisAgents.length];
+          if(!bloc||!taker) return;
           const switcherSec = moisSecteur[switcher.id];
           bloc.forEach(d=>{
             secteurJour[switcher.id][d]=cantouId;
