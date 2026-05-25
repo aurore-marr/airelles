@@ -3185,46 +3185,8 @@ function autoFill(){
       }
     });
 
-    // ── Équilibrage M/S/J par secteur (échange de secteurs, pas d'horaires) ──
-    const SHIFTS=['M','S','J'];
-    const secIds=SECTEURS.map(s=>s.id);
-    for(let d=0;d<42;d++){
-      const workers=AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&
-        (planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J'));
-      if(workers.length<3) continue;
-      const getS=ag=>secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
-      const setS=(ag,sec)=>{
-        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-        secteurJour[ag.id][d]=sec; secteurJour[ag.id][String(d)]=sec;
-      };
-      for(let pass=0;pass<6;pass++){
-        let changed=false;
-        for(const sh of SHIFTS){
-          const bySec={};
-          secIds.forEach(s=>{bySec[s]=[];});
-          workers.filter(ag=>planning[ag.id][d]===sh).forEach(ag=>{
-            const s=getS(ag); if(s&&bySec[s]) bySec[s].push(ag);
-          });
-          const secTrop=secIds.find(s=>bySec[s].length>=2);
-          const secVide=secIds.find(s=>bySec[s].length===0);
-          if(secTrop&&secVide){
-            const otherSh=SHIFTS.find(sh2=>{
-              if(sh2===sh) return false;
-              return workers.filter(ag=>planning[ag.id][d]===sh2&&getS(ag)===secVide).length>=2;
-            });
-            if(otherSh){
-              const a1=bySec[secTrop].find(ag=>!ag.secteurFixe);
-              const a2=workers.find(ag=>planning[ag.id][d]===otherSh&&getS(ag)===secVide&&!ag.secteurFixe);
-              if(a1&&a2){ setS(a1,secVide); setS(a2,secTrop); changed=true; }
-            } else {
-              const a1=bySec[secTrop].find(ag=>!ag.secteurFixe);
-              if(a1){ setS(a1,secVide); changed=true; }
-            }
-          }
-        }
-        if(!changed) break;
-      }
-    }
+    // Note : le 3/3/3 est garanti par la logique d'échange de blocs.
+    // On ne fait PAS d'équilibrage a posteriori pour ne pas casser le secteur mensuel.
   })();
 
     // ── PAS de passe d'équité aléatoire : la rotation régulière garantit
