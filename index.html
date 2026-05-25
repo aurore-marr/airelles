@@ -3116,34 +3116,29 @@ function autoFill(){
       ? RULES.secRotIds
       : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
     if(rotIds.length < 2) return;
-    const secNord = rotIds[0], secSud = rotIds[1];
 
-    // Pour chaque groupe (G1 et G2) on applique la logique séparément
     [1,2].forEach(grp => {
       const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
       if(!groupAgents.length) return;
 
       const fixesCantou = groupAgents.filter(ag=>ag.secteurFixe&&ag.secteur===cantouId);
-      const nonFixes = groupAgents.filter(ag=>!ag.secteurFixe);
+      const nonFixes    = groupAgents.filter(ag=>!ag.secteurFixe)
+                           .sort((a,b)=>a.id.localeCompare(b.id));
 
-      // Combien d'agents "du mois" au CANTOU = 3 - nombre de fixes
       const nbCantouMois = Math.max(0, 3 - fixesCantou.length);
-
-      // Jours travaillés du groupe (à partir du roulement)
       const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
       const blocs = buildBlocs(groupDays);
 
       // ── Affectation mensuelle ──
-      // Répartir les non-fixes : nbCantouMois au CANTOU, puis 3 NORD, 3 SUD
-      // (le mois = tout le cycle ici ; on pourra affiner avec 2 mois plus tard)
-      const moisSecteur={};
+      // On répartit les non-fixes : les premiers au CANTOU, puis NORD, puis SUD
+      const moisSecteur = {};
       nonFixes.forEach((ag,i)=>{
-        if(i < nbCantouMois) moisSecteur[ag.id]=cantouId;
-        else if(i < nbCantouMois+3) moisSecteur[ag.id]=secNord;
-        else moisSecteur[ag.id]=secSud;
+        if(i < nbCantouMois)             moisSecteur[ag.id] = cantouId;
+        else if(i < nbCantouMois+3)      moisSecteur[ag.id] = rotIds[0]; // nord
+        else                             moisSecteur[ag.id] = rotIds[1]; // sud
       });
 
-      // Initialiser secteurJour = secteur du mois
+      // Initialiser secteurJour au secteur du mois
       nonFixes.forEach(ag=>{
         if(!secteurJour[ag.id]) secteurJour[ag.id]={};
         groupDays.forEach(d=>{
@@ -3151,7 +3146,6 @@ function autoFill(){
           secteurJour[ag.id][String(d)]=moisSecteur[ag.id];
         });
       });
-      // Les fixes restent à leur secteur
       fixesCantou.forEach(ag=>{
         if(!secteurJour[ag.id]) secteurJour[ag.id]={};
         groupDays.forEach(d=>{
@@ -3160,17 +3154,24 @@ function autoFill(){
         });
       });
 
-      // ── Échange de blocs : chaque agent NORD/SUD fait 1 SEUL bloc au CANTOU ──
-      // En échange un agent CANTOU du mois prend ce bloc dans NORD/SUD
-      // Ainsi les agents gardent leur secteur mensuel, avec 1 seul bloc d'échange
+      // ── Échanges de blocs : 4 par cycle (2 NORD + 2 SUD → CANTOU) ──
       const cantouMoisAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===cantouId);
-      const nordSudAgents = nonFixes.filter(ag=>moisSecteur[ag.id]!==cantouId);
+      const nordAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===rotIds[0]);
+      const sudAgents  = nonFixes.filter(ag=>moisSecteur[ag.id]===rotIds[1]);
 
-      if(cantouMoisAgents.length>0 && nordSudAgents.length>0){
-        nordSudAgents.forEach((switcher, idx)=>{
-          // Chaque agent NORD/SUD switche exactement 1 bloc (le sien)
-          const bloc = blocs[idx % blocs.length];
-          // Un agent CANTOU du mois prend sa place (rotation)
+      if(cantouMoisAgents.length > 0){
+        // 2 NORD + 2 SUD font un échange (les 2 premiers de chaque liste)
+        const nbEchanges = Math.min(2, Math.floor(blocs.length/2));
+        const switchList = [
+          ...nordAgents.slice(0, nbEchanges),
+          ...sudAgents.slice(0, nbEchanges)
+        ];
+        // Blocs espacés : indices 1, 3, 5, 7 (évite le 1er et dernier bloc)
+        const blocIndices = [1,3,5,7].filter(i=>i<blocs.length);
+
+        switchList.forEach((switcher, idx)=>{
+          if(idx >= blocIndices.length) return;
+          const bloc = blocs[blocIndices[idx]];
           const taker = cantouMoisAgents[idx % cantouMoisAgents.length];
           if(!bloc||!taker) return;
           const switcherSec = moisSecteur[switcher.id];
@@ -3184,57 +3185,40 @@ function autoFill(){
       }
     });
 
-    // ── Étape finale : équilibrer M/S/J par secteur en ajustant les SECTEURS ──
-    // On ne touche PAS aux horaires (ça casserait le roulement).
-    // On échange les secteurs entre agents de même horaire pour avoir 1M+1S+1J/secteur.
+    // ── Équilibrage M/S/J par secteur (échange de secteurs, pas d'horaires) ──
     const SHIFTS=['M','S','J'];
     const secIds=SECTEURS.map(s=>s.id);
     for(let d=0;d<42;d++){
       const workers=AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&
         (planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J'));
       if(workers.length<3) continue;
-
-      const getSecOf=ag=>secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
-      const setSecOf=(ag,sec)=>{
+      const getS=ag=>secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
+      const setS=(ag,sec)=>{
         if(!secteurJour[ag.id]) secteurJour[ag.id]={};
         secteurJour[ag.id][d]=sec; secteurJour[ag.id][String(d)]=sec;
       };
-
-      // Plusieurs passes pour converger vers 1 de chaque horaire par secteur
       for(let pass=0;pass<6;pass++){
         let changed=false;
-        // Pour chaque horaire, vérifier qu'il est réparti 1 par secteur
         for(const sh of SHIFTS){
-          // agents de cet horaire groupés par secteur
-          const bySecForShift={};
-          secIds.forEach(s=>{bySecForShift[s]=[];});
+          const bySec={};
+          secIds.forEach(s=>{bySec[s]=[];});
           workers.filter(ag=>planning[ag.id][d]===sh).forEach(ag=>{
-            const s=getSecOf(ag);
-            if(s&&bySecForShift[s]) bySecForShift[s].push(ag);
+            const s=getS(ag); if(s&&bySec[s]) bySec[s].push(ag);
           });
-          // Secteur avec 2+ de cet horaire → secteur avec 0
-          const secTrop=secIds.find(s=>bySecForShift[s].length>=2);
-          const secVide=secIds.find(s=>bySecForShift[s].length===0);
+          const secTrop=secIds.find(s=>bySec[s].length>=2);
+          const secVide=secIds.find(s=>bySec[s].length===0);
           if(secTrop&&secVide){
-            // Trouver dans secVide un agent d'un autre horaire (en surplus) à échanger
             const otherSh=SHIFTS.find(sh2=>{
               if(sh2===sh) return false;
-              const cnt=workers.filter(ag=>planning[ag.id][d]===sh2&&getSecOf(ag)===secVide).length;
-              return cnt>=2;
+              return workers.filter(ag=>planning[ag.id][d]===sh2&&getS(ag)===secVide).length>=2;
             });
             if(otherSh){
-              // Échange : un agent (sh,secTrop) ↔ un agent (otherSh,secVide)
-              const a1=bySecForShift[secTrop].find(ag=>!ag.secteurFixe);
-              const a2=workers.find(ag=>planning[ag.id][d]===otherSh&&getSecOf(ag)===secVide&&!ag.secteurFixe);
-              if(a1&&a2){
-                setSecOf(a1,secVide);
-                setSecOf(a2,secTrop);
-                changed=true;
-              }
+              const a1=bySec[secTrop].find(ag=>!ag.secteurFixe);
+              const a2=workers.find(ag=>planning[ag.id][d]===otherSh&&getS(ag)===secVide&&!ag.secteurFixe);
+              if(a1&&a2){ setS(a1,secVide); setS(a2,secTrop); changed=true; }
             } else {
-              // Pas d'échange possible, juste déplacer un agent non-fixe
-              const a1=bySecForShift[secTrop].find(ag=>!ag.secteurFixe);
-              if(a1){ setSecOf(a1,secVide); changed=true; }
+              const a1=bySec[secTrop].find(ag=>!ag.secteurFixe);
+              if(a1){ setS(a1,secVide); changed=true; }
             }
           }
         }
