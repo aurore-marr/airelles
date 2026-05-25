@@ -3115,113 +3115,110 @@ function autoFill(){
     const rotIds = (RULES.secRotIds && RULES.secRotIds.length >= 2)
       ? RULES.secRotIds
       : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
-    if(!rotIds.length) return;
+    if(rotIds.length < 2) return;
+    const secNord = rotIds[0], secSud = rotIds[1];
 
-    const secIds = SECTEURS.map(s=>s.id);
-    const SHIFTS = ['M','S','J'];
+    // Pour chaque groupe (G1 et G2) on applique la logique séparément
+    [1,2].forEach(grp => {
+      const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
+      if(!groupAgents.length) return;
 
-    // Agents AS non-fixes triés par groupe puis nom
-    const agentsAS = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&!ag.secteurFixe)
-      .sort((a,b)=>a.grp-b.grp||a.nom.localeCompare(b.nom,'fr'));
+      const fixesCantou = groupAgents.filter(ag=>ag.secteurFixe&&ag.secteur===cantouId);
+      const nonFixes = groupAgents.filter(ag=>!ag.secteurFixe);
 
-    // Étape 1 : Affecter rotation NORD/SUD + 1 bloc 3 jours CANTOU
-    // Règle : S1-S3 (j0-j20) = secBase, S4-S6 (j21-j41) = secAutre
-    // + 1 bloc de 3 jours consécutifs au CANTOU par cycle (décalé par agent)
-    agentsAS.forEach((ag, agIdx) => {
-      if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-      const workDays=[];
-      for(let d=0;d<42;d++){
-        if(planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J') workDays.push(d);
-      }
-      if(!workDays.length) return;
+      // Combien d'agents "du mois" au CANTOU = 3 - nombre de fixes
+      const nbCantouMois = Math.max(0, 3 - fixesCantou.length);
 
-      const secBase  = rotIds[agIdx % rotIds.length];       // ex: 'nord'
-      const secAutre = rotIds[(agIdx+1) % rotIds.length];   // ex: 'sud'
+      // Jours travaillés du groupe (à partir du roulement)
+      const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
+      const blocs = buildBlocs(groupDays);
 
-      // Affecter d'abord le secteur mensuel (S1-S3 / S4-S6)
-      workDays.forEach(d => {
-        secteurJour[ag.id][d] = d < 21 ? secBase : secAutre;
+      // ── Affectation mensuelle ──
+      // Répartir les non-fixes : nbCantouMois au CANTOU, puis 3 NORD, 3 SUD
+      // (le mois = tout le cycle ici ; on pourra affiner avec 2 mois plus tard)
+      const moisSecteur={};
+      nonFixes.forEach((ag,i)=>{
+        if(i < nbCantouMois) moisSecteur[ag.id]=cantouId;
+        else if(i < nbCantouMois+3) moisSecteur[ag.id]=secNord;
+        else moisSecteur[ag.id]=secSud;
       });
 
-      // Trouver le bloc de 3 jours consécutifs pour le CANTOU
-      // G2 : chercher bloc SDL (Sam-Dim-Lun)
-      // G1 : chercher S-D puis prendre le L suivant
-      const blocs = buildBlocs([...workDays].sort((a,b)=>a-b));
-      
-      // Chercher un bloc de longueur >= 3 pour le CANTOU
-      // Décaler par rang agent pour ne pas tous au même moment
-      const blocs3 = blocs.filter(b=>b.length>=3);
-      const blocs2 = blocs.filter(b=>b.length===2);
-      
-      let cantouDays = [];
-      
-      if(blocs3.length > 0){
-        // Prendre un bloc de 3 jours, décalé par rang
-        const bloc = blocs3[agIdx % blocs3.length];
-        cantouDays = bloc.slice(0,3);
-      } else if(blocs2.length >= 2){
-        // G1 : prendre les 2 derniers jours d'un bloc S-D + le 1er jour du bloc suivant
-        const blocIdx = agIdx % blocs2.length;
-        const bloc = blocs2[blocIdx];
-        cantouDays = bloc.slice(-2); // S-D
-        // Chercher le bloc suivant pour ajouter le L
-        const nextBloc = blocs.find(b=>b[0]===bloc[bloc.length-1]+1||b[0]===bloc[bloc.length-1]+2);
-        if(nextBloc) cantouDays.push(nextBloc[0]);
-      } else if(blocs.length > 0){
-        // Fallback : premier bloc disponible
-        cantouDays = blocs[agIdx % blocs.length].slice(0,3);
-      }
-
-      // Appliquer le CANTOU sur ces 3 jours
-      cantouDays.forEach(d => {
-        secteurJour[ag.id][d] = cantouId;
+      // Initialiser secteurJour = secteur du mois
+      nonFixes.forEach(ag=>{
+        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+        groupDays.forEach(d=>{
+          secteurJour[ag.id][d]=moisSecteur[ag.id];
+          secteurJour[ag.id][String(d)]=moisSecteur[ag.id];
+        });
       });
+      // Les fixes restent à leur secteur
+      fixesCantou.forEach(ag=>{
+        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+        groupDays.forEach(d=>{
+          secteurJour[ag.id][d]=cantouId;
+          secteurJour[ag.id][String(d)]=cantouId;
+        });
+      });
+
+      // ── Échange de blocs : agents NORD/SUD font 1 bloc au CANTOU ──
+      // En échange un agent CANTOU prend leur bloc dans NORD/SUD
+      const cantouMoisAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===cantouId);
+      const nordSudAgents = nonFixes.filter(ag=>moisSecteur[ag.id]!==cantouId);
+
+      if(cantouMoisAgents.length>0){
+        blocs.forEach((bloc, blocIdx)=>{
+          const switcher = nordSudAgents[blocIdx % nordSudAgents.length];
+          const taker = cantouMoisAgents[blocIdx % cantouMoisAgents.length];
+          if(!switcher||!taker) return;
+          const switcherSec = moisSecteur[switcher.id];
+          bloc.forEach(d=>{
+            secteurJour[switcher.id][d]=cantouId;
+            secteurJour[switcher.id][String(d)]=cantouId;
+            secteurJour[taker.id][d]=switcherSec;
+            secteurJour[taker.id][String(d)]=switcherSec;
+          });
+        });
+      }
     });
 
-    // Étape 2 : Assigner secteur+horaire → exactement 1M+1S+1J par secteur par jour
+    // ── Étape finale : équilibrer les horaires M/S/J dans chaque secteur ──
+    // Pour chaque jour, chaque secteur doit avoir idéalement 1M+1S+1J
+    const SHIFTS=['M','S','J'];
+    const secIds=SECTEURS.map(s=>s.id);
     for(let d=0;d<42;d++){
-      // Agents AS travaillant ce jour
-      const allAS = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&(planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J'));
-      if(!allAS.length) continue;
+      const workers=AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&
+        (planning[ag.id][d]==='M'||planning[ag.id][d]==='S'||planning[ag.id][d]==='J'));
+      if(workers.length<3) continue;
 
-      // Construire les slots disponibles : 1M+1S+1J par secteur
-      const slots=[];
+      // Grouper par secteur
       secIds.forEach(sec=>{
-        SHIFTS.forEach(sh=>{ slots.push({sec,sh,taken:false}); });
-      });
-
-      // Réserver les slots des agents fixes EN PREMIER
-      const fixes=allAS.filter(ag=>ag.secteurFixe);
-      fixes.forEach(ag=>{
-        const s=ag.secteur||cantouId;
-        const v=planning[ag.id][d];
-        const slot=slots.find(sl=>sl.sec===s&&sl.sh===v&&!sl.taken);
-        if(slot){
-          slot.taken=true;
-          if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-          secteurJour[ag.id][d]=s;
-          secteurJour[ag.id][String(d)]=s;
-        }
-      });
-
-      // Assigner les non-fixes
-      const nonFixes=allAS.filter(ag=>!ag.secteurFixe);
-      // Trier : d'abord ceux dont le secteur cible (rotation) a encore un slot libre
-      nonFixes.forEach(ag=>{
-        const v=planning[ag.id][d];
-        const wantSec=secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
-
-        // Chercher slot : 1) même secteur+horaire, 2) même horaire autre secteur, 3) n'importe quel slot libre
-        let slot=null;
-        if(wantSec) slot=slots.find(sl=>sl.sec===wantSec&&sl.sh===v&&!sl.taken);
-        if(!slot)   slot=slots.find(sl=>sl.sh===v&&!sl.taken);
-        if(!slot)   slot=slots.find(sl=>!sl.taken);
-        if(!slot) return;
-
-        slot.taken=true;
-        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-        secteurJour[ag.id][d]=slot.sec;
-        secteurJour[ag.id][String(d)]=slot.sec;
+        const inSec=workers.filter(ag=>{
+          const s=secteurJour[ag.id]&&(secteurJour[ag.id][d]||secteurJour[ag.id][String(d)]);
+          return s===sec;
+        });
+        // Compter les horaires
+        const shiftCount={M:[],S:[],J:[]};
+        inSec.forEach(ag=>{
+          const v=planning[ag.id][d];
+          if(shiftCount[v]) shiftCount[v].push(ag);
+        });
+        // Si un horaire a 2+ et un autre 0, équilibrer en échangeant l'horaire
+        // (on ne change PAS le secteur, juste le code horaire si possible)
+        SHIFTS.forEach(sh=>{
+          while(shiftCount[sh].length>=2){
+            // Trouver un horaire manquant
+            const missing=SHIFTS.find(s2=>shiftCount[s2].length===0);
+            if(!missing) break;
+            // Déplacer un agent de sh vers missing
+            const ag=shiftCount[sh].pop();
+            // Vérifier que l'agent n'a pas de contrainte sur cet horaire
+            if(ag.contraintes&&ag.contraintes.horaireInterdit===missing){
+              shiftCount[sh].push(ag); break;
+            }
+            planning[ag.id][d]=missing;
+            shiftCount[missing].push(ag);
+          }
+        });
       });
     }
   })();
