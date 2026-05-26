@@ -1467,6 +1467,15 @@ return {makeCanvas: makeQRCanvas};
           </select>
         </div>
       </div>
+      <div class="rule-row">
+        <div class="rule-label"><strong>FE — Jour férié</strong></div>
+        <div class="rule-val">
+          <select id="r-imp-FE" style="width:100px;background:var(--s2);border:1px solid var(--bd2);color:var(--txt);padding:3px 6px;border-radius:4px;font-size:.75rem">
+            <option value="presence">Présence</option>
+            <option value="zero">0h</option>
+          </select>
+        </div>
+      </div>
 
     </div>
 
@@ -5592,7 +5601,7 @@ function showTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   if(el)el.classList.add('active');
-  if(name==='regles'){renderCodeDocs();renderSecConfig();renderCustomStatList();renderDroitsSpecGrid();renderSecRulesSection();}
+  if(name==='regles'){renderCodeDocs();renderSecConfig();renderCustomStatList();renderDroitsSpecGrid();renderSecRulesSection();initRulesForm();}
   if(name==='conges'){initCongDates();renderConges();}
 }
 
@@ -5744,6 +5753,13 @@ function renderDroitsSpecGrid(){
   }).join('');
 }
 
+function initRulesForm(){
+  // Synchronise les selects (AT, FE) avec l'état RULES courant
+  const atSel=document.getElementById('r-imp-AT');
+  if(atSel) atSel.value=RULES.impacts.AT||'presence';
+  const feSel=document.getElementById('r-imp-FE');
+  if(feSel) feSel.value=RULES.impacts.FE||'presence';
+}
 function saveRules(){
   RULES.durations.M=parseFloat(document.getElementById('r-dur-M').value)||10;
   RULES.durations.S=parseFloat(document.getElementById('r-dur-S').value)||10;
@@ -5752,8 +5768,8 @@ function saveRules(){
   RULES.durations.ref=parseFloat(document.getElementById('r-dur-ref').value)||10;
   RULES.impacts.EM=parseFloat(document.getElementById('r-imp-EM').value)||-7;
   RULES.impacts.FO=parseFloat(document.getElementById('r-imp-FO').value)||7;
-  RULES.impacts.AT=document.getElementById('r-imp-AT').value;
-  RULES.impacts.FE=document.getElementById('r-imp-FE').value;
+  RULES.impacts.AT=document.getElementById('r-imp-AT')?.value||'presence';
+  RULES.impacts.FE=document.getElementById('r-imp-FE')?.value||'presence';
   RULES.seuilMin=parseInt(document.getElementById('r-seuil-min').value)||2;
   RULES.seuilOk=parseInt(document.getElementById('r-seuil-ok').value)||3;
   RULES.seuilWE=parseInt(document.getElementById('r-seuil-we').value)||2;
