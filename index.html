@@ -1467,15 +1467,6 @@ return {makeCanvas: makeQRCanvas};
           </select>
         </div>
       </div>
-      <div class="rule-row">
-        <div class="rule-label"><strong>FE — Jour férié</strong></div>
-        <div class="rule-val">
-          <select id="r-imp-FE" style="width:100px;background:var(--s2);border:1px solid var(--bd2);color:var(--txt);padding:3px 6px;border-radius:4px;font-size:.75rem">
-            <option value="presence">Présence</option>
-            <option value="zero">0h</option>
-          </select>
-        </div>
-      </div>
 
     </div>
 
@@ -3007,28 +2998,31 @@ function autoFill(){
     // Appliquer cycleReduit
     if(cycleReduit && workDays.length>0){
       const cycleReduitJour = (ctr.cycleReduitJour!=null) ? ctr.cycleReduitJour : null;
-      const allSorted=[...allDays].sort((a,b)=>a-b);
+      // Travailler sur workDays déjà filtré (joursOff exclus), pas sur allDays
+      const wdSorted=[...workDays].sort((a,b)=>a-b);
       const toRemove=new Set();
-      // Identifier les blocs de 3 jours consécutifs
       let i=0;
-      while(i<allSorted.length){
-        // Trouver la longueur du bloc consécutif à partir de i
+      while(i<wdSorted.length){
         let blkEnd=i;
-        while(blkEnd+1<allSorted.length && allSorted[blkEnd+1]===allSorted[blkEnd]+1) blkEnd++;
+        while(blkEnd+1<wdSorted.length && wdSorted[blkEnd+1]===wdSorted[blkEnd]+1) blkEnd++;
         const blkLen=blkEnd-i+1;
         if(blkLen===3){
           if(cycleReduitJour!==null){
-            // Retirer le jour sélectionné s'il tombe dans ce bloc
-            let found=false;
+            // Retirer le jour dont le dow correspond, s'il est dans ce bloc
             for(let j=i;j<=blkEnd;j++){
-              const dt=addDays(cycleStart,allSorted[j]);
-              const dow=(dt.getDay()+6)%7; // 0=Lun..6=Dim
-              if(dow===cycleReduitJour){ toRemove.add(allSorted[j]); found=true; break; }
+              const dt=addDays(cycleStart,wdSorted[j]);
+              const dow=(dt.getDay()+6)%7;
+              if(dow===cycleReduitJour){ toRemove.add(wdSorted[j]); break; }
             }
-            // Si le jour ne tombe pas dans ce bloc : laisser intact (rien à faire)
+            // Si le dow cible n'est pas dans ce bloc : retirer le dernier jour du bloc
+            const blocHasTarget=[...Array(blkEnd-i+1)].some((_,k)=>{
+              const dt=addDays(cycleStart,wdSorted[i+k]);
+              return (dt.getDay()+6)%7===cycleReduitJour;
+            });
+            if(!blocHasTarget) toRemove.add(wdSorted[blkEnd]);
           } else {
             // Comportement par défaut : retirer le 3ème jour
-            toRemove.add(allSorted[blkEnd]);
+            toRemove.add(wdSorted[blkEnd]);
           }
         }
         i=blkEnd+1;
@@ -3037,9 +3031,11 @@ function autoFill(){
     }
 
     let finalWorkDays;
-    if(joursOff.length>0 || cycleReduit){
+    if(cycleReduit){
+      // cycleReduit gère lui-même la réduction bloc par bloc → résultat tel quel
       finalWorkDays=workDays;
     } else {
+      // Appliquer le taux sur les jours disponibles (après filtre joursOff)
       const target=Math.round(allDays.length * ag.taux);
       finalWorkDays=workDays.slice(0, target);
     }
@@ -3119,74 +3115,91 @@ function autoFill(){
       }
     });
 
-  // ── Règles secteurs : 4 sem NORD/SUD + 1 sem CANTOU + 1M/1S/1J par secteur ──
+  // ── Règle Cantou : chaque agent non-fixe fait 1 bloc au Cantou par cycle ──
+  // On ne touche PAS aux horaires (M/S/J déjà calculés) — on permute uniquement
+  // les secteurs dans secteurJour pour qu'un bloc de l'agent soit au Cantou.
   (function applySecteurRules(){
+    if(!RULES.secCantouSemaine) return;
     const cantouId = RULES.secCantouId || 'cantou';
-    const rotIds = (RULES.secRotIds && RULES.secRotIds.length >= 2)
-      ? RULES.secRotIds
-      : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
-    if(rotIds.length < 2) return;
-
-    // Séquences de base des horaires par bloc (extraites du roulement parfait)
-    const SHIFTS = ['M','J','S'];
-    const BASE_SEQ_G1 = [0,1,2,1,2,0,2,0,1]; // M J S J S M S M J (indices dans SHIFTS)
-    const BASE_SEQ_G2 = [2,0,2,0,1,0,1,2,1,2]; // S M S M J M J S J S
 
     [1,2].forEach(grp => {
       const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
       if(!groupAgents.length) return;
 
-      const fixesCantou = groupAgents.filter(ag=>ag.secteurFixe&&ag.secteur===cantouId);
-      const nonFixes = groupAgents.filter(ag=>!ag.secteurFixe)
-                        .sort((a,b)=>a.id.localeCompare(b.id));
+      // Agents non-fixes dont le secteur initial n'est pas Cantou
+      const nonFixesHorsCantou = groupAgents.filter(ag=>
+        !ag.secteurFixe && ag.secteur !== cantouId
+      ).sort((a,b)=>a.id.localeCompare(b.id));
 
-      const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
-      const blocs = buildBlocs(groupDays);
-      const baseSeq = grp===1 ? BASE_SEQ_G1 : BASE_SEQ_G2;
+      if(!nonFixesHorsCantou.length) return;
 
-      // Répartir les non-fixes en 3 groupes de secteurs
-      // Tri : les 2-3 premiers au CANTOU, 3 suivants NORD, 3 derniers SUD
-      const nbCantouMois = Math.max(0, 3 - fixesCantou.length);
-      const secOrder = [cantouId, rotIds[0], rotIds[1]]; // [cantou, nord, sud]
+      // Agents non-fixes dont le secteur initial est Cantou (ou qui n'ont pas de secteur fixe et sont cantou)
+      const nonFixesCantou = groupAgents.filter(ag=>
+        !ag.secteurFixe && ag.secteur === cantouId
+      ).sort((a,b)=>a.id.localeCompare(b.id));
 
-      // Affecter chaque agent à un secteur ET un rang (0,1,2) dans ce secteur
-      const assignments = []; // {ag, sec, rank}
-      let cantouCount=0, nordCount=0, sudCount=0;
-      nonFixes.forEach((ag, i) => {
-        let sec, rank;
-        if(i < nbCantouMois){
-          sec = cantouId; rank = cantouCount + fixesCantou.length; cantouCount++;
-        } else if(i < nbCantouMois+3){
-          sec = rotIds[0]; rank = nordCount; nordCount++;
-        } else {
-          sec = rotIds[1]; rank = sudCount; sudCount++;
-        }
-        assignments.push({ag, sec, rank});
-      });
+      // Pour chaque agent non-Cantou, on lui attribue 1 bloc au Cantou
+      // en échangeant avec un agent non-fixe Cantou sur le même bloc (même shift)
+      nonFixesHorsCantou.forEach((agHC, rank) => {
+        if(!secteurJour[agHC.id]) return; // pas de secteurJour → pas de jours travaillés
 
-      // Agents fixes
-      fixesCantou.forEach((ag, i) => {
-        assignments.push({ag, sec:cantouId, rank:i, fixe:true});
-      });
-
-      // Assigner horaires et secteurs par bloc
-      assignments.forEach(({ag, sec, rank, fixe}) => {
-        if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
-
-        blocs.forEach((bloc, bi) => {
-          if(bi >= baseSeq.length) return;
-
-          // Horaire pour cet agent dans ce bloc : décalé par rang
-          const shiftIdx = (baseSeq[bi] + rank) % 3;
-          const shift = SHIFTS[shiftIdx];
-
-          // Affecter chaque jour du bloc
-          bloc.forEach(d => {
-            planning[ag.id][d] = shift;
-            secteurJour[ag.id][d] = sec;
-            secteurJour[ag.id][String(d)] = sec;
-          });
+        // Récupérer tous les jours travaillés de cet agent avec leur secteur et shift
+        const joursOff = (agHC.contraintes&&agHC.contraintes.joursOff)||[];
+        const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
+        const agDays = groupDays.filter(d=>{
+          const v = planning[agHC.id][d]||'';
+          if(!['M','S','J'].includes(v)) return false;
+          if(joursOff.length){
+            const dt = addDays(cycleStart, d);
+            if(joursOff.includes((dt.getDay()+6)%7)) return false;
+          }
+          return true;
         });
+        if(!agDays.length) return;
+
+        // Construire les blocs de travail de cet agent
+        const blocs = buildBlocs(agDays);
+        if(!blocs.length) return;
+
+        // Choisir quel bloc deviendra Cantou pour cet agent (décalé par rang)
+        const cantouBlocIdx = rank % blocs.length;
+        const cantouBloc = blocs[cantouBlocIdx];
+
+        // Vérifier que ce bloc n'est pas déjà au Cantou
+        const dejaAuCantou = cantouBloc.every(d=>
+          (secteurJour[agHC.id][d]||secteurJour[agHC.id][String(d)]) === cantouId
+        );
+        if(dejaAuCantou) return;
+
+        // Trouver un agent Cantou non-fixe qui travaille sur CE MÊME bloc (jours et shift compatibles)
+        // On cherche un agent Cantou qui a les mêmes jours dans ce bloc
+        const agCantouPartenaire = nonFixesCantou.find(agC => {
+          if(!secteurJour[agC.id]) return false;
+          // Doit travailler (M/S/J) au moins sur les jours de cantouBloc
+          return cantouBloc.every(d => ['M','S','J'].includes(planning[agC.id][d]||''));
+        });
+
+        if(agCantouPartenaire) {
+          // ÉCHANGE DE SECTEUR sur ce bloc uniquement (sans toucher aux horaires)
+          // agHC prend le Cantou, agCantouPartenaire prend le secteur de agHC
+          const secHC = secteurJour[agHC.id][cantouBloc[0]] || secteurJour[agHC.id][String(cantouBloc[0])] || agHC.secteur;
+          cantouBloc.forEach(d => {
+            const secC = secteurJour[agCantouPartenaire.id][d] || secteurJour[agCantouPartenaire.id][String(d)] || cantouId;
+            // agHC → Cantou
+            secteurJour[agHC.id][d] = cantouId;
+            secteurJour[agHC.id][String(d)] = cantouId;
+            // agCantouPartenaire → secteur de agHC
+            secteurJour[agCantouPartenaire.id][d] = secHC;
+            secteurJour[agCantouPartenaire.id][String(d)] = secHC;
+          });
+        } else {
+          // Pas de partenaire disponible : forcer le secteur Cantou sur ce bloc pour agHC
+          // (sans changer l'horaire)
+          cantouBloc.forEach(d => {
+            secteurJour[agHC.id][d] = cantouId;
+            secteurJour[agHC.id][String(d)] = cantouId;
+          });
+        }
       });
     });
   })();
@@ -5601,7 +5614,7 @@ function showTab(name,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   if(el)el.classList.add('active');
-  if(name==='regles'){renderCodeDocs();renderSecConfig();renderCustomStatList();renderDroitsSpecGrid();renderSecRulesSection();initRulesForm();}
+  if(name==='regles'){renderCodeDocs();renderSecConfig();renderCustomStatList();renderDroitsSpecGrid();renderSecRulesSection();}
   if(name==='conges'){initCongDates();renderConges();}
 }
 
@@ -5753,13 +5766,6 @@ function renderDroitsSpecGrid(){
   }).join('');
 }
 
-function initRulesForm(){
-  // Synchronise les selects (AT, FE) avec l'état RULES courant
-  const atSel=document.getElementById('r-imp-AT');
-  if(atSel) atSel.value=RULES.impacts.AT||'presence';
-  const feSel=document.getElementById('r-imp-FE');
-  if(feSel) feSel.value=RULES.impacts.FE||'presence';
-}
 function saveRules(){
   RULES.durations.M=parseFloat(document.getElementById('r-dur-M').value)||10;
   RULES.durations.S=parseFloat(document.getElementById('r-dur-S').value)||10;
@@ -5769,7 +5775,6 @@ function saveRules(){
   RULES.impacts.EM=parseFloat(document.getElementById('r-imp-EM').value)||-7;
   RULES.impacts.FO=parseFloat(document.getElementById('r-imp-FO').value)||7;
   RULES.impacts.AT=document.getElementById('r-imp-AT')?.value||'presence';
-  RULES.impacts.FE=document.getElementById('r-imp-FE')?.value||'presence';
   RULES.seuilMin=parseInt(document.getElementById('r-seuil-min').value)||2;
   RULES.seuilOk=parseInt(document.getElementById('r-seuil-ok').value)||3;
   RULES.seuilWE=parseInt(document.getElementById('r-seuil-we').value)||2;
@@ -7097,7 +7102,7 @@ async function supabaseLoad(){
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
     const rows = await res.json();
-    if(!rows || !rows.length){ renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
+    if(!rows || !rows.length){ autoFill(); renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
     const d = rows[0].data;
     if(d.planning)    Object.assign(planning, d.planning);
     if(d.mods)        Object.assign(mods, d.mods);
@@ -7126,10 +7131,10 @@ async function supabaseLoad(){
     }
     if(d.cadres && d.cadres.length > 0){ d.cadres.forEach(function(c,i){ if(CADRES_LIST[i]) CADRES_LIST[i].nom = c.nom; }); }
     if(d.startDate){ var sd=document.getElementById('startDate'); if(sd) sd.value=d.startDate; }
-    renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){};
+    autoFill(); renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){};
     setSyncStatus('✓ Chargé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
   } catch(e) {
-    renderAll(); renderAgents(); updatePlanBadges();
+    autoFill(); renderAll(); renderAgents(); updatePlanBadges();
     setSyncStatus('✗ Erreur chargement', '#f87171');
   }
 }
