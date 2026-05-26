@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planning Soins — AS · IDE · Nuit</title>
+<title>Planning Soins — AS · IDE · Nuit (v6 roulement)</title>
 <!-- Polices système (pas de dépendance réseau) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script>
 /* xlsx.js : ce stub s'active si le CDN est inaccessible.
@@ -1230,8 +1230,8 @@ return {makeCanvas: makeQRCanvas};
   <!-- Info rotation prévisible -->
   <div class="info-bar" style="margin-bottom:8px;font-size:.7rem">
     <span class="icon">🔄</span>
-    <span><strong>Rotation régulière et prévisible :</strong> à chaque bloc de jours travaillés, l'horaire <em>et</em> le secteur avancent d'un cran dans un tableau fixe.
-    La séquence est identique d'un cycle à l'autre — les agents peuvent calculer leur planning dans 2 ou 3 mois à l'avance.
+    <span><strong>Rotation mensuelle des secteurs :</strong> à chaque nouveau mois calendaire, chaque agent avance d'un cran dans la séquence <em>CANTOU → NORD → SUD → CANTOU…</em>
+    Le secteur change dès le 1er bloc du nouveau mois. Les agents à secteur fixe (CANTOU imposé) ne tournent pas.
     <button onclick="showRotationDetail()" style="margin-left:8px;font-size:.65rem;padding:2px 8px;background:var(--s3);color:var(--accent);border:1px solid var(--bd2);border-radius:3px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700">🔍 Voir le tableau de rotation</button>
     </span>
   </div>
@@ -1556,8 +1556,8 @@ return {makeCanvas: makeQRCanvas};
       </div>
       <div class="rule-row">
         <div class="rule-label">
-          <strong>Secteurs en rotation mensuelle</strong>
-          <div style="font-size:.65rem;color:var(--muted2);margin-top:2px">Les 2 secteurs qui alternent chaque mois (hors CANTOU)</div>
+          <strong>Rotation mensuelle des secteurs</strong>
+          <div style="font-size:.65rem;color:var(--muted2);margin-top:2px">Chaque mois, les agents AS sans secteur fixe avancent d'un cran : CANTOU → NORD → SUD → CANTOU…</div>
         </div>
         <div class="rule-val" style="flex-direction:column;align-items:flex-start;gap:4px" id="r-rot-ids-wrap">
         </div>
@@ -2507,25 +2507,32 @@ function getAllStatuts(){
 // ═══════════════════════════════════════════════════════
 let AGENTS = [
   // AS Groupe 1
-  {id:'g1_1', poste:'55',   nom:'PETIT Carole',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_2', poste:'280',  nom:'EDUARDO Nadia',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_3', poste:'255',  nom:'NDY BELUI Marie-Claire', taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_4', poste:'277',  nom:'BOUCETTA Cherifa',       taux:0.8, grp:1, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[2],cycleReduit:false}},
-  {id:'g1_5', poste:'282',  nom:'TESSA',                  taux:1.0, grp:1, spec:'AS', statut:'con', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_6', poste:'275',  nom:'NDIYEP Sandrine',        taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_7', poste:'285',  nom:'AUBEDATU Adija',         taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_8', poste:'274',  nom:'Poste 274',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_9', poste:'278',  nom:'Poste 278',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
+  // cyclePattern : roulement 6 semaines (42 jours, index 0=lundi S1)
+  // G1 sous-groupe A (agents 1-3) : R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R
+  {id:'g1_1', poste:'55',   nom:'PETIT Carole',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_2', poste:'280',  nom:'EDUARDO Nadia',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_3', poste:'255',  nom:'NDY BELUI Marie-Claire', taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  // G1 sous-groupe B (agents 4-6) : R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R
+  {id:'g1_4', poste:'277',  nom:'BOUCETTA Cherifa',       taux:0.8, grp:1, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[2],cycleReduit:false}},
+  {id:'g1_5', poste:'282',  nom:'TESSA',                  taux:1.0, grp:1, spec:'AS', statut:'con', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_6', poste:'275',  nom:'NDIYEP Sandrine',        taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  // G1 sous-groupe C (agents 7-9) : R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R
+  {id:'g1_7', poste:'285',  nom:'AUBEDATU Adija',         taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_8', poste:'274',  nom:'Poste 274',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_9', poste:'278',  nom:'Poste 278',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
   // AS Groupe 2
-  {id:'g2_1', poste:'273',  nom:'CASTANO Jennifer',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_2', poste:'276',  nom:'DESMARTIN Julien',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_3', poste:'281',  nom:'BLANC Jessica',          taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_4', poste:'284',  nom:'Farida',                 taux:1.0, grp:2, spec:'AS', statut:'con', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_5', poste:'977',  nom:'CECILLON Fatema',        taux:0.9, grp:2, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[0],cycleReduit:true,cycleReduitJour:0}},
-  {id:'g2_6', poste:'1042', nom:'NICOLAU Marie-Noelle',   taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_7', poste:'947',  nom:'BONYONGA Josseline',     taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_8', poste:'283',  nom:'Poste 283',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_9', poste:'946',  nom:'Poste 946',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
+  // G2 sous-groupe A (agents 1-3) : M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M
+  {id:'g2_1', poste:'273',  nom:'CASTANO Jennifer',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_2', poste:'276',  nom:'DESMARTIN Julien',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_3', poste:'281',  nom:'BLANC Jessica',          taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
+  // G2 sous-groupe B (agents 4-6) : J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J
+  {id:'g2_4', poste:'284',  nom:'Farida',                 taux:1.0, grp:2, spec:'AS', statut:'con', secteur:'nord',   cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_5', poste:'977',  nom:'CECILLON Fatema',        taux:0.9, grp:2, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[0],cycleReduit:true,cycleReduitJour:0}},
+  {id:'g2_6', poste:'1042', nom:'NICOLAU Marie-Noelle',   taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[],cycleReduit:false}},
+  // G2 sous-groupe C (agents 7-9) : S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S
+  {id:'g2_7', poste:'947',  nom:'BONYONGA Josseline',     taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_8', poste:'283',  nom:'Poste 283',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_9', poste:'946',  nom:'Poste 946',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
   // IDE (un seul groupe, pas de secteur)
   {id:'ide1_1', poste:'I01', nom:'IDE Dubois Marie',      taux:1.0, grp:1, spec:'IDE', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
   {id:'ide1_2', poste:'I02', nom:'IDE Martin Sophie',     taux:1.0, grp:1, spec:'IDE', statut:'tit', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
@@ -2838,7 +2845,11 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  if(!confirm('Regénérer le roulement ?\nAttention : les codes M/S/J/R seront recalculés.\nLes congés (CA/MO/CF…) sont conservés.')) return;
+  window.showConfirmModal('Regénérer le roulement ?',
+    'Les codes M/S/J/R seront recalculés. Les congés (CA/MO/CF…) sont conservés.',
+    function(){ window._doAutoFillFresh(); });
+}
+function _doAutoFillFresh(){
   // Vider le planning en mémoire avant de regénérer
   AGENTS.forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
@@ -2998,31 +3009,28 @@ function autoFill(){
     // Appliquer cycleReduit
     if(cycleReduit && workDays.length>0){
       const cycleReduitJour = (ctr.cycleReduitJour!=null) ? ctr.cycleReduitJour : null;
-      // Travailler sur workDays déjà filtré (joursOff exclus), pas sur allDays
-      const wdSorted=[...workDays].sort((a,b)=>a-b);
+      const allSorted=[...allDays].sort((a,b)=>a-b);
       const toRemove=new Set();
+      // Identifier les blocs de 3 jours consécutifs
       let i=0;
-      while(i<wdSorted.length){
+      while(i<allSorted.length){
+        // Trouver la longueur du bloc consécutif à partir de i
         let blkEnd=i;
-        while(blkEnd+1<wdSorted.length && wdSorted[blkEnd+1]===wdSorted[blkEnd]+1) blkEnd++;
+        while(blkEnd+1<allSorted.length && allSorted[blkEnd+1]===allSorted[blkEnd]+1) blkEnd++;
         const blkLen=blkEnd-i+1;
         if(blkLen===3){
           if(cycleReduitJour!==null){
-            // Retirer le jour dont le dow correspond, s'il est dans ce bloc
+            // Retirer le jour sélectionné s'il tombe dans ce bloc
+            let found=false;
             for(let j=i;j<=blkEnd;j++){
-              const dt=addDays(cycleStart,wdSorted[j]);
-              const dow=(dt.getDay()+6)%7;
-              if(dow===cycleReduitJour){ toRemove.add(wdSorted[j]); break; }
+              const dt=addDays(cycleStart,allSorted[j]);
+              const dow=(dt.getDay()+6)%7; // 0=Lun..6=Dim
+              if(dow===cycleReduitJour){ toRemove.add(allSorted[j]); found=true; break; }
             }
-            // Si le dow cible n'est pas dans ce bloc : retirer le dernier jour du bloc
-            const blocHasTarget=[...Array(blkEnd-i+1)].some((_,k)=>{
-              const dt=addDays(cycleStart,wdSorted[i+k]);
-              return (dt.getDay()+6)%7===cycleReduitJour;
-            });
-            if(!blocHasTarget) toRemove.add(wdSorted[blkEnd]);
+            // Si le jour ne tombe pas dans ce bloc : laisser intact (rien à faire)
           } else {
             // Comportement par défaut : retirer le 3ème jour
-            toRemove.add(wdSorted[blkEnd]);
+            toRemove.add(allSorted[blkEnd]);
           }
         }
         i=blkEnd+1;
@@ -3031,17 +3039,54 @@ function autoFill(){
     }
 
     let finalWorkDays;
-    if(cycleReduit){
-      // cycleReduit gère lui-même la réduction bloc par bloc → résultat tel quel
+    if(joursOff.length>0 || cycleReduit){
+      // joursOff ou cycleReduit constituent eux-mêmes la réduction de jours
+      // → on respecte le résultat tel quel, le taux n'est pas appliqué en plus
       finalWorkDays=workDays;
     } else {
-      // Appliquer le taux sur les jours disponibles (après filtre joursOff)
+      // Aucune contrainte : on applique le taux brut
       const target=Math.round(allDays.length * ag.taux);
       finalWorkDays=workDays.slice(0, target);
     }
 
     const isNuit=ag.spec==='Nuit';
     const isIDE_like=ag.spec==='IDE'||ag.spec==='AUX'||ag.spec==='AE';
+
+    // ── CYCLE PATTERN FIXE (nouveau roulement) ──────────────────────────
+    // Si l'agent possède un cyclePattern de 42 codes, on l'applique directement.
+    // Les congés déjà en place sont préservés (on ne remplace que R ou vide).
+    if(ag.cyclePattern && ag.cyclePattern.length===42 && ag.spec==='AS'){
+      for(let d=0;d<42;d++){
+        const patCode=ag.cyclePattern[d];
+        const cur=planning[ag.id][d]||'';
+        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur===''){
+          // Vérifier joursOff : si ce jour est interdit pour cet agent, forcer R
+          let forceOff=false;
+          if(finalWorkDays.length<(ag.cyclePattern.filter(c=>c!=='R').length)){
+            // L'agent a un taux réduit ou joursOff → ne mettre du travail
+            // que sur les finalWorkDays
+            forceOff = (patCode!=='R') && !finalWorkDays.includes(d);
+          }
+          planning[ag.id][d] = forceOff ? 'R' : patCode;
+        }
+      }
+      // Secteur : utiliser la rotation mensuelle habituelle sur les jours travaillés
+      if(!ag.secteurFixe){
+        const _secRot=[RULES.secCantouId||'cantou',...(RULES.secRotIds||['nord','sud'])];
+        const _baseIdx=_secRot.indexOf(ag.secteur);
+        for(let d=0;d<42;d++){
+          const v=planning[ag.id][d];
+          if(v==='M'||v==='S'||v==='J'){
+            const _moisDepart=cycleStart.getMonth();
+            const _moisBloc=addDays(cycleStart,d).getMonth();
+            const _delta=((_moisBloc-_moisDepart)+12)%12;
+            if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+            secteurJour[ag.id][d]=_baseIdx>=0?_secRot[(_baseIdx+_delta)%_secRot.length]:ag.secteur;
+          }
+        }
+      }
+      return; // passe à l'agent suivant
+    }
 
     if(!isNuit && !isIDE_like){
       // ── ROTATION RÉGULIÈRE : secteur + horaire changent à chaque BLOC ──
@@ -3072,13 +3117,27 @@ function autoFill(){
         const rotIdx=(agRank + globalBlocIdx) % nRot;
         const {secId, code}=rotTable[rotIdx];
 
+        // Rotation mensuelle du secteur : cantou→nord→sud→cantou…
+        // L'horaire (code) ne change pas du tout.
+        let blocSecId = secId;
+        if(!ag.secteurFixe){
+          const _secRot = [RULES.secCantouId||'cantou', ...(RULES.secRotIds||['nord','sud'])];
+          const _baseIdx = _secRot.indexOf(ag.secteur);
+          if(_baseIdx >= 0){
+            const _moisDepart = cycleStart.getMonth();
+            const _moisBloc = addDays(cycleStart, bloc[0]).getMonth();
+            const _delta = ((_moisBloc - _moisDepart) + 12) % 12;
+            blocSecId = _secRot[(_baseIdx + _delta) % _secRot.length];
+          }
+        }
+
         bloc.forEach(dayIdx=>{
           const cur=planning[ag.id][dayIdx];
           if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='')
             planning[ag.id][dayIdx]=code;
           if(!ag.secteurFixe){
             if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-            secteurJour[ag.id][dayIdx]=secId;
+            secteurJour[ag.id][dayIdx]=blocSecId;
           }
         });
       });
@@ -3115,91 +3174,111 @@ function autoFill(){
       }
     });
 
-  // ── Règle Cantou : chaque agent non-fixe fait 1 bloc au Cantou par cycle ──
-  // On ne touche PAS aux horaires (M/S/J déjà calculés) — on permute uniquement
-  // les secteurs dans secteurJour pour qu'un bloc de l'agent soit au Cantou.
+  // ── Règles secteurs : rotation MENSUELLE cantou→nord→sud→cantou… ──────
+  //
+  //  PRINCIPE :
+  //  Chaque non-fixe a un rang (position dans la liste triée).
+  //  Son secteur = secOrder[(rang + moisEcoulés) % 3].
+  //  Si trop de non-fixes tombent sur cantou (> 3 - nbFixes), les excédents
+  //  sont redirigés vers nord ou sud alternativement.
+  //  → Cantou ne dépasse jamais 3 agents (fixes inclus).
+  //
+  //  La séquence est ancrée sur janvier 2024 pour rester prévisible.
   (function applySecteurRules(){
-    if(!RULES.secCantouSemaine) return;
     const cantouId = RULES.secCantouId || 'cantou';
+    const rotIds = (RULES.secRotIds && RULES.secRotIds.length >= 2)
+      ? RULES.secRotIds
+      : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
+    if(rotIds.length < 2) return;
+
+    // Séquence : cantou(0) → nord(1) → sud(2) → cantou…
+    const secOrder = [cantouId, rotIds[0], rotIds[1]];
+
+    // Mois de référence : janvier 2024 = mois 0
+    const ORIGIN_MONTH = new Date('2024-01-01T00:00:00');
+    function monthsSinceOrigin(date){
+      return (date.getFullYear() - ORIGIN_MONTH.getFullYear()) * 12
+             + (date.getMonth() - ORIGIN_MONTH.getMonth());
+    }
+
+    const SHIFTS = ['M','J','S'];
+    const BASE_SEQ_G1 = [0,1,2,1,2,0,2,0,1];
+    const BASE_SEQ_G2 = [2,0,2,0,1,0,1,2,1,2];
 
     [1,2].forEach(grp => {
       const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
       if(!groupAgents.length) return;
 
-      // Agents non-fixes dont le secteur initial n'est pas Cantou
-      const nonFixesHorsCantou = groupAgents.filter(ag=>
-        !ag.secteurFixe && ag.secteur !== cantouId
-      ).sort((a,b)=>a.id.localeCompare(b.id));
+      const fixesAll  = groupAgents.filter(ag=>ag.secteurFixe);
+      const nonFixes  = groupAgents.filter(ag=>!ag.secteurFixe)
+                          .sort((a,b)=>a.id.localeCompare(b.id));
 
-      if(!nonFixesHorsCantou.length) return;
+      const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
+      const blocs     = buildBlocs(groupDays);
+      const baseSeq   = grp===1 ? BASE_SEQ_G1 : BASE_SEQ_G2;
 
-      // Agents non-fixes dont le secteur initial est Cantou (ou qui n'ont pas de secteur fixe et sont cantou)
-      const nonFixesCantou = groupAgents.filter(ag=>
-        !ag.secteurFixe && ag.secteur === cantouId
-      ).sort((a,b)=>a.id.localeCompare(b.id));
+      // Nombre max de non-fixes autorisés au cantou (pour rester à 3 avec les fixes)
+      const nbFixesCantou = fixesAll.filter(ag=>ag.secteur===cantouId).length;
+      const maxCantouNF   = Math.max(1, 3 - nbFixesCantou);
 
-      // Pour chaque agent non-Cantou, on lui attribue 1 bloc au Cantou
-      // en échangeant avec un agent non-fixe Cantou sur le même bloc (même shift)
-      nonFixesHorsCantou.forEach((agHC, rank) => {
-        if(!secteurJour[agHC.id]) return; // pas de secteurJour → pas de jours travaillés
+      // Pré-calculer le secteur de chaque non-fixe pour chaque mois possible
+      // (calculé à la volée dans la boucle bloc)
 
-        // Récupérer tous les jours travaillés de cet agent avec leur secteur et shift
-        const joursOff = (agHC.contraintes&&agHC.contraintes.joursOff)||[];
-        const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
-        const agDays = groupDays.filter(d=>{
-          const v = planning[agHC.id][d]||'';
-          if(!['M','S','J'].includes(v)) return false;
-          if(joursOff.length){
-            const dt = addDays(cycleStart, d);
-            if(joursOff.includes((dt.getDay()+6)%7)) return false;
+      // Assigner horaires fixes
+      fixesAll.forEach((ag, i) => {
+        if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
+        blocs.forEach((bloc, bi) => {
+          if(bi >= baseSeq.length) return;
+          const shiftIdx = (baseSeq[bi] + i) % 3;
+          bloc.forEach(d => {
+            planning[ag.id][d]           = SHIFTS[shiftIdx];
+            secteurJour[ag.id][d]         = ag.secteur || cantouId;
+            secteurJour[ag.id][String(d)] = ag.secteur || cantouId;
+          });
+        });
+      });
+
+      // Assigner horaires et secteurs non-fixes BLOC PAR BLOC
+      // → pour chaque bloc, recalculer qui va au cantou ce mois-là
+      blocs.forEach((bloc, bi) => {
+        if(bi >= baseSeq.length) return;
+
+        const blocDate  = addDays(cycleStart, bloc[0]);
+        const moisEcoul = monthsSinceOrigin(blocDate);
+
+        // Calculer le secteur naïf de chaque non-fixe pour ce mois
+        // Puis plafonner le cantou à maxCantouNF
+        let cantouRestants = maxCantouNF;
+        let nordExtra = 0, sudExtra = 0;
+
+        nonFixes.forEach((ag, i) => {
+          if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
+
+          const rank     = i;
+          const shiftIdx = (baseSeq[bi] + rank) % 3;
+          const shift    = SHIFTS[shiftIdx];
+
+          const secIdx = (i + moisEcoul) % 3;
+          let secId;
+          if(secIdx === 0) { // veut cantou
+            if(cantouRestants > 0) {
+              secId = cantouId;
+              cantouRestants--;
+            } else {
+              // Rediriger vers nord ou sud (alterner pour équilibrer)
+              if(nordExtra <= sudExtra) { secId = rotIds[0]; nordExtra++; }
+              else                      { secId = rotIds[1]; sudExtra++; }
+            }
+          } else {
+            secId = secOrder[secIdx];
           }
-          return true;
-        });
-        if(!agDays.length) return;
 
-        // Construire les blocs de travail de cet agent
-        const blocs = buildBlocs(agDays);
-        if(!blocs.length) return;
-
-        // Choisir quel bloc deviendra Cantou pour cet agent (décalé par rang)
-        const cantouBlocIdx = rank % blocs.length;
-        const cantouBloc = blocs[cantouBlocIdx];
-
-        // Vérifier que ce bloc n'est pas déjà au Cantou
-        const dejaAuCantou = cantouBloc.every(d=>
-          (secteurJour[agHC.id][d]||secteurJour[agHC.id][String(d)]) === cantouId
-        );
-        if(dejaAuCantou) return;
-
-        // Trouver un agent Cantou non-fixe qui travaille sur CE MÊME bloc (jours et shift compatibles)
-        // On cherche un agent Cantou qui a les mêmes jours dans ce bloc
-        const agCantouPartenaire = nonFixesCantou.find(agC => {
-          if(!secteurJour[agC.id]) return false;
-          // Doit travailler (M/S/J) au moins sur les jours de cantouBloc
-          return cantouBloc.every(d => ['M','S','J'].includes(planning[agC.id][d]||''));
-        });
-
-        if(agCantouPartenaire) {
-          // ÉCHANGE DE SECTEUR sur ce bloc uniquement (sans toucher aux horaires)
-          // agHC prend le Cantou, agCantouPartenaire prend le secteur de agHC
-          const secHC = secteurJour[agHC.id][cantouBloc[0]] || secteurJour[agHC.id][String(cantouBloc[0])] || agHC.secteur;
-          cantouBloc.forEach(d => {
-            const secC = secteurJour[agCantouPartenaire.id][d] || secteurJour[agCantouPartenaire.id][String(d)] || cantouId;
-            // agHC → Cantou
-            secteurJour[agHC.id][d] = cantouId;
-            secteurJour[agHC.id][String(d)] = cantouId;
-            // agCantouPartenaire → secteur de agHC
-            secteurJour[agCantouPartenaire.id][d] = secHC;
-            secteurJour[agCantouPartenaire.id][String(d)] = secHC;
+          bloc.forEach(d => {
+            planning[ag.id][d]           = shift;
+            secteurJour[ag.id][d]         = secId;
+            secteurJour[ag.id][String(d)] = secId;
           });
-        } else {
-          // Pas de partenaire disponible : forcer le secteur Cantou sur ce bloc pour agHC
-          // (sans changer l'horaire)
-          cantouBloc.forEach(d => {
-            secteurJour[agHC.id][d] = cantouId;
-            secteurJour[agHC.id][String(d)] = cantouId;
-          });
-        }
+        });
       });
     });
   })();
@@ -3292,7 +3371,7 @@ function equalizeInterAgents(cycleStart){
   const specGroupsList=[];
   ['AS'].forEach(spec=>{
     [1,2].forEach(grp=>{
-      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp);
+      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp&&!a.cyclePattern);
       if(ga.length>=2) specGroupsList.push(ga);
     });
   });
@@ -3417,7 +3496,7 @@ function equalizeInterAgents(cycleStart){
 // Après la passe principale, on ne touche plus aux secteurs (déjà optimaux).
 function equalizeShiftsPerAgent(){
   const SHIFT_CODES=['M','S','J'];
-  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit').forEach(ag=>{
+  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit'&&!ag.cyclePattern).forEach(ag=>{
     for(let pass=0;pass<30;pass++){
       let cnt={M:0,S:0,J:0};
       let byCode={M:[],S:[],J:[]};
@@ -7102,7 +7181,7 @@ async function supabaseLoad(){
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
     const rows = await res.json();
-    if(!rows || !rows.length){ autoFill(); renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
+    if(!rows || !rows.length){ renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){}; setSyncStatus('⚠ Aucune donnée', '#888'); return; }
     const d = rows[0].data;
     if(d.planning)    Object.assign(planning, d.planning);
     if(d.mods)        Object.assign(mods, d.mods);
@@ -7131,10 +7210,10 @@ async function supabaseLoad(){
     }
     if(d.cadres && d.cadres.length > 0){ d.cadres.forEach(function(c,i){ if(CADRES_LIST[i]) CADRES_LIST[i].nom = c.nom; }); }
     if(d.startDate){ var sd=document.getElementById('startDate'); if(sd) sd.value=d.startDate; }
-    autoFill(); renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){};
+    renderAll(); renderAgents(); updatePlanBadges(); try{renderRemplacants();}catch(e){};
     setSyncStatus('✓ Chargé ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
   } catch(e) {
-    autoFill(); renderAll(); renderAgents(); updatePlanBadges();
+    renderAll(); renderAgents(); updatePlanBadges();
     setSyncStatus('✗ Erreur chargement', '#f87171');
   }
 }
@@ -7142,6 +7221,7 @@ async function supabaseLoad(){
 // ── Exposition globale (nécessaire car let/const isolent le scope) ──
 window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
+window._doAutoFillFresh = _doAutoFillFresh;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
 
@@ -7360,7 +7440,35 @@ function printOneQR(key){
   w.document.write('<div class="url">' + data.url + '</div>');
   w.document.write('<div class="foot">Scannez pour accéder à votre planning</div>');
   w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
-  w.document.write('</body></html>');
+  w.document.write('
+<!-- ── Modale de confirmation (remplace confirm() bloqué) ── -->
+<div id="appConfirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:#13161f;border:1px solid #303654;border-radius:12px;padding:28px 32px;max-width:380px;width:90vw;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;">
+    <div id="appConfirmTitle" style="font-size:1.1rem;font-weight:900;letter-spacing:1px;color:#38bdf8;margin-bottom:10px;text-transform:uppercase;"></div>
+    <div id="appConfirmMsg" style="font-size:.82rem;color:#8491b0;margin-bottom:22px;line-height:1.5;white-space:pre-line;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="appConfirmCancel" style="background:#1d2235;border:1px solid #303654;color:#8491b0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;">Annuler</button>
+      <button id="appConfirmOk" style="background:#38bdf8;color:#0c0e14;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;border:none;">Confirmer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function showConfirmModal(title, msg, onOk){
+    var ov=document.getElementById('appConfirmOverlay');
+    document.getElementById('appConfirmTitle').textContent=title;
+    document.getElementById('appConfirmMsg').textContent=msg;
+    ov.style.display='flex';
+    var ok=document.getElementById('appConfirmOk');
+    var cancel=document.getElementById('appConfirmCancel');
+    function close(){ ov.style.display='none'; ok.onclick=null; cancel.onclick=null; }
+    ok.onclick=function(){ close(); if(onOk) onOk(); };
+    cancel.onclick=function(){ close(); };
+  }
+  window.showConfirmModal=showConfirmModal;
+})();
+</script>
+</body></html>');
   w.document.close();
 }
 
