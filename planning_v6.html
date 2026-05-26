@@ -3236,8 +3236,8 @@ function autoFill(){
       const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
       if(!groupAgents.length) return;
 
-      const fixesAll  = groupAgents.filter(ag=>ag.secteurFixe);
-      const nonFixes  = groupAgents.filter(ag=>!ag.secteurFixe)
+      const fixesAll  = groupAgents.filter(ag=>ag.secteurFixe&&!ag.cyclePattern);
+      const nonFixes  = groupAgents.filter(ag=>!ag.secteurFixe&&!ag.cyclePattern)
                           .sort((a,b)=>a.id.localeCompare(b.id));
 
       const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
