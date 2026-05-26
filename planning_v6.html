@@ -2838,7 +2838,6 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  // Confirmation simple par double-clic ou prompt-like via innerHTML du bouton
   var btn = document.querySelector('button[onclick="autoFillFresh()"]');
   if(btn && btn.getAttribute('data-confirm') !== '1'){
     btn.setAttribute('data-confirm','1');
@@ -2852,8 +2851,12 @@ function autoFillFresh(){
     }, 3000);
     return;
   }
-  if(btn){ btn.setAttribute('data-confirm','0'); btn.innerHTML = '⚡ Générer roulement'; btn.style.background=''; }
-  _doAutoFill();
+  if(btn){ 
+    btn.setAttribute('data-confirm','0'); 
+    btn.innerHTML = '⚡ Générer roulement'; 
+    btn.style.background='';
+  }
+  window._doAutoFillFresh();
 }
 
 function _doAutoFill(){
