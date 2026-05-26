@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planning Soins — AS · IDE · Nuit (v6 roulement)</title>
+<title>Planning Soins — AS · IDE · Nuit</title>
 <!-- Polices système (pas de dépendance réseau) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script>
 /* xlsx.js : ce stub s'active si le CDN est inaccessible.
@@ -2507,32 +2507,25 @@ function getAllStatuts(){
 // ═══════════════════════════════════════════════════════
 let AGENTS = [
   // AS Groupe 1
-  // cyclePattern : roulement 6 semaines (42 jours, index 0=lundi S1)
-  // G1 sous-groupe A (agents 1-3) : R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R
-  {id:'g1_1', poste:'55',   nom:'PETIT Carole',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_2', poste:'280',  nom:'EDUARDO Nadia',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_3', poste:'255',  nom:'NDY BELUI Marie-Claire', taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  // G1 sous-groupe B (agents 4-6) : R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R
-  {id:'g1_4', poste:'277',  nom:'BOUCETTA Cherifa',       taux:0.8, grp:1, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[2],cycleReduit:false}},
-  {id:'g1_5', poste:'282',  nom:'TESSA',                  taux:1.0, grp:1, spec:'AS', statut:'con', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_6', poste:'275',  nom:'NDIYEP Sandrine',        taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  // G1 sous-groupe C (agents 7-9) : R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R
-  {id:'g1_7', poste:'285',  nom:'AUBEDATU Adija',         taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_8', poste:'274',  nom:'Poste 274',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g1_9', poste:'278',  nom:'Poste 278',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_1', poste:'55',   nom:'PETIT Carole',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_2', poste:'280',  nom:'EDUARDO Nadia',          taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_3', poste:'255',  nom:'NDY BELUI Marie-Claire', taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_4', poste:'277',  nom:'BOUCETTA Cherifa',       taux:0.8, grp:1, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[2],cycleReduit:false}},
+  {id:'g1_5', poste:'282',  nom:'TESSA',                  taux:1.0, grp:1, spec:'AS', statut:'con', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_6', poste:'275',  nom:'NDIYEP Sandrine',        taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_7', poste:'285',  nom:'AUBEDATU Adija',         taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_8', poste:'274',  nom:'Poste 274',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g1_9', poste:'278',  nom:'Poste 278',              taux:1.0, grp:1, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
   // AS Groupe 2
-  // G2 sous-groupe A (agents 1-3) : M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M
-  {id:'g2_1', poste:'273',  nom:'CASTANO Jennifer',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_2', poste:'276',  nom:'DESMARTIN Julien',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_3', poste:'281',  nom:'BLANC Jessica',          taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', cyclePattern:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'], contraintes:{joursOff:[],cycleReduit:false}},
-  // G2 sous-groupe B (agents 4-6) : J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S | S,R,R,J,J,R,R | R,S,S,R,R,J,J
-  {id:'g2_4', poste:'284',  nom:'Farida',                 taux:1.0, grp:2, spec:'AS', statut:'con', secteur:'nord',   cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_5', poste:'977',  nom:'CECILLON Fatema',        taux:0.9, grp:2, spec:'AS', statut:'tit', secteur:'nord',   cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[0],cycleReduit:true,cycleReduitJour:0}},
-  {id:'g2_6', poste:'1042', nom:'NICOLAU Marie-Noelle',   taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], cyclePattern:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'], contraintes:{joursOff:[],cycleReduit:false}},
-  // G2 sous-groupe C (agents 7-9) : S,R,R,J,J,R,R | R,S,S,R,R,J,J | J,R,R,M,M,R,R | R,J,J,R,R,M,M | M,R,R,S,S,R,R | R,M,M,R,R,S,S
-  {id:'g2_7', poste:'947',  nom:'BONYONGA Josseline',     taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_8', poste:'283',  nom:'Poste 283',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
-  {id:'g2_9', poste:'946',  nom:'Poste 946',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    cyclePattern:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_1', poste:'273',  nom:'CASTANO Jennifer',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_2', poste:'276',  nom:'DESMARTIN Julien',       taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_3', poste:'281',  nom:'BLANC Jessica',          taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_4', poste:'284',  nom:'Farida',                 taux:1.0, grp:2, spec:'AS', statut:'con', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_5', poste:'977',  nom:'CECILLON Fatema',        taux:0.9, grp:2, spec:'AS', statut:'tit', secteur:'nord',   contraintes:{joursOff:[0],cycleReduit:true,cycleReduitJour:0}},
+  {id:'g2_6', poste:'1042', nom:'NICOLAU Marie-Noelle',   taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'cantou', secteurFixe:true, secteurs:['cantou'], contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_7', poste:'947',  nom:'BONYONGA Josseline',     taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_8', poste:'283',  nom:'Poste 283',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
+  {id:'g2_9', poste:'946',  nom:'Poste 946',              taux:1.0, grp:2, spec:'AS', statut:'tit', secteur:'sud',    contraintes:{joursOff:[],cycleReduit:false}},
   // IDE (un seul groupe, pas de secteur)
   {id:'ide1_1', poste:'I01', nom:'IDE Dubois Marie',      taux:1.0, grp:1, spec:'IDE', statut:'tit', secteur:'cantou', contraintes:{joursOff:[],cycleReduit:false}},
   {id:'ide1_2', poste:'I02', nom:'IDE Martin Sophie',     taux:1.0, grp:1, spec:'IDE', statut:'tit', secteur:'nord',   contraintes:{joursOff:[],cycleReduit:false}},
@@ -2845,12 +2838,28 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  window.showConfirmModal('Regénérer le roulement ?',
-    'Les codes M/S/J/R seront recalculés. Les congés (CA/MO/CF…) sont conservés.',
-    function(){ window._doAutoFillFresh(); });
+  var btn = document.querySelector('button[onclick="autoFillFresh()"]');
+  if(btn && btn.getAttribute('data-confirm') !== '1'){
+    btn.setAttribute('data-confirm','1');
+    var origText = btn.innerHTML;
+    btn.innerHTML = '⚠️ Cliquez encore pour confirmer';
+    btn.style.background = '#f87171';
+    setTimeout(function(){
+      btn.setAttribute('data-confirm','0');
+      btn.innerHTML = origText;
+      btn.style.background = '';
+    }, 3000);
+    return;
+  }
+  if(btn){ 
+    btn.setAttribute('data-confirm','0'); 
+    btn.innerHTML = '⚡ Générer roulement'; 
+    btn.style.background='';
+  }
+  window._doAutoFillFresh();
 }
-function _doAutoFillFresh(){
-  // Vider le planning en mémoire avant de regénérer
+
+function _doAutoFill(){
   AGENTS.forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
     for(let d=0;d<42;d++){
@@ -2863,444 +2872,198 @@ function _doAutoFillFresh(){
 }
 
 function autoFill(){
-  // Réinitialiser uniquement les codes horaires (M/S/J/R/NU)
-  // On préserve les congés (CA/MO/CF/EM/AT/FO/GR) et les mods
+  // Préserver les congés existants
   AGENTS.filter(a=>a.actif!==false).forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
     for(let d=0;d<42;d++){
       const v=planning[a.id][d]||'';
-      if(!v||v==='M'||v==='S'||v==='J'||v==='NU'||v==='R'||v==='RC')
-        planning[a.id][d]='';
+      if(!v||v==='M'||v==='S'||v==='J'||v==='NU'||v==='R'||v==='RC') planning[a.id][d]='';
     }
     secteurJour[a.id]={};
   });
 
   const cycleStart=getStart();
 
-  // ══════════════════════════════════════════════════════════════════════
-  //  PRINCIPE DE ROTATION RÉGULIÈRE ET PRÉVISIBLE
-  //
-  //  Chaque agent AS reçoit un rang fixe dans son groupe (0, 1, 2, …).
-  //  Ce rang détermine sa COMBINAISON DE DÉPART (secteur + horaire) pour
-  //  le BLOC 0 du cycle courant.
-  //
-  //  À chaque BLOC suivant (groupe de jours consécutifs), la combinaison
-  //  avance d'un cran dans le tableau rotatif :
-  //
-  //    Bloc 0 : combinaison[rang % N]
-  //    Bloc 1 : combinaison[(rang + 1) % N]
-  //    Bloc 2 : combinaison[(rang + 2) % N]
-  //    …
-  //
-  //  Le tableau rotatif est une liste exhaustive de toutes les combinaisons
-  //  (secteur × horaire) ordonnées de façon à ce que :
-  //    - chaque horaire passe par chaque secteur
-  //    - la rotation soit identique et infinie : le cycle N+1 repart
-  //      exactement là où le cycle N s'est arrêté.
-  //
-  //  Résultat : un agent peut calculer seul son secteur et son horaire
-  //  pour n'importe quel bloc futur, même dans 6 mois.
-  // ══════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
+  //  ROULEMENT FIXE AS (issu du tableau Excel)
+  //  Chaque agent AS a un pattern de 42 codes (M/S/J/R).
+  //  Les secteurs tournent par bloc au sein de chaque sous-groupe
+  //  de façon à garantir 3 agents par horaire ET 3 par secteur
+  //  chaque jour travaillé.
+  // ══════════════════════════════════════════════════════════
 
-  // Construire le tableau rotatif des combinaisons (secteur × horaire)
-  // Ordre : on alterne horaire puis secteur pour maximiser la diversité
-  // visible sur le planning (pas deux blocs consécutifs identiques pour
-  // l'ensemble du groupe).
-  // Avec 3 secteurs et 3 horaires → 9 combinaisons.
-  const allSecIds=SECTEURS.map(s=>s.id);
-  const nSec=allSecIds.length;
-  const BASE_CODES=['M','S','J'];
+  // Patterns horaires 42 jours par agent (index 0 = lundi S1)
+  const AS_PATTERNS = {
+    // Groupe 1
+    g1_1:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
+    g1_2:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
+    g1_3:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
+    g1_4:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'],
+    g1_5:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'],
+    g1_6:['R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R'],
+    g1_7:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
+    g1_8:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
+    g1_9:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
+    // Groupe 2
+    g2_1:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
+    g2_2:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
+    g2_3:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
+    g2_4:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'],
+    g2_5:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'],
+    g2_6:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'],
+    g2_7:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'],
+    g2_8:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'],
+    g2_9:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','J','J','R','R','S','S'],
+  };
 
-  // Tableau de toutes les combinaisons dans l'ordre rotatif :
-  // (sec0,M), (sec1,S), (sec2,J), (sec0,S), (sec1,J), (sec2,M), (sec0,J), (sec1,M), (sec2,S)
-  // Cette séquence garantit : pas de répétition de (sec+code) sur ≤9 blocs consécutifs.
-  function buildRotationTable(allowedCodes){
-    const nc=allowedCodes.length;
-    const ns=nSec;
-    const total=Math.max(nc,ns)*Math.max(nc,ns); // 9 pour 3×3
-    const combs=[];
-    for(let i=0;i<total;i++){
-      const secIdx=i%ns;
-      const codeIdx=i%nc;
-      combs.push({secId:allSecIds[secIdx], code:allowedCodes[codeIdx]});
-    }
-    // Dédupliquer tout en préservant l'ordre (pas de doublons (sec+code))
-    const seen=new Set();
-    const unique=[];
-    for(const c of combs){
-      const k=c.secId+'_'+c.code;
-      if(!seen.has(k)){seen.add(k);unique.push(c);}
-    }
-    // Compléter si nécessaire pour couvrir ns×nc combinaisons
-    if(unique.length<ns*nc){
-      for(let s=0;s<ns;s++) for(let c2=0;c2<nc;c2++){
-        const k=allSecIds[s]+'_'+allowedCodes[c2];
-        if(!seen.has(k)){seen.add(k);unique.push({secId:allSecIds[s],code:allowedCodes[c2]});}
-      }
-    }
-    return unique; // longueur = ns × nc = 9
-  }
+  // Secteurs par sous-groupe.
+  // avail = secteurs disponibles (hors agents secteurFixe du même sous-groupe).
+  // subRank = rang dans les agents non-fixes du sous-groupe.
+  const SEC_ROT = [
+    RULES.secCantouId||'cantou',
+    ...(RULES.secRotIds && RULES.secRotIds.length>=2 ? RULES.secRotIds : ['nord','sud'])
+  ];
+  const AS_SEC_INFO = {
+    // Groupe 1 — sous-groupe A (g1_1/2/3): avail=cantou,nord,sud
+    g1_1:{avail:SEC_ROT, subRank:0},
+    g1_2:{avail:SEC_ROT, subRank:1},
+    g1_3:{avail:SEC_ROT, subRank:2},
+    // Groupe 1 — sous-groupe B (g1_4/5/6)
+    g1_4:{avail:SEC_ROT, subRank:0},
+    g1_5:{avail:SEC_ROT, subRank:1},
+    g1_6:{avail:SEC_ROT, subRank:2},
+    // Groupe 1 — sous-groupe C (g1_7 fixe cantou → g1_8/9 → nord,sud)
+    g1_7:{avail:null, fixedSec:'cantou'},
+    g1_8:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:0},
+    g1_9:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:1},
+    // Groupe 2 — sous-groupe A (g2_1/2/3)
+    g2_1:{avail:SEC_ROT, subRank:0},
+    g2_2:{avail:SEC_ROT, subRank:1},
+    g2_3:{avail:SEC_ROT, subRank:2},
+    // Groupe 2 — sous-groupe B (g2_6 fixe cantou → g2_4/5 → nord,sud)
+    g2_4:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:0},
+    g2_5:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:1},
+    g2_6:{avail:null, fixedSec:'cantou'},
+    // Groupe 2 — sous-groupe C (g2_7/8/9)
+    g2_7:{avail:SEC_ROT, subRank:0},
+    g2_8:{avail:SEC_ROT, subRank:1},
+    g2_9:{avail:SEC_ROT, subRank:2},
+  };
 
-  // Helper : extraire les blocs de jours consécutifs à partir d'un tableau de jours triés
-  function buildBlocs(sortedDays){
-    if(!sortedDays.length) return [];
-    const blocs=[];
-    let b=[sortedDays[0]];
-    for(let i=1;i<sortedDays.length;i++){
-      if(sortedDays[i]===sortedDays[i-1]+1) b.push(sortedDays[i]);
-      else{ blocs.push(b); b=[sortedDays[i]]; }
+  // Décalage de cycle (continuité entre cycles)
+  const ORIGIN = new Date('2024-01-01T00:00:00');
+  const msDay  = 86400000;
+  const daysSinceOrigin = Math.round((cycleStart - ORIGIN) / msDay);
+  const cycleOffset = Math.round(daysSinceOrigin / 42);
+
+  function buildBlocs(pat){
+    const work = pat.map((c,i)=>c!=='R'?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
+    if(!work.length) return [];
+    const blocs=[]; let b=[work[0]];
+    for(let i=1;i<work.length;i++){
+      if(work[i]===work[i-1]+1) b.push(work[i]);
+      else{ blocs.push(b); b=[work[i]]; }
     }
     blocs.push(b);
     return blocs;
   }
 
-  // ── RANG GLOBAL DE BLOC ──────────────────────────────────────────────
-  // Pour calculer quel bloc c'est "dans l'absolu" (indépendamment du cycle
-  // courant) on utilise le numéro de bloc depuis une date d'origine fixe.
-  // On choisit le 1er janvier 2024 comme origine (lundi).
-  // Un bloc = ~3j. Pour être exact, on compte les blocs réels accumulés.
-  // En pratique, on comptabilise les blocs dans le cycle courant (0,1,2…)
-  // ET on ajoute un décalage basé sur le numero de cycle (cycleStart).
-  //
-  // Décalage de cycle : nombre de cycles de 42j écoulés depuis l'origine.
-  const ORIGIN=new Date('2024-01-01T00:00:00');
-  const msPerDay=1000*60*60*24;
-  const daysSinceOrigin=Math.round((cycleStart-ORIGIN)/msPerDay);
-  // Nombre moyen de blocs par cycle de 42j ≈ nombre de blocs dans G1_DAYS
-  // On calcule les blocs de G1 pour avoir un référentiel stable
-  const g1Blocs=buildBlocs([...G1_DAYS].sort((a,b)=>a-b));
-  const g2Blocs=buildBlocs([...G2_DAYS].sort((a,b)=>a-b));
-  const nBlocsPerCycle=g1Blocs.length; // ~7 blocs par cycle pour un groupe
-  // Décalage en blocs entre cycles (pour que la rotation continue d'un cycle au suivant)
-  const cycleOffset=Math.round(daysSinceOrigin/42)*nBlocsPerCycle;
+  // Appliquer le roulement à chaque agent AS
+  AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false).forEach(ag=>{
+    const pat = AS_PATTERNS[ag.id];
+    const secInfo = AS_SEC_INFO[ag.id];
+    if(!pat || !secInfo) return; // agent non géré par ce roulement
 
-  // ── IDE : alterner G1/G2 selon rang dans la liste IDE ────────────────
-  const ideList=AGENTS.filter(a=>a.spec==='IDE'&&a.actif!==false);
-  const auxList=AGENTS.filter(a=>a.spec==='AUX'&&a.actif!==false);
-  const aeList=AGENTS.filter(a=>a.spec==='AE'&&a.actif!==false);
-
-  AGENTS.filter(a=>a.actif!==false).forEach((ag)=>{
-    let effectiveGrp=ag.grp;
-    if(ag.spec==='IDE'){
-      const ideIdx=ideList.indexOf(ag);
-      effectiveGrp=(ideIdx%2===0)?1:2;
-    } else if(ag.spec==='AUX'){
-      const auxIdx=auxList.indexOf(ag);
-      effectiveGrp=(auxIdx%2===0)?1:2;
-    } else if(ag.spec==='AE'){
-      const aeIdx=aeList.indexOf(ag);
-      effectiveGrp=(aeIdx%2===0)?1:2;
+    // Appliquer les horaires (en préservant les congés déjà saisis)
+    for(let d=0;d<42;d++){
+      const cur = planning[ag.id][d]||'';
+      if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur==='')
+        planning[ag.id][d] = pat[d];
     }
-    const allDays=effectiveGrp===1?G1_DAYS:G2_DAYS;
 
-    // Contraintes de l'agent
-    const ctr=ag.contraintes||{joursOff:[],cycleReduit:false};
+    // Appliquer les secteurs
+    if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+    if(secInfo.fixedSec){
+      // Agent secteurFixe : toujours le même secteur
+      for(let d=0;d<42;d++){
+        const v=planning[ag.id][d];
+        if(v==='M'||v==='S'||v==='J'){
+          secteurJour[ag.id][d]=secInfo.fixedSec;
+          secteurJour[ag.id][String(d)]=secInfo.fixedSec;
+        }
+      }
+    } else {
+      // Rotation par bloc
+      const blocs = buildBlocs(pat);
+      const avail = secInfo.avail;
+      const n = avail.length;
+      blocs.forEach((bloc, bi)=>{
+        const sec = avail[(secInfo.subRank + bi + cycleOffset) % n];
+        bloc.forEach(d=>{
+          const v=planning[ag.id][d];
+          if(v==='M'||v==='S'||v==='J'){
+            secteurJour[ag.id][d]=sec;
+            secteurJour[ag.id][String(d)]=sec;
+          }
+        });
+      });
+    }
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  IDE, AUX, AE : alternance G1/G2 sur les jours du groupe
+  // ══════════════════════════════════════════════════════════
+  ['IDE','AUX','AE'].forEach(spec=>{
+    const list=AGENTS.filter(a=>a.spec===spec&&a.actif!==false);
+    list.forEach((ag,idx)=>{
+      const grpDays=(idx%2===0?G1_DAYS:G2_DAYS);
+      const ctr=ag.contraintes||{joursOff:[]};
+      const joursOff=ctr.joursOff||[];
+      let workDays=grpDays.filter(d=>{
+        if(!joursOff.length) return true;
+        const dt=addDays(cycleStart,d);
+        const dow=(dt.getDay()+6)%7;
+        return !joursOff.includes(dow);
+      });
+      const target=Math.round(workDays.length*(ag.taux||1.0));
+      workDays=workDays.slice(0,target);
+      if(!planning[ag.id]) planning[ag.id]={};
+      for(let d=0;d<42;d++){
+        const cur=planning[ag.id][d]||'';
+        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur==='')
+          planning[ag.id][d]=workDays.includes(d)?'J':'R';
+      }
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  NUIT
+  // ══════════════════════════════════════════════════════════
+  AGENTS.filter(ag=>ag.spec==='Nuit'&&ag.actif!==false).forEach(ag=>{
+    const grpDays=ag.grp===2?G2_DAYS:G1_DAYS;
+    const ctr=ag.contraintes||{joursOff:[]};
     const joursOff=ctr.joursOff||[];
-    const cycleReduit=!!ctr.cycleReduit;
-
-    // Filtrer les joursOff fixes
-    let workDays=allDays.filter(d=>{
+    let workDays=grpDays.filter(d=>{
       if(!joursOff.length) return true;
       const dt=addDays(cycleStart,d);
       const dow=(dt.getDay()+6)%7;
       return !joursOff.includes(dow);
     });
-
-    // Appliquer cycleReduit
-    if(cycleReduit && workDays.length>0){
-      const cycleReduitJour = (ctr.cycleReduitJour!=null) ? ctr.cycleReduitJour : null;
-      const allSorted=[...allDays].sort((a,b)=>a-b);
-      const toRemove=new Set();
-      // Identifier les blocs de 3 jours consécutifs
-      let i=0;
-      while(i<allSorted.length){
-        // Trouver la longueur du bloc consécutif à partir de i
-        let blkEnd=i;
-        while(blkEnd+1<allSorted.length && allSorted[blkEnd+1]===allSorted[blkEnd]+1) blkEnd++;
-        const blkLen=blkEnd-i+1;
-        if(blkLen===3){
-          if(cycleReduitJour!==null){
-            // Retirer le jour sélectionné s'il tombe dans ce bloc
-            let found=false;
-            for(let j=i;j<=blkEnd;j++){
-              const dt=addDays(cycleStart,allSorted[j]);
-              const dow=(dt.getDay()+6)%7; // 0=Lun..6=Dim
-              if(dow===cycleReduitJour){ toRemove.add(allSorted[j]); found=true; break; }
-            }
-            // Si le jour ne tombe pas dans ce bloc : laisser intact (rien à faire)
-          } else {
-            // Comportement par défaut : retirer le 3ème jour
-            toRemove.add(allSorted[blkEnd]);
-          }
-        }
-        i=blkEnd+1;
-      }
-      workDays=workDays.filter(d=>!toRemove.has(d));
-    }
-
-    let finalWorkDays;
-    if(joursOff.length>0 || cycleReduit){
-      // joursOff ou cycleReduit constituent eux-mêmes la réduction de jours
-      // → on respecte le résultat tel quel, le taux n'est pas appliqué en plus
-      finalWorkDays=workDays;
-    } else {
-      // Aucune contrainte : on applique le taux brut
-      const target=Math.round(allDays.length * ag.taux);
-      finalWorkDays=workDays.slice(0, target);
-    }
-
-    const isNuit=ag.spec==='Nuit';
-    const isIDE_like=ag.spec==='IDE'||ag.spec==='AUX'||ag.spec==='AE';
-
-    // ── CYCLE PATTERN FIXE (nouveau roulement) ──────────────────────────
-    // Si l'agent possède un cyclePattern de 42 codes, on l'applique directement.
-    // Les congés déjà en place sont préservés (on ne remplace que R ou vide).
-    if(ag.cyclePattern && ag.cyclePattern.length===42 && ag.spec==='AS'){
-      for(let d=0;d<42;d++){
-        const patCode=ag.cyclePattern[d];
-        const cur=planning[ag.id][d]||'';
-        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur===''){
-          // Vérifier joursOff : si ce jour est interdit pour cet agent, forcer R
-          let forceOff=false;
-          if(finalWorkDays.length<(ag.cyclePattern.filter(c=>c!=='R').length)){
-            // L'agent a un taux réduit ou joursOff → ne mettre du travail
-            // que sur les finalWorkDays
-            forceOff = (patCode!=='R') && !finalWorkDays.includes(d);
-          }
-          planning[ag.id][d] = forceOff ? 'R' : patCode;
-        }
-      }
-      // Secteur : utiliser la rotation mensuelle habituelle sur les jours travaillés
-      if(!ag.secteurFixe){
-        const _secRot=[RULES.secCantouId||'cantou',...(RULES.secRotIds||['nord','sud'])];
-        const _baseIdx=_secRot.indexOf(ag.secteur);
-        for(let d=0;d<42;d++){
-          const v=planning[ag.id][d];
-          if(v==='M'||v==='S'||v==='J'){
-            const _moisDepart=cycleStart.getMonth();
-            const _moisBloc=addDays(cycleStart,d).getMonth();
-            const _delta=((_moisBloc-_moisDepart)+12)%12;
-            if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-            secteurJour[ag.id][d]=_baseIdx>=0?_secRot[(_baseIdx+_delta)%_secRot.length]:ag.secteur;
-          }
-        }
-      }
-      return; // passe à l'agent suivant
-    }
-
-    if(!isNuit && !isIDE_like){
-      // ── ROTATION RÉGULIÈRE : secteur + horaire changent à chaque BLOC ──
-
-      const horaireInterdit=(ag.contraintes&&ag.contraintes.horaireInterdit)||'';
-      const allowedCodes=BASE_CODES.filter(c=>c!==horaireInterdit);
-
-      // Tableau rotatif pour cet agent (selon ses horaires autorisés)
-      const rotTable=buildRotationTable(allowedCodes);
-      const nRot=rotTable.length; // 9 (ou moins si horaireInterdit)
-
-      // Rang de l'agent dans son groupe → point de départ dans la rotation
-      const grpAgents=AGENTS.filter(a=>a.spec!=='IDE'&&a.spec!=='Nuit'&&a.grp===ag.grp);
-      const agRank=grpAgents.indexOf(ag);
-
-      // Blocs de travail de cet agent sur le cycle courant
-      const sorted=[...finalWorkDays].sort((a,b)=>a-b);
-      const blocs=buildBlocs(sorted);
-
-      blocs.forEach((bloc, blocIdxInCycle)=>{
-        // Index de bloc global = décalage du cycle + index dans le cycle
-        // (garantit la continuité d'un cycle à l'autre)
-        const globalBlocIdx=cycleOffset + blocIdxInCycle;
-
-        // Combinaison de ce bloc pour cet agent :
-        // on décale par le rang de l'agent pour que deux agents voisins
-        // ne soient jamais sur la même combinaison.
-        const rotIdx=(agRank + globalBlocIdx) % nRot;
-        const {secId, code}=rotTable[rotIdx];
-
-        // Rotation mensuelle du secteur : cantou→nord→sud→cantou…
-        // L'horaire (code) ne change pas du tout.
-        let blocSecId = secId;
-        if(!ag.secteurFixe){
-          const _secRot = [RULES.secCantouId||'cantou', ...(RULES.secRotIds||['nord','sud'])];
-          const _baseIdx = _secRot.indexOf(ag.secteur);
-          if(_baseIdx >= 0){
-            const _moisDepart = cycleStart.getMonth();
-            const _moisBloc = addDays(cycleStart, bloc[0]).getMonth();
-            const _delta = ((_moisBloc - _moisDepart) + 12) % 12;
-            blocSecId = _secRot[(_baseIdx + _delta) % _secRot.length];
-          }
-        }
-
-        bloc.forEach(dayIdx=>{
-          const cur=planning[ag.id][dayIdx];
-          if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='')
-            planning[ag.id][dayIdx]=code;
-          if(!ag.secteurFixe){
-            if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-            secteurJour[ag.id][dayIdx]=blocSecId;
-          }
-        });
-      });
-
-    } else {
-      // IDE, AUX, AE et Nuit : pas de rotation secteur/horaire par bloc
-      finalWorkDays.forEach((dayIdx)=>{
-        const cur=planning[ag.id][dayIdx];
-        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='NU'||cur===''){
-          if(isNuit) planning[ag.id][dayIdx]='NU';
-          else planning[ag.id][dayIdx]='J';
-        }
-      });
-    }
-
-    // Jours off → Repos
+    const target=Math.round(workDays.length*(ag.taux||1.0));
+    workDays=workDays.slice(0,target);
+    if(!planning[ag.id]) planning[ag.id]={};
     for(let d=0;d<42;d++){
-      if(!finalWorkDays.includes(d)){
-        const cur=planning[ag.id][d];
-        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='NU')
-          planning[ag.id][d]='R';
-      }
+      const cur=planning[ag.id][d]||'';
+      if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='NU'||cur==='R'||cur==='RC'||cur==='')
+        planning[ag.id][d]=workDays.includes(d)?'NU':'R';
     }
   });
 
-  // ── Secteurs fixes (écrase la rotation pour les agents à secteur imposé) ──
-  const allSecIdsFixed=SECTEURS.map(s=>s.id);
-  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.secteurFixe&&ag.secteur&&allSecIdsFixed.includes(ag.secteur))
-    .forEach(ag=>{
-      for(let d=0;d<42;d++){
-        const v=planning[ag.id][d]||'';
-        if(v==='M'||v==='S'||v==='J'||v==='NU')
-          secteurJour[ag.id][d]=ag.secteur;
-      }
-    });
-
-  // ── Règles secteurs : rotation MENSUELLE cantou→nord→sud→cantou… ──────
-  //
-  //  PRINCIPE :
-  //  Chaque non-fixe a un rang (position dans la liste triée).
-  //  Son secteur = secOrder[(rang + moisEcoulés) % 3].
-  //  Si trop de non-fixes tombent sur cantou (> 3 - nbFixes), les excédents
-  //  sont redirigés vers nord ou sud alternativement.
-  //  → Cantou ne dépasse jamais 3 agents (fixes inclus).
-  //
-  //  La séquence est ancrée sur janvier 2024 pour rester prévisible.
-  (function applySecteurRules(){
-    const cantouId = RULES.secCantouId || 'cantou';
-    const rotIds = (RULES.secRotIds && RULES.secRotIds.length >= 2)
-      ? RULES.secRotIds
-      : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
-    if(rotIds.length < 2) return;
-
-    // Séquence : cantou(0) → nord(1) → sud(2) → cantou…
-    const secOrder = [cantouId, rotIds[0], rotIds[1]];
-
-    // Mois de référence : janvier 2024 = mois 0
-    const ORIGIN_MONTH = new Date('2024-01-01T00:00:00');
-    function monthsSinceOrigin(date){
-      return (date.getFullYear() - ORIGIN_MONTH.getFullYear()) * 12
-             + (date.getMonth() - ORIGIN_MONTH.getMonth());
-    }
-
-    const SHIFTS = ['M','J','S'];
-    const BASE_SEQ_G1 = [0,1,2,1,2,0,2,0,1];
-    const BASE_SEQ_G2 = [2,0,2,0,1,0,1,2,1,2];
-
-    [1,2].forEach(grp => {
-      const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
-      if(!groupAgents.length) return;
-
-      const fixesAll  = groupAgents.filter(ag=>ag.secteurFixe);
-      const nonFixes  = groupAgents.filter(ag=>!ag.secteurFixe)
-                          .sort((a,b)=>a.id.localeCompare(b.id));
-
-      const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
-      const blocs     = buildBlocs(groupDays);
-      const baseSeq   = grp===1 ? BASE_SEQ_G1 : BASE_SEQ_G2;
-
-      // Nombre max de non-fixes autorisés au cantou (pour rester à 3 avec les fixes)
-      const nbFixesCantou = fixesAll.filter(ag=>ag.secteur===cantouId).length;
-      const maxCantouNF   = Math.max(1, 3 - nbFixesCantou);
-
-      // Pré-calculer le secteur de chaque non-fixe pour chaque mois possible
-      // (calculé à la volée dans la boucle bloc)
-
-      // Assigner horaires fixes
-      fixesAll.forEach((ag, i) => {
-        if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
-        blocs.forEach((bloc, bi) => {
-          if(bi >= baseSeq.length) return;
-          const shiftIdx = (baseSeq[bi] + i) % 3;
-          bloc.forEach(d => {
-            planning[ag.id][d]           = SHIFTS[shiftIdx];
-            secteurJour[ag.id][d]         = ag.secteur || cantouId;
-            secteurJour[ag.id][String(d)] = ag.secteur || cantouId;
-          });
-        });
-      });
-
-      // Assigner horaires et secteurs non-fixes BLOC PAR BLOC
-      // → pour chaque bloc, recalculer qui va au cantou ce mois-là
-      blocs.forEach((bloc, bi) => {
-        if(bi >= baseSeq.length) return;
-
-        const blocDate  = addDays(cycleStart, bloc[0]);
-        const moisEcoul = monthsSinceOrigin(blocDate);
-
-        // Calculer le secteur naïf de chaque non-fixe pour ce mois
-        // Puis plafonner le cantou à maxCantouNF
-        let cantouRestants = maxCantouNF;
-        let nordExtra = 0, sudExtra = 0;
-
-        nonFixes.forEach((ag, i) => {
-          if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
-
-          const rank     = i;
-          const shiftIdx = (baseSeq[bi] + rank) % 3;
-          const shift    = SHIFTS[shiftIdx];
-
-          const secIdx = (i + moisEcoul) % 3;
-          let secId;
-          if(secIdx === 0) { // veut cantou
-            if(cantouRestants > 0) {
-              secId = cantouId;
-              cantouRestants--;
-            } else {
-              // Rediriger vers nord ou sud (alterner pour équilibrer)
-              if(nordExtra <= sudExtra) { secId = rotIds[0]; nordExtra++; }
-              else                      { secId = rotIds[1]; sudExtra++; }
-            }
-          } else {
-            secId = secOrder[secIdx];
-          }
-
-          bloc.forEach(d => {
-            planning[ag.id][d]           = shift;
-            secteurJour[ag.id][d]         = secId;
-            secteurJour[ag.id][String(d)] = secId;
-          });
-        });
-      });
-    });
-  })();
-
-    // ── PAS de passe d'équité aléatoire : la rotation régulière garantit
-  //    l'équité M/S/J sur le long terme par construction. ──────────────
-  // On conserve equalizeShiftsPerAgent() uniquement pour les agents avec
-  // horaireInterdit (2 codes au lieu de 3) qui ne sont pas parfaitement
-  // équilibrés par la rotation 9-blocs.
-  const anyRestricted=AGENTS.some(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit'&&ag.contraintes&&ag.contraintes.horaireInterdit);
-  if(anyRestricted) equalizeShiftsPerAgent();
-
-  // ── PASSE D'ÉQUITÉ INTER-AGENTS ──────────────────────────────────────
-  equalizeInterAgents(cycleStart);
-
-  (window.renderAll || renderAll)();
-  (window.supabaseSave || supabaseSave)();
+  (window.renderAll||renderAll)();
+  (window.supabaseSave||supabaseSave)();
 }
 
-// ── Équilibrage inter-agents : WE, dimanches, fériés, M/S/J ──────────
-// Passe post-génération : compare les agents du même groupe/spécialité
-// et échange des jours pour réduire les écarts.
+
 function equalizeInterAgents(cycleStart){
   const SHIFT=['M','S','J'];
   const msDay=1000*60*60*24;
@@ -3371,7 +3134,7 @@ function equalizeInterAgents(cycleStart){
   const specGroupsList=[];
   ['AS'].forEach(spec=>{
     [1,2].forEach(grp=>{
-      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp&&!a.cyclePattern);
+      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp);
       if(ga.length>=2) specGroupsList.push(ga);
     });
   });
@@ -3496,7 +3259,7 @@ function equalizeInterAgents(cycleStart){
 // Après la passe principale, on ne touche plus aux secteurs (déjà optimaux).
 function equalizeShiftsPerAgent(){
   const SHIFT_CODES=['M','S','J'];
-  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit'&&!ag.cyclePattern).forEach(ag=>{
+  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit').forEach(ag=>{
     for(let pass=0;pass<30;pass++){
       let cnt={M:0,S:0,J:0};
       let byCode={M:[],S:[],J:[]};
@@ -7221,7 +6984,7 @@ async function supabaseLoad(){
 // ── Exposition globale (nécessaire car let/const isolent le scope) ──
 window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
-window._doAutoFillFresh = _doAutoFillFresh;
+window._doAutoFill = _doAutoFill;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
 
@@ -7440,35 +7203,7 @@ function printOneQR(key){
   w.document.write('<div class="url">' + data.url + '</div>');
   w.document.write('<div class="foot">Scannez pour accéder à votre planning</div>');
   w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
-  w.document.write('
-<!-- ── Modale de confirmation (remplace confirm() bloqué) ── -->
-<div id="appConfirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center;">
-  <div style="background:#13161f;border:1px solid #303654;border-radius:12px;padding:28px 32px;max-width:380px;width:90vw;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;">
-    <div id="appConfirmTitle" style="font-size:1.1rem;font-weight:900;letter-spacing:1px;color:#38bdf8;margin-bottom:10px;text-transform:uppercase;"></div>
-    <div id="appConfirmMsg" style="font-size:.82rem;color:#8491b0;margin-bottom:22px;line-height:1.5;white-space:pre-line;"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button id="appConfirmCancel" style="background:#1d2235;border:1px solid #303654;color:#8491b0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;">Annuler</button>
-      <button id="appConfirmOk" style="background:#38bdf8;color:#0c0e14;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;border:none;">Confirmer</button>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  function showConfirmModal(title, msg, onOk){
-    var ov=document.getElementById('appConfirmOverlay');
-    document.getElementById('appConfirmTitle').textContent=title;
-    document.getElementById('appConfirmMsg').textContent=msg;
-    ov.style.display='flex';
-    var ok=document.getElementById('appConfirmOk');
-    var cancel=document.getElementById('appConfirmCancel');
-    function close(){ ov.style.display='none'; ok.onclick=null; cancel.onclick=null; }
-    ok.onclick=function(){ close(); if(onOk) onOk(); };
-    cancel.onclick=function(){ close(); };
-  }
-  window.showConfirmModal=showConfirmModal;
-})();
-</script>
-</body></html>');
+  w.document.write('</body></html>');
   w.document.close();
 }
 
