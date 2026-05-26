@@ -2845,7 +2845,11 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  if(!confirm('Regénérer le roulement ?\nAttention : les codes M/S/J/R seront recalculés.\nLes congés (CA/MO/CF…) sont conservés.')) return;
+  showConfirmModal('Regénérer le roulement ?',
+    'Les codes M/S/J/R seront recalculés. Les congés (CA/MO/CF…) sont conservés.',
+    function(){ _doAutoFillFresh(); });
+}
+function _doAutoFillFresh(){
   // Vider le planning en mémoire avant de regénérer
   AGENTS.forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
@@ -7435,7 +7439,35 @@ function printOneQR(key){
   w.document.write('<div class="url">' + data.url + '</div>');
   w.document.write('<div class="foot">Scannez pour accéder à votre planning</div>');
   w.document.write('<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>');
-  w.document.write('</body></html>');
+  w.document.write('
+<!-- ── Modale de confirmation (remplace confirm() bloqué) ── -->
+<div id="appConfirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:#13161f;border:1px solid #303654;border-radius:12px;padding:28px 32px;max-width:380px;width:90vw;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;">
+    <div id="appConfirmTitle" style="font-size:1.1rem;font-weight:900;letter-spacing:1px;color:#38bdf8;margin-bottom:10px;text-transform:uppercase;"></div>
+    <div id="appConfirmMsg" style="font-size:.82rem;color:#8491b0;margin-bottom:22px;line-height:1.5;white-space:pre-line;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="appConfirmCancel" style="background:#1d2235;border:1px solid #303654;color:#8491b0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;">Annuler</button>
+      <button id="appConfirmOk" style="background:#38bdf8;color:#0c0e14;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.85rem;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;border:none;">Confirmer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  function showConfirmModal(title, msg, onOk){
+    var ov=document.getElementById('appConfirmOverlay');
+    document.getElementById('appConfirmTitle').textContent=title;
+    document.getElementById('appConfirmMsg').textContent=msg;
+    ov.style.display='flex';
+    var ok=document.getElementById('appConfirmOk');
+    var cancel=document.getElementById('appConfirmCancel');
+    function close(){ ov.style.display='none'; ok.onclick=null; cancel.onclick=null; }
+    ok.onclick=function(){ close(); if(onOk) onOk(); };
+    cancel.onclick=function(){ close(); };
+  }
+  window.showConfirmModal=showConfirmModal;
+})();
+</script>
+</body></html>');
   w.document.close();
 }
 
