@@ -2845,9 +2845,9 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  showConfirmModal('Regénérer le roulement ?',
+  window.showConfirmModal('Regénérer le roulement ?',
     'Les codes M/S/J/R seront recalculés. Les congés (CA/MO/CF…) sont conservés.',
-    function(){ _doAutoFillFresh(); });
+    function(){ window._doAutoFillFresh(); });
 }
 function _doAutoFillFresh(){
   // Vider le planning en mémoire avant de regénérer
@@ -3060,30 +3060,57 @@ function autoFill(){
         const patCode=ag.cyclePattern[d];
         const cur=planning[ag.id][d]||'';
         if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur===''){
-          // Vérifier joursOff : si ce jour est interdit pour cet agent, forcer R
           let forceOff=false;
           if(finalWorkDays.length<(ag.cyclePattern.filter(c=>c!=='R').length)){
-            // L'agent a un taux réduit ou joursOff → ne mettre du travail
-            // que sur les finalWorkDays
             forceOff = (patCode!=='R') && !finalWorkDays.includes(d);
           }
           planning[ag.id][d] = forceOff ? 'R' : patCode;
         }
       }
-      // Secteur : utiliser la rotation mensuelle habituelle sur les jours travaillés
+      // ── Secteur par bloc : rotation pour garantir 1 agent par (secteur × horaire).
+      //    Les agents AS sont divisés en sous-groupes partageant le même cyclePattern.
+      //    Les agents secteurFixe gardent leur secteur.
+      //    Les agents non-fixes du sous-groupe se répartissent les secteurs restants,
+      //    en tournant d'un bloc à l'autre (cycleOffset assure la continuité inter-cycles).
       if(!ag.secteurFixe){
         const _secRot=[RULES.secCantouId||'cantou',...(RULES.secRotIds||['nord','sud'])];
-        const _baseIdx=_secRot.indexOf(ag.secteur);
-        for(let d=0;d<42;d++){
-          const v=planning[ag.id][d];
-          if(v==='M'||v==='S'||v==='J'){
-            const _moisDepart=cycleStart.getMonth();
-            const _moisBloc=addDays(cycleStart,d).getMonth();
-            const _delta=((_moisBloc-_moisDepart)+12)%12;
-            if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-            secteurJour[ag.id][d]=_baseIdx>=0?_secRot[(_baseIdx+_delta)%_secRot.length]:ag.secteur;
+
+        // Sous-groupe complet (fixe + non-fixe) partageant ce pattern
+        const _fullSub=AGENTS.filter(a=>
+          a.spec==='AS' && a.grp===ag.grp && a.cyclePattern &&
+          JSON.stringify(a.cyclePattern)===JSON.stringify(ag.cyclePattern)
+        );
+        // Secteurs déjà pris par les agents secteurFixe du sous-groupe
+        const _fixedSecs=_fullSub.filter(a=>a.secteurFixe).map(a=>a.secteur||'cantou');
+        // Secteurs disponibles pour rotation (dans l'ordre de _secRot, sans les fixés)
+        const _availSecs=_secRot.filter(s=>!_fixedSecs.includes(s));
+        const _nAvail=_availSecs.length||1;
+
+        // Rang parmi les non-fixes du sous-groupe
+        const _nonFixed=_fullSub.filter(a=>!a.secteurFixe);
+        const _subRank=_nonFixed.indexOf(ag);
+
+        // Blocs de jours travaillés du pattern
+        const _workDaysPat=ag.cyclePattern.map((c,i)=>c!=='R'?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
+        const _blocsPatRaw=[];
+        if(_workDaysPat.length){
+          let _b=[_workDaysPat[0]];
+          for(let _i=1;_i<_workDaysPat.length;_i++){
+            if(_workDaysPat[_i]===_workDaysPat[_i-1]+1) _b.push(_workDaysPat[_i]);
+            else{ _blocsPatRaw.push(_b); _b=[_workDaysPat[_i]]; }
           }
+          _blocsPatRaw.push(_b);
         }
+
+        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+        _blocsPatRaw.forEach((_bloc, _bi)=>{
+          const _secIdx=(_subRank + _bi + cycleOffset) % _nAvail;
+          _bloc.forEach(_d=>{
+            if(planning[ag.id][_d]==='M'||planning[ag.id][_d]==='S'||planning[ag.id][_d]==='J'){
+              secteurJour[ag.id][_d]=_availSecs[_secIdx];
+            }
+          });
+        });
       }
       return; // passe à l'agent suivant
     }
@@ -3371,7 +3398,7 @@ function equalizeInterAgents(cycleStart){
   const specGroupsList=[];
   ['AS'].forEach(spec=>{
     [1,2].forEach(grp=>{
-      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp);
+      const ga=AGENTS.filter(a=>a.spec===spec&&a.grp===grp&&!a.cyclePattern);
       if(ga.length>=2) specGroupsList.push(ga);
     });
   });
@@ -3496,7 +3523,7 @@ function equalizeInterAgents(cycleStart){
 // Après la passe principale, on ne touche plus aux secteurs (déjà optimaux).
 function equalizeShiftsPerAgent(){
   const SHIFT_CODES=['M','S','J'];
-  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit').forEach(ag=>{
+  AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit'&&!ag.cyclePattern).forEach(ag=>{
     for(let pass=0;pass<30;pass++){
       let cnt={M:0,S:0,J:0};
       let byCode={M:[],S:[],J:[]};
@@ -7221,6 +7248,7 @@ async function supabaseLoad(){
 // ── Exposition globale (nécessaire car let/const isolent le scope) ──
 window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
+window._doAutoFillFresh = _doAutoFillFresh;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
 
