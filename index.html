@@ -1147,6 +1147,7 @@ return {makeCanvas: makeQRCanvas};
     <label style="font-size:.72rem;color:var(--muted2)">Début cycle :</label>
     <input type="date" id="startDate">
     <button class="bwarn" onclick="autoFillFresh()">⚡ Générer roulement</button>
+    <button class="bdng" onclick="window.resetEtGenere()" title="Vide Supabase et regénère">🔄 Reset+Générer</button>
     <button class="bsec" onclick="openEquityPanel()" title="Vérifier et rééquilibrer la répartition M/S/J entre agents">⚖️ Équité M/S/J</button>
     <button class="bsec" onclick="resetAll()">↺ Reset</button>
     <button class="bsec" onclick="toggleLight()">☀ Mode clair</button>
@@ -3117,76 +3118,68 @@ function autoFill(){
       : SECTEURS.filter(s=>s.id!==cantouId).map(s=>s.id);
     if(rotIds.length < 2) return;
 
+    // Séquences de base des horaires par bloc (extraites du roulement parfait)
+    const SHIFTS = ['M','J','S'];
+    const BASE_SEQ_G1 = [0,1,2,1,2,0,2,0,1]; // M J S J S M S M J (indices dans SHIFTS)
+    const BASE_SEQ_G2 = [2,0,2,0,1,0,1,2,1,2]; // S M S M J M J S J S
+
     [1,2].forEach(grp => {
       const groupAgents = AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false&&ag.grp===grp);
       if(!groupAgents.length) return;
 
       const fixesCantou = groupAgents.filter(ag=>ag.secteurFixe&&ag.secteur===cantouId);
-      const nonFixes    = groupAgents.filter(ag=>!ag.secteurFixe)
-                           .sort((a,b)=>a.id.localeCompare(b.id));
+      const nonFixes = groupAgents.filter(ag=>!ag.secteurFixe)
+                        .sort((a,b)=>a.id.localeCompare(b.id));
 
-      const nbCantouMois = Math.max(0, 3 - fixesCantou.length);
       const groupDays = (grp===1?G1_DAYS:G2_DAYS).slice().sort((a,b)=>a-b);
       const blocs = buildBlocs(groupDays);
+      const baseSeq = grp===1 ? BASE_SEQ_G1 : BASE_SEQ_G2;
 
-      // ── Affectation mensuelle ──
-      // On répartit les non-fixes : les premiers au CANTOU, puis NORD, puis SUD
-      const moisSecteur = {};
-      nonFixes.forEach((ag,i)=>{
-        if(i < nbCantouMois)             moisSecteur[ag.id] = cantouId;
-        else if(i < nbCantouMois+3)      moisSecteur[ag.id] = rotIds[0]; // nord
-        else                             moisSecteur[ag.id] = rotIds[1]; // sud
+      // Répartir les non-fixes en 3 groupes de secteurs
+      // Tri : les 2-3 premiers au CANTOU, 3 suivants NORD, 3 derniers SUD
+      const nbCantouMois = Math.max(0, 3 - fixesCantou.length);
+      const secOrder = [cantouId, rotIds[0], rotIds[1]]; // [cantou, nord, sud]
+
+      // Affecter chaque agent à un secteur ET un rang (0,1,2) dans ce secteur
+      const assignments = []; // {ag, sec, rank}
+      let cantouCount=0, nordCount=0, sudCount=0;
+      nonFixes.forEach((ag, i) => {
+        let sec, rank;
+        if(i < nbCantouMois){
+          sec = cantouId; rank = cantouCount + fixesCantou.length; cantouCount++;
+        } else if(i < nbCantouMois+3){
+          sec = rotIds[0]; rank = nordCount; nordCount++;
+        } else {
+          sec = rotIds[1]; rank = sudCount; sudCount++;
+        }
+        assignments.push({ag, sec, rank});
       });
 
-      // Initialiser secteurJour au secteur du mois
-      nonFixes.forEach(ag=>{
-        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-        groupDays.forEach(d=>{
-          secteurJour[ag.id][d]=moisSecteur[ag.id];
-          secteurJour[ag.id][String(d)]=moisSecteur[ag.id];
-        });
-      });
-      fixesCantou.forEach(ag=>{
-        if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-        groupDays.forEach(d=>{
-          secteurJour[ag.id][d]=cantouId;
-          secteurJour[ag.id][String(d)]=cantouId;
-        });
+      // Agents fixes
+      fixesCantou.forEach((ag, i) => {
+        assignments.push({ag, sec:cantouId, rank:i, fixe:true});
       });
 
-      // ── Échanges de blocs : 4 par cycle (2 NORD + 2 SUD → CANTOU) ──
-      const cantouMoisAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===cantouId);
-      const nordAgents = nonFixes.filter(ag=>moisSecteur[ag.id]===rotIds[0]);
-      const sudAgents  = nonFixes.filter(ag=>moisSecteur[ag.id]===rotIds[1]);
+      // Assigner horaires et secteurs par bloc
+      assignments.forEach(({ag, sec, rank, fixe}) => {
+        if(!secteurJour[ag.id]) secteurJour[ag.id] = {};
 
-      if(cantouMoisAgents.length > 0){
-        // 2 NORD + 2 SUD font un échange (les 2 premiers de chaque liste)
-        const nbEchanges = Math.min(2, Math.floor(blocs.length/2));
-        const switchList = [
-          ...nordAgents.slice(0, nbEchanges),
-          ...sudAgents.slice(0, nbEchanges)
-        ];
-        // Blocs espacés : indices 1, 3, 5, 7 (évite le 1er et dernier bloc)
-        const blocIndices = [1,3,5,7].filter(i=>i<blocs.length);
+        blocs.forEach((bloc, bi) => {
+          if(bi >= baseSeq.length) return;
 
-        switchList.forEach((switcher, idx)=>{
-          if(idx >= blocIndices.length) return;
-          const bloc = blocs[blocIndices[idx]];
-          const taker = cantouMoisAgents[idx % cantouMoisAgents.length];
-          if(!bloc||!taker) return;
-          const switcherSec = moisSecteur[switcher.id];
-          bloc.forEach(d=>{
-            secteurJour[switcher.id][d]=cantouId;
-            secteurJour[switcher.id][String(d)]=cantouId;
-            secteurJour[taker.id][d]=switcherSec;
-            secteurJour[taker.id][String(d)]=switcherSec;
+          // Horaire pour cet agent dans ce bloc : décalé par rang
+          const shiftIdx = (baseSeq[bi] + rank) % 3;
+          const shift = SHIFTS[shiftIdx];
+
+          // Affecter chaque jour du bloc
+          bloc.forEach(d => {
+            planning[ag.id][d] = shift;
+            secteurJour[ag.id][d] = sec;
+            secteurJour[ag.id][String(d)] = sec;
           });
         });
-      }
+      });
     });
-
-    // Note : le 3/3/3 est garanti par la logique d'échange de blocs.
-    // On ne fait PAS d'équilibrage a posteriori pour ne pas casser le secteur mensuel.
   })();
 
     // ── PAS de passe d'équité aléatoire : la rotation régulière garantit
@@ -7130,6 +7123,20 @@ window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
+
+window.resetEtGenere = async function(){
+  if(!confirm('Vider toutes les données Supabase et regénérer le roulement ?\nCette action est irréversible.')) return;
+  // Vider planning en mémoire
+  AGENTS.forEach(a=>{
+    planning[a.id]={};
+    mods[a.id]={};
+    secteurJour[a.id]={};
+  });
+  // Sauvegarder état vide en Supabase
+  await supabaseSave();
+  // Regénérer
+  autoFill();
+};
 window.supabaseLoad = supabaseLoad;
 
 // ═══════════════════════════════════════════════════════
