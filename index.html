@@ -2859,7 +2859,7 @@ function autoFillFresh(){
   window._doAutoFillFresh();
 }
 
-function _doAutoFill(){
+function _doAutoFillFresh(){
   AGENTS.forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
     for(let d=0;d<42;d++){
