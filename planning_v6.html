@@ -2838,7 +2838,25 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
-  if(!confirm('Regénérer le roulement ?\nAttention : les codes M/S/J/R seront recalculés.\nLes congés (CA/MO/CF\u2026) sont conservés.')) return;
+  // Confirmation simple par double-clic ou prompt-like via innerHTML du bouton
+  var btn = document.querySelector('button[onclick="autoFillFresh()"]');
+  if(btn && btn.getAttribute('data-confirm') !== '1'){
+    btn.setAttribute('data-confirm','1');
+    var origText = btn.innerHTML;
+    btn.innerHTML = '⚠️ Cliquez encore pour confirmer';
+    btn.style.background = '#f87171';
+    setTimeout(function(){
+      btn.setAttribute('data-confirm','0');
+      btn.innerHTML = origText;
+      btn.style.background = '';
+    }, 3000);
+    return;
+  }
+  if(btn){ btn.setAttribute('data-confirm','0'); btn.innerHTML = '⚡ Générer roulement'; btn.style.background=''; }
+  _doAutoFill();
+}
+
+function _doAutoFill(){
   AGENTS.forEach(a=>{
     if(!planning[a.id]) planning[a.id]={};
     for(let d=0;d<42;d++){
@@ -6963,6 +6981,7 @@ async function supabaseLoad(){
 // ── Exposition globale (nécessaire car let/const isolent le scope) ──
 window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
+window._doAutoFill = _doAutoFill;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
 
