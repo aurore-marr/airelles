@@ -2538,11 +2538,38 @@ let AGENTS = [
   {id:'nuit3',  poste:'N03', nom:'NUIT Poste N03',        taux:1.0, grp:1, spec:'Nuit', statut:'con', secteur:'sud',    nuitHoraire:'NU1', contraintes:{joursOff:[],cycleReduit:false}},
 ];
 
-// G1 : S1(M,ME,S,D) S2(J,V) S3(M,ME,S,D) S4(J,V) S5(M,ME,S,D) S6(L,J,V)
-const G1_DAYS=[1,2,5,6,7,10,11,15,16,19,20,21,24,25,29,30,33,34,35,38,39]; // S1(M,ME,S,D) S2(L,J,V) x3
-// G2 : S1(L,J,V,S) S2(M,ME,D) S3(L,J,V,S) S4(M,ME,D) S5(L,J,V,S) S6(M,ME,D)
-const G2_DAYS=[0,3,4,8,9,12,13,14,17,18,22,23,26,27,28,31,32,36,37,40,41]; // S1(L,J,V) S2(M,ME,S,D) x3
+// Roulement 18 semaines — Groupe 1 (jours travaillés = M, S, J ; R = repos)
+// Cycle de 126 jours (18 × 7), index 0=L, 1=M, 2=Me, 3=J, 4=V, 5=S, 6=D
+const G1_PATTERN = [
+  // S1        S2        S3        S4        S5        S6
+  'R','S','S','R','R','J','J',  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',
+  // S7        S8        S9
+  'M','R','R','S','S','R','R',  'R','M','M','R','R','S','S',  'S','R','R','J','J','R','R',
+  // S10       S11       S12
+  'R','M','M','R','R','S','S',  'S','R','R','J','J','R','R',  'R','S','S','R','R','J','J',
+  // S13       S14       S15
+  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',  'M','R','R','S','S','R','R',
+  // S16       S17       S18
+  'R','J','J','R','R','M','M',  'M','R','R','S','S','R','R',  'R','M','M','R','R','S','S',
+  'S','R','R','J','J','R','R',  'R','S','S','R','R','J','J',  'J','R','R','M','M','R','R',
+];
+const G1_DAYS = G1_PATTERN.map((v,i)=>v!=='R'?i:-1).filter(i=>i>=0);
 
+// Roulement 18 semaines — Groupe 2
+const G2_PATTERN = [
+  // S1        S2        S3        S4        S5        S6
+  'M','R','R','S','S','R','R',  'R','M','M','R','R','S','S',  'S','R','R','J','J','R','R',
+  // S7        S8        S9
+  'R','S','S','R','R','J','J',  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',
+  // S10       S11       S12
+  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',  'M','R','R','S','S','R','R',
+  // S13       S14       S15
+  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',  'M','R','R','S','S','R','R',
+  // S16       S17       S18
+  'R','M','M','R','R','S','S',  'S','R','R','J','J','R','R',  'R','S','S','R','R','J','J',
+  'J','R','R','M','M','R','R',  'R','J','J','R','R','M','M',  'M','R','R','S','S','R','R',
+];
+const G2_DAYS = G2_PATTERN.map((v,i)=>v!=='R'?i:-1).filter(i=>i>=0);
 let planning={}, mods={}, secteurJour={};
 
 // ═══════════════════════════════════════════════════════
@@ -2699,7 +2726,7 @@ const FERIES_FIXES = [
 function getFeriesTravailles(agId, cycleStart){
   const CODES_TRAVAIL = ['M','S','J','NU'];
   const result = []; // [{date, label}]
-  for(let d=0; d<42; d++){
+  for(let d=0;  d<126; d++){
     const dt = addDays(cycleStart, d);
     if(!isFerie(dt)) continue;
     const v = planning[agId] ? (planning[agId][d]||'') : '';
@@ -2838,32 +2865,27 @@ function cellHeures(agId,dayIdx){
 const DN_IDX=['L','M','ME','J','V','S','D'];
 
 function autoFillFresh(){
+  // Confirmation double-clic (confirm() bloqué sur certains hébergeurs)
   var btn = document.querySelector('button[onclick="autoFillFresh()"]');
   if(btn && btn.getAttribute('data-confirm') !== '1'){
     btn.setAttribute('data-confirm','1');
-    var origText = btn.innerHTML;
+    var origHTML = btn.innerHTML;
     btn.innerHTML = '⚠️ Cliquez encore pour confirmer';
     btn.style.background = '#f87171';
     setTimeout(function(){
       btn.setAttribute('data-confirm','0');
-      btn.innerHTML = origText;
+      btn.innerHTML = origHTML;
       btn.style.background = '';
     }, 3000);
     return;
   }
-  if(btn){ 
-    btn.setAttribute('data-confirm','0'); 
-    btn.innerHTML = '⚡ Générer roulement'; 
-    btn.style.background='';
-  }
-  window._doAutoFillFresh();
-}
+  if(btn){ btn.setAttribute('data-confirm','0'); btn.innerHTML='⚡ Générer roulement'; btn.style.background=''; }
 
-function _doAutoFillFresh(){
-  AGENTS.forEach(a=>{
+  // Vider les codes horaires (préserver les congés CA/MO/CF/AT/FO/GR/EM)
+  AGENTS.forEach(function(a){
     if(!planning[a.id]) planning[a.id]={};
-    for(let d=0;d<42;d++){
-      const v=planning[a.id][d]||'';
+    for(var d=0; d<126;d++){
+      var v=planning[a.id][d]||'';
       if(!v||v==='M'||v==='S'||v==='J'||v==='NU'||v==='R'||v==='RC') planning[a.id][d]='';
     }
     secteurJour[a.id]={};
@@ -2872,29 +2894,20 @@ function _doAutoFillFresh(){
 }
 
 function autoFill(){
-  // Préserver les congés existants
-  AGENTS.filter(a=>a.actif!==false).forEach(a=>{
-    if(!planning[a.id]) planning[a.id]={};
-    for(let d=0;d<42;d++){
-      const v=planning[a.id][d]||'';
-      if(!v||v==='M'||v==='S'||v==='J'||v==='NU'||v==='R'||v==='RC') planning[a.id][d]='';
-    }
-    secteurJour[a.id]={};
-  });
+  var cycleStart = getStart();
 
-  const cycleStart=getStart();
+  // ═══════════════════════════════════════════════════════
+  //  Numéro de cycle depuis l'origine (2024-01-01)
+  //  Utilisé pour la rotation mensuelle des secteurs
+  // ═══════════════════════════════════════════════════════
+  var ORIGIN = new Date('2024-01-01T00:00:00');
+  var cycleNum = Math.floor(Math.round((cycleStart - ORIGIN) / 86400000) / 42);
 
-  // ══════════════════════════════════════════════════════════
-  //  ROULEMENT FIXE AS (issu du tableau Excel)
-  //  Chaque agent AS a un pattern de 42 codes (M/S/J/R).
-  //  Les secteurs tournent par bloc au sein de chaque sous-groupe
-  //  de façon à garantir 3 agents par horaire ET 3 par secteur
-  //  chaque jour travaillé.
-  // ══════════════════════════════════════════════════════════
-
-  // Patterns horaires 42 jours par agent (index 0 = lundi S1)
-  const AS_PATTERNS = {
-    // Groupe 1
+  // ═══════════════════════════════════════════════════════
+  //  PATTERNS HORAIRES AS — 42 jours par agent
+  //  R = repos, M = matin, S = soir, J = journée
+  // ═══════════════════════════════════════════════════════
+  var AS_PAT = {
     g1_1:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
     g1_2:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
     g1_3:['R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R'],
@@ -2904,7 +2917,6 @@ function autoFill(){
     g1_7:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
     g1_8:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
     g1_9:['R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R'],
-    // Groupe 2
     g2_1:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
     g2_2:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
     g2_3:['M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M'],
@@ -2913,149 +2925,150 @@ function autoFill(){
     g2_6:['J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S','S','R','R','J','J','R','R','R','S','S','R','R','J','J'],
     g2_7:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'],
     g2_8:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'],
-    g2_9:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','J','J','R','R','S','S'],
+    g2_9:['S','R','R','J','J','R','R','R','S','S','R','R','J','J','J','R','R','M','M','R','R','R','J','J','R','R','M','M','M','R','R','S','S','R','R','R','M','M','R','R','S','S'],
   };
 
-  // Secteurs par sous-groupe.
-  // avail = secteurs disponibles (hors agents secteurFixe du même sous-groupe).
-  // subRank = rang dans les agents non-fixes du sous-groupe.
-  const SEC_ROT = [
-    RULES.secCantouId||'cantou',
-    ...(RULES.secRotIds && RULES.secRotIds.length>=2 ? RULES.secRotIds : ['nord','sud'])
-  ];
-  const AS_SEC_INFO = {
-    // Groupe 1 — sous-groupe A (g1_1/2/3): avail=cantou,nord,sud
-    g1_1:{avail:SEC_ROT, subRank:0},
-    g1_2:{avail:SEC_ROT, subRank:1},
-    g1_3:{avail:SEC_ROT, subRank:2},
-    // Groupe 1 — sous-groupe B (g1_4/5/6)
-    g1_4:{avail:SEC_ROT, subRank:0},
-    g1_5:{avail:SEC_ROT, subRank:1},
-    g1_6:{avail:SEC_ROT, subRank:2},
-    // Groupe 1 — sous-groupe C (g1_7 fixe cantou → g1_8/9 → nord,sud)
-    g1_7:{avail:null, fixedSec:'cantou'},
-    g1_8:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:0},
-    g1_9:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:1},
-    // Groupe 2 — sous-groupe A (g2_1/2/3)
-    g2_1:{avail:SEC_ROT, subRank:0},
-    g2_2:{avail:SEC_ROT, subRank:1},
-    g2_3:{avail:SEC_ROT, subRank:2},
-    // Groupe 2 — sous-groupe B (g2_6 fixe cantou → g2_4/5 → nord,sud)
-    g2_4:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:0},
-    g2_5:{avail:[SEC_ROT[1],SEC_ROT[2]], subRank:1},
-    g2_6:{avail:null, fixedSec:'cantou'},
-    // Groupe 2 — sous-groupe C (g2_7/8/9)
-    g2_7:{avail:SEC_ROT, subRank:0},
-    g2_8:{avail:SEC_ROT, subRank:1},
-    g2_9:{avail:SEC_ROT, subRank:2},
-  };
+  // ═══════════════════════════════════════════════════════
+  //  SECTEURS — règles :
+  //  • g1_7, g2_6 : CANTOU fixe permanent
+  //  • Tous les autres AS : rotation mensuelle (= par cycle de 42j)
+  //  • Chaque cycle : 1 agent de chaque sous-groupe horaire va au CANTOU
+  //    pour garantir 3 agents par horaire ET 3 par secteur chaque jour
+  //  • Rotation cantou : cycleNum % 3 détermine lequel des 3 va au cantou
+  //
+  //  G1 sous-groupes :
+  //    A = [g1_1,g1_2,g1_3] horaire S  → 1 au cantou, 1 nord, 1 sud (rotation)
+  //    B = [g1_4,g1_5,g1_6] horaire M  → 1 au cantou, 1 nord, 1 sud (rotation)
+  //    C = [g1_7(fixe),g1_8,g1_9] J    → g1_7=cantou, g1_8=nord, g1_9=sud
+  //
+  //  G2 sous-groupes :
+  //    A = [g2_1,g2_2,g2_3] horaire M  → 1 au cantou, 1 nord, 1 sud (rotation)
+  //    B = [g2_4,g2_5,g2_6(fixe)] J    → g2_6=cantou, g2_4=nord, g2_5=sud
+  //    C = [g2_7,g2_8,g2_9] horaire S  → 1 au cantou, 1 nord, 1 sud (rotation)
+  // ═══════════════════════════════════════════════════════
+  function getSecteurAS(agId){
+    var secs = SECTEURS.map(function(s){ return s.id; }); // [cantou, nord, sud]
+    var cantou = secs[0]||'cantou';
+    var nord   = secs[1]||'nord';
+    var sud    = secs[2]||'sud';
+    var cn = cycleNum;
 
-  // Décalage de cycle (continuité entre cycles)
-  const ORIGIN = new Date('2024-01-01T00:00:00');
-  const msDay  = 86400000;
-  const daysSinceOrigin = Math.round((cycleStart - ORIGIN) / msDay);
-  const cycleOffset = Math.round(daysSinceOrigin / 42);
+    // Fixes permanents
+    if(agId==='g1_7') return cantou;
+    if(agId==='g2_6') return cantou;
 
-  function buildBlocs(pat){
-    const work = pat.map((c,i)=>c!=='R'?i:-1).filter(i=>i>=0).sort((a,b)=>a-b);
-    if(!work.length) return [];
-    const blocs=[]; let b=[work[0]];
-    for(let i=1;i<work.length;i++){
-      if(work[i]===work[i-1]+1) b.push(work[i]);
-      else{ blocs.push(b); b=[work[i]]; }
+    // G1 sous-groupe A : rotation cantou
+    var G1A=['g1_1','g1_2','g1_3'];
+    if(G1A.indexOf(agId)>=0){
+      var i=G1A.indexOf(agId), ca=cn%3;
+      if(i===ca) return cantou;
+      var others=G1A.filter(function(_,k){return k!==ca;});
+      return others.indexOf(agId)===0 ? nord : sud;
     }
-    blocs.push(b);
-    return blocs;
+    // G1 sous-groupe B : rotation cantou
+    var G1B=['g1_4','g1_5','g1_6'];
+    if(G1B.indexOf(agId)>=0){
+      var i=G1B.indexOf(agId), ca=cn%3;
+      if(i===ca) return cantou;
+      var others=G1B.filter(function(_,k){return k!==ca;});
+      return others.indexOf(agId)===0 ? nord : sud;
+    }
+    // G1 sous-groupe C : g1_8=nord, g1_9=sud (cantou couvert par g1_7 fixe)
+    if(agId==='g1_8') return nord;
+    if(agId==='g1_9') return sud;
+
+    // G2 sous-groupe A : rotation cantou
+    var G2A=['g2_1','g2_2','g2_3'];
+    if(G2A.indexOf(agId)>=0){
+      var i=G2A.indexOf(agId), ca=cn%3;
+      if(i===ca) return cantou;
+      var others=G2A.filter(function(_,k){return k!==ca;});
+      return others.indexOf(agId)===0 ? nord : sud;
+    }
+    // G2 sous-groupe B : g2_4=nord, g2_5=sud (cantou couvert par g2_6 fixe)
+    if(agId==='g2_4') return nord;
+    if(agId==='g2_5') return sud;
+    // G2 sous-groupe C : rotation cantou
+    var G2C=['g2_7','g2_8','g2_9'];
+    if(G2C.indexOf(agId)>=0){
+      var i=G2C.indexOf(agId), ca=cn%3;
+      if(i===ca) return cantou;
+      var others=G2C.filter(function(_,k){return k!==ca;});
+      return others.indexOf(agId)===0 ? nord : sud;
+    }
+    // Fallback
+    return agId.split('_')[0]==='g1' ? nord : sud;
   }
 
-  // Appliquer le roulement à chaque agent AS
-  AGENTS.filter(ag=>ag.spec==='AS'&&ag.actif!==false).forEach(ag=>{
-    const pat = AS_PATTERNS[ag.id];
-    const secInfo = AS_SEC_INFO[ag.id];
-    if(!pat || !secInfo) return; // agent non géré par ce roulement
+  // ═══════════════════════════════════════════════════════
+  //  APPLICATION DU ROULEMENT AS
+  // ═══════════════════════════════════════════════════════
+  AGENTS.filter(function(ag){ return ag.spec==='AS' && ag.actif!==false; }).forEach(function(ag){
+    var pat = AS_PAT[ag.id];
+    if(!pat) return;
+    var sec = getSecteurAS(ag.id);
 
-    // Appliquer les horaires (en préservant les congés déjà saisis)
-    for(let d=0;d<42;d++){
-      const cur = planning[ag.id][d]||'';
-      if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur==='')
-        planning[ag.id][d] = pat[d];
-    }
-
-    // Appliquer les secteurs
-    if(!secteurJour[ag.id]) secteurJour[ag.id]={};
-    if(secInfo.fixedSec){
-      // Agent secteurFixe : toujours le même secteur
-      for(let d=0;d<42;d++){
-        const v=planning[ag.id][d];
-        if(v==='M'||v==='S'||v==='J'){
-          secteurJour[ag.id][d]=secInfo.fixedSec;
-          secteurJour[ag.id][String(d)]=secInfo.fixedSec;
-        }
-      }
-    } else {
-      // Rotation par bloc
-      const blocs = buildBlocs(pat);
-      const avail = secInfo.avail;
-      const n = avail.length;
-      blocs.forEach((bloc, bi)=>{
-        const sec = avail[(secInfo.subRank + bi + cycleOffset) % n];
-        bloc.forEach(d=>{
-          const v=planning[ag.id][d];
-          if(v==='M'||v==='S'||v==='J'){
-            secteurJour[ag.id][d]=sec;
-            secteurJour[ag.id][String(d)]=sec;
-          }
-        });
-      });
-    }
-  });
-
-  // ══════════════════════════════════════════════════════════
-  //  IDE, AUX, AE : alternance G1/G2 sur les jours du groupe
-  // ══════════════════════════════════════════════════════════
-  ['IDE','AUX','AE'].forEach(spec=>{
-    const list=AGENTS.filter(a=>a.spec===spec&&a.actif!==false);
-    list.forEach((ag,idx)=>{
-      const grpDays=(idx%2===0?G1_DAYS:G2_DAYS);
-      const ctr=ag.contraintes||{joursOff:[]};
-      const joursOff=ctr.joursOff||[];
-      let workDays=grpDays.filter(d=>{
-        if(!joursOff.length) return true;
-        const dt=addDays(cycleStart,d);
-        const dow=(dt.getDay()+6)%7;
-        return !joursOff.includes(dow);
-      });
-      const target=Math.round(workDays.length*(ag.taux||1.0));
-      workDays=workDays.slice(0,target);
-      if(!planning[ag.id]) planning[ag.id]={};
-      for(let d=0;d<42;d++){
-        const cur=planning[ag.id][d]||'';
-        if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='R'||cur==='RC'||cur==='')
-          planning[ag.id][d]=workDays.includes(d)?'J':'R';
-      }
-    });
-  });
-
-  // ══════════════════════════════════════════════════════════
-  //  NUIT
-  // ══════════════════════════════════════════════════════════
-  AGENTS.filter(ag=>ag.spec==='Nuit'&&ag.actif!==false).forEach(ag=>{
-    const grpDays=ag.grp===2?G2_DAYS:G1_DAYS;
-    const ctr=ag.contraintes||{joursOff:[]};
-    const joursOff=ctr.joursOff||[];
-    let workDays=grpDays.filter(d=>{
-      if(!joursOff.length) return true;
-      const dt=addDays(cycleStart,d);
-      const dow=(dt.getDay()+6)%7;
-      return !joursOff.includes(dow);
-    });
-    const target=Math.round(workDays.length*(ag.taux||1.0));
-    workDays=workDays.slice(0,target);
     if(!planning[ag.id]) planning[ag.id]={};
-    for(let d=0;d<42;d++){
-      const cur=planning[ag.id][d]||'';
-      if(!cur||cur==='M'||cur==='S'||cur==='J'||cur==='NU'||cur==='R'||cur==='RC'||cur==='')
-        planning[ag.id][d]=workDays.includes(d)?'NU':'R';
+    if(!secteurJour[ag.id]) secteurJour[ag.id]={};
+
+    for(var d=0; d<126;d++){
+      // Préserver les congés existants
+      var cur = planning[ag.id][d]||'';
+      var isConge = cur && cur!=='M'&&cur!=='S'&&cur!=='J'&&cur!=='R'&&cur!=='RC'&&cur!=='NU'&&cur!=='';
+      if(!isConge){
+        planning[ag.id][d] = pat[d];
+      }
+      // Secteur sur les jours travaillés
+      var v = isConge ? cur : pat[d];
+      if(v==='M'||v==='S'||v==='J'){
+        secteurJour[ag.id][d]   = sec;
+        secteurJour[ag.id][String(d)] = sec;
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════
+  //  IDE / AUX / AE
+  // ═══════════════════════════════════════════════════════
+  ['IDE','AUX','AE'].forEach(function(spec){
+    var list = AGENTS.filter(function(a){ return a.spec===spec && a.actif!==false; });
+    list.forEach(function(ag, idx){
+      var grpDays = idx%2===0 ? G1_DAYS : G2_DAYS;
+      var joursOff = (ag.contraintes&&ag.contraintes.joursOff)||[];
+      var workDays = grpDays.filter(function(d){
+        if(!joursOff.length) return true;
+        var dt = addDays(cycleStart, d);
+        return !joursOff.includes((dt.getDay()+6)%7);
+      });
+      var target = Math.round(workDays.length * (ag.taux||1.0));
+      workDays = workDays.slice(0, target);
+      if(!planning[ag.id]) planning[ag.id]={};
+      for(var d=0; d<126;d++){
+        var cur=planning[ag.id][d]||'';
+        var isConge=cur&&cur!=='M'&&cur!=='S'&&cur!=='J'&&cur!=='R'&&cur!=='RC'&&cur!=='NU'&&cur!=='';
+        if(!isConge) planning[ag.id][d] = workDays.indexOf(d)>=0 ? 'J' : 'R';
+      }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  //  NUIT
+  // ═══════════════════════════════════════════════════════
+  AGENTS.filter(function(ag){ return ag.spec==='Nuit' && ag.actif!==false; }).forEach(function(ag){
+    var grpDays = ag.grp===2 ? G2_DAYS : G1_DAYS;
+    var joursOff = (ag.contraintes&&ag.contraintes.joursOff)||[];
+    var workDays = grpDays.filter(function(d){
+      if(!joursOff.length) return true;
+      var dt = addDays(cycleStart, d);
+      return !joursOff.includes((dt.getDay()+6)%7);
+    });
+    var target = Math.round(workDays.length * (ag.taux||1.0));
+    workDays = workDays.slice(0, target);
+    if(!planning[ag.id]) planning[ag.id]={};
+    for(var d=0; d<126;d++){
+      var cur=planning[ag.id][d]||'';
+      var isConge=cur&&cur!=='M'&&cur!=='S'&&cur!=='J'&&cur!=='R'&&cur!=='RC'&&cur!=='NU'&&cur!=='';
+      if(!isConge) planning[ag.id][d] = workDays.indexOf(d)>=0 ? 'NU' : 'R';
     }
   });
 
@@ -3070,7 +3083,7 @@ function equalizeInterAgents(cycleStart){
 
   // Jours fériés du cycle
   const feriesSet=new Set();
-  for(let d=0;d<42;d++){
+  for(let d=0; d<126;d++){
     const dt=new Date(cycleStart.getTime()+d*msDay);
     const key=(dt.getMonth()+1)+'-'+dt.getDate();
     const feriesList=['1-1','5-1','5-8','7-14','8-15','11-1','11-11','12-25'];
@@ -3098,7 +3111,7 @@ function equalizeInterAgents(cycleStart){
   // Calcul des métriques d'un agent sur le cycle
   function metrics(agId){
     let m=0,s=0,j=0,we=0,dim=0,ferie=0;
-    for(let d=0;d<42;d++){
+    for(let d=0; d<126;d++){
       const v=planning[agId][d]||'';
       if(!SHIFT.includes(v)) continue;
       const dt=new Date(cycleStart.getTime()+d*msDay);
@@ -3154,7 +3167,7 @@ function equalizeInterAgents(cycleStart){
       // Chercher un jour WE où rich travaille et poor est en repos, et le jour
       // suivant ou précédent est aussi travaillé pour rich (éviter les blocs de 1)
       let swapped=false;
-      for(let d=0;d<42&&!swapped;d++){
+      for(let d=0; d<126&&!swapped;d++){
         const dt=new Date(cycleStart.getTime()+d*msDay);
         const dow=dt.getDay();
         if(dow!==0&&dow!==6) continue;
@@ -3190,7 +3203,7 @@ function equalizeInterAgents(cycleStart){
       const rich=mets[0], poor=mets[mets.length-1];
       if(rich.dim-poor.dim<=1) break;
       let swapped=false;
-      for(let d=0;d<42&&!swapped;d++){
+      for(let d=0; d<126&&!swapped;d++){
         const dt=new Date(cycleStart.getTime()+d*msDay);
         if(dt.getDay()!==0) continue;
         // Chercher deux agents : l'un avec trop de dim, l'autre avec moins, tous deux travaillent ce jour
@@ -3226,7 +3239,7 @@ function equalizeInterAgents(cycleStart){
     // ── Passe 4 : équilibrer M/S/J entre agents (inter-agents) ─────
     for(let pass=0;pass<80;pass++){
       let improved=false;
-      for(let d=0;d<42;d++){
+      for(let d=0; d<126;d++){
         const workers=agents.filter(a=>SHIFT.includes(planning[a.id][d]||''));
         if(workers.length<2) continue;
         // Chercher deux agents dont l'écart de code bénéficierait d'un échange
@@ -3263,7 +3276,7 @@ function equalizeShiftsPerAgent(){
     for(let pass=0;pass<30;pass++){
       let cnt={M:0,S:0,J:0};
       let byCode={M:[],S:[],J:[]};
-      for(let d=0;d<42;d++){
+      for(let d=0; d<126;d++){
         const v=planning[ag.id][d]||'';
         if(SHIFT_CODES.includes(v)){cnt[v]++;byCode[v].push(d);}
       }
@@ -3309,7 +3322,7 @@ function findSwapCandidates(agId, dayIdx, newCode){
     if(peerVal!==newCode) return;
     // Calculer les comptages de ce pair
     let cntPeer={M:0,S:0,J:0};
-    for(let d=0;d<42;d++){
+    for(let d=0; d<126;d++){
       const v=planning[peer.id][d]||'';
       if(['M','S','J'].includes(v)) cntPeer[v]++;
     }
@@ -3437,9 +3450,12 @@ function renderPlanning(spec){
     }
 
 
-    const workDays=ag.grp===1?G1_DAYS:G2_DAYS;
-    const tgt=Math.round(7*ag.taux);
-    let mC=0,sC=0,jC=0,weC=0;
+    const workDays = ag.grp===1 ? G1_DAYS : G2_DAYS;
+const pattern  = ag.grp===1 ? G1_PATTERN : G2_PATTERN;
+const tgt = Math.round(7*ag.taux);
+let mC=0, sC=0, jC=0, weC=0;
+const sm = getSec(ag.secteur);
+const statut = getAllStatuts().find(s=>s.id===ag.statut);
     const sm=getSec(ag.secteur);
     const statut=getAllStatuts().find(s=>s.id===ag.statut);
 
@@ -3644,7 +3660,7 @@ function renderPlanning(spec){
     h+=`<td colspan="${viewCount}" style="text-align:left;padding:2px 8px;font-size:.6rem;color:var(--muted2)">`;
     const eqDetails=agents.map(ag=>{
       let cnt={M:0,S:0,J:0},total=0;
-      for(let d=0;d<42;d++){const v=planning[ag.id][d]||'';if(['M','S','J'].includes(v)){cnt[v]++;total++;}}
+      for(let d=0; d<126;d++){const v=planning[ag.id][d]||'';if(['M','S','J'].includes(v)){cnt[v]++;total++;}}
       if(total===0) return null;
       const et=Math.round(total/3);
       const ok=['M','S','J'].every(c=>Math.abs(cnt[c]-et)<=1);
@@ -3678,7 +3694,7 @@ function renderTaux(){
   const anneeAffiche=start.getFullYear();
   // Trouver aussi les mois couverts par le cycle (pour info)
   const monthsMap={};
-  for(let d=0;d<42;d++){
+  for(let d=0; d<126;d++){
     const dt=addDays(start,d);
     const key=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
     if(!monthsMap[key]) monthsMap[key]={name:MFULL[dt.getMonth()],year:dt.getFullYear(),month:dt.getMonth(),days:[]};
@@ -3717,7 +3733,7 @@ function renderTauxForMonth(monthKey){
       // recalcul label
       const start=getStart();
       const monthsMap={};
-      for(let d=0;d<42;d++){
+      for(let d=0; d<126;d++){
         const dt=addDays(start,d);
         const key=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
         if(!monthsMap[key]) monthsMap[key]={name:MFULL[dt.getMonth()],year:dt.getFullYear(),days:[]};
@@ -3735,7 +3751,7 @@ function renderTauxForMonth(monthKey){
   const start=getStart();
   const grid=document.getElementById('tauxGrid');
   const monthsMap={};
-  for(let d=0;d<42;d++){
+  for(let d=0; d<126;d++){
     const dt=addDays(start,d);
     const key=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
     if(!monthsMap[key]) monthsMap[key]={name:MFULL[dt.getMonth()],year:dt.getFullYear(),days:[]};
@@ -3852,7 +3868,7 @@ function renderConges(){
   let dMin=0, dMax=41;
   if(deb){
     const debDate=new Date(deb+'T00:00:00');
-    for(let d=0;d<42;d++){if(addDays(start,d)>=debDate){dMin=d;break;} dMin=42;}
+    for(let d=0; d<126;d++){if(addDays(start,d)>=debDate){dMin=d;break;} dMin=42;}
   }
   if(fin){
     const finDate=new Date(fin+'T00:00:00');
@@ -3882,7 +3898,7 @@ function renderConges(){
     const CODES_TRAVAIL=['M','S','J','NU'];
     const feriesTrav=getFeriesTravailles(ag.id, start).filter(f=>f.dayIdx>=dMin&&f.dayIdx<=dMax);
     const feriesDays=new Set(feriesTrav.map(f=>f.dayIdx));
-    for(let d=dMin;d<=dMax&&d<42;d++){
+    for(let d=dMin;d<=dMax&& d<126;d++){
       const dt=addDays(start,d),m=dt.getMonth()+1;
       const v=planning[ag.id][d]||'';
       const inP=(m>=RULES.perDebut&&m<=RULES.perFin);
@@ -4004,7 +4020,7 @@ function renderConges(){
           let firstFreeDayCode = '';
           let firstFreeDayLabel = '';
           const DF2=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-          for(let d=dMin;d<=dMax&&d<42;d++){
+          for(let d=dMin;d<=dMax&& d<126;d++){
             const v=planning[ag.id][d]||'';
             if(v==='R'||v===''){
               firstFreeDay=d;
@@ -4517,7 +4533,7 @@ function updateModalRangeInfo(){
   if(finDate<debDate){ info.textContent='⚠ La date de fin doit être après le début'; info.style.color='var(--red)'; return; }
   // Compter les jours dans le cycle
   let count=0;
-  for(let d=0;d<42;d++){
+  for(let d=0; d<126;d++){
     const dt=addDays(start,d);
     if(dt>=debDate && dt<=finDate) count++;
   }
@@ -4611,7 +4627,7 @@ function confirmModal(){
 
     // Compter les jours concernés
     const daysToApply=[];
-    for(let d=0;d<42;d++){
+    for(let d=0; d<126;d++){
       const dt=addDays(start,d);
       if(dt>=debDate && dt<=finDate) daysToApply.push(d);
     }
@@ -4715,7 +4731,7 @@ function openEquityPanel(){
   let report='';
   AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit').forEach(ag=>{
     let cnt={M:0,S:0,J:0},total=0;
-    for(let d=0;d<42;d++){
+    for(let d=0; d<126;d++){
       const v=planning[ag.id][d]||'';
       if(SHIFT_CODES.includes(v)){cnt[v]++;total++;}
     }
@@ -4727,7 +4743,7 @@ function openEquityPanel(){
   });
   const needsBalance=AGENTS.filter(ag=>ag.spec!=='IDE'&&ag.spec!=='Nuit').some(ag=>{
     let cnt={M:0,S:0,J:0},total=0;
-    for(let d=0;d<42;d++){const v=planning[ag.id][d]||'';if(['M','S','J'].includes(v)){cnt[v]++;total++;}}
+    for(let d=0; d<126;d++){const v=planning[ag.id][d]||'';if(['M','S','J'].includes(v)){cnt[v]++;total++;}}
     if(total===0) return false;
     return ['M','S','J'].some(c=>Math.abs(cnt[c]-total/3)>1.5);
   });
@@ -4824,7 +4840,7 @@ function exportCongesExcel(){
   const deb=document.getElementById('congDateDeb')?.value;
   const fin=document.getElementById('congDateFin')?.value;
   let dMin=0, dMax=41;
-  if(deb){const debDate=new Date(deb+'T00:00:00');for(let d=0;d<42;d++){if(addDays(start,d)>=debDate){dMin=d;break;}dMin=42;}}
+  if(deb){const debDate=new Date(deb+'T00:00:00');for(let d=0; d<126;d++){if(addDays(start,d)>=debDate){dMin=d;break;}dMin=42;}}
   if(fin){const finDate=new Date(fin+'T00:00:00');for(let d=41;d>=0;d--){if(addDays(start,d)<=finDate){dMax=d;break;}dMax=-1;}}
 
   // Nom de la période pour le fichier
@@ -4849,7 +4865,7 @@ function exportCongesExcel(){
     let caM=0,caH=0,rtt=0,cf=0,mo=0,em=0,at=0,rc=0,hSup=0,hMoins=0,dimanchesTrav=0;
     const feriesTrav=getFeriesTravailles(ag.id, start).filter(f=>f.dayIdx>=dMin&&f.dayIdx<=dMax);
     const feriesDays=new Set(feriesTrav.map(f=>f.dayIdx));
-    for(let d=dMin;d<=dMax&&d<42;d++){
+    for(let d=dMin;d<=dMax&& d<126;d++){
       const dt=addDays(start,d),m=dt.getMonth()+1;
       const v=planning[ag.id]?planning[ag.id][d]||'':'';
       const inP=(m>=RULES.perDebut&&m<=RULES.perFin);
@@ -4921,7 +4937,7 @@ function exportCongesExcel(){
     const specLabel={'AS':'AS','IDE':'IDE','Nuit':'Nuit','AUX':'Auxiliaire','AE':'Entretien'};
     const feriesDaysEx=new Set(getFeriesTravailles(ag.id,start).filter(f=>f.dayIdx>=dMin&&f.dayIdx<=dMax).map(f=>f.dayIdx));
     const CODES_TRAVAIL=['M','S','J','NU'];
-    for(let d=dMin;d<=dMax&&d<42;d++){
+    for(let d=dMin;d<=dMax&& d<126;d++){
       const dt=addDays(start,d);
       const v=planning[ag.id]?planning[ag.id][d]||'':'';
       if(dt.getDay()===0&&CODES_TRAVAIL.includes(v)&&!feriesDaysEx.has(d)){
@@ -5412,7 +5428,7 @@ async function importPlanning(input,spec){
       if(!poste) return;
       const ag=AGENTS.find(a=>a.poste===poste&&a.spec===spec);
       if(!ag){ missed.push(poste); return; }
-      for(let d=0;d<42;d++){
+      for(let d=0; d<126;d++){
         const code=String(row[d+1]||'').trim().toUpperCase();
         if(validCodes.includes(code)) planning[ag.id][d]=code;
         else planning[ag.id][d]='R';
@@ -5848,7 +5864,7 @@ function mobGetCurrentWeekStart(){
 
 function mobGetTotaux(agId){
   var cnt = {M:0, S:0, J:0, NU:0, CA:0, R:0};
-  for(var d=0; d<42; d++){
+  for(var d=0;  d<126; d++){
     var v = (planning[agId] && planning[agId][d]) || '';
     if(cnt[v] !== undefined) cnt[v]++;
   }
@@ -6984,8 +7000,6 @@ async function supabaseLoad(){
 // ── Exposition globale (nécessaire car let/const isolent le scope) ──
 window.autoFill = autoFill;
 window.autoFillFresh = autoFillFresh;
-window._doAutoFill = _doAutoFill;
-window._doAutoFillFresh = _doAutoFillFresh;
 window.renderAll = renderAll;
 window.supabaseSave = supabaseSave;
 
