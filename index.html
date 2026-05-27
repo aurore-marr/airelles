@@ -2953,60 +2953,48 @@ function autoFill(){
     var sud    = secs[2]||'sud';
     var cn = cycleNum;
 
-    // Fixes permanents
-    if(agId==='g1_7') return cantou;
-    if(agId==='g2_6') return cantou;
+  function getSecteurAS(agId, dayIdx){
+  // Fixes permanents
+  if(agId==='g1_7') return 'cantou';
+  if(agId==='g2_6') return 'cantou';
 
-    // G1 sous-groupe A : rotation cantou
-    var G1A=['g1_1','g1_2','g1_3'];
-    if(G1A.indexOf(agId)>=0){
-      var i=G1A.indexOf(agId), ca=cn%3;
-      if(i===ca) return cantou;
-      var others=G1A.filter(function(_,k){return k!==ca;});
-      return others.indexOf(agId)===0 ? nord : sud;
-    }
-    // G1 sous-groupe B : rotation cantou
-    var G1B=['g1_4','g1_5','g1_6'];
-    if(G1B.indexOf(agId)>=0){
-      var i=G1B.indexOf(agId), ca=cn%3;
-      if(i===ca) return cantou;
-      var others=G1B.filter(function(_,k){return k!==ca;});
-      return others.indexOf(agId)===0 ? nord : sud;
-    }
-    // G1 sous-groupe C : g1_8=nord, g1_9=sud (cantou couvert par g1_7 fixe)
-    if(agId==='g1_8') return nord;
-    if(agId==='g1_9') return sud;
+  // Roulement annuel secteur (basé sur le mois du jour)
+  var dt = addDays(cycleStart, dayIdx||0);
+  var mois = dt.getMonth(); // 0=Jan, 1=Fév, ... 11=Déc
 
-    // G2 sous-groupe A : rotation cantou
-    var G2A=['g2_1','g2_2','g2_3'];
-    if(G2A.indexOf(agId)>=0){
-      var i=G2A.indexOf(agId), ca=cn%3;
-      if(i===ca) return cantou;
-      var others=G2A.filter(function(_,k){return k!==ca;});
-      return others.indexOf(agId)===0 ? nord : sud;
-    }
-    // G2 sous-groupe B : g2_4=nord, g2_5=sud (cantou couvert par g2_6 fixe)
-    if(agId==='g2_4') return nord;
-    if(agId==='g2_5') return sud;
-    // G2 sous-groupe C : rotation cantou
-    var G2C=['g2_7','g2_8','g2_9'];
-    if(G2C.indexOf(agId)>=0){
-      var i=G2C.indexOf(agId), ca=cn%3;
-      if(i===ca) return cantou;
-      var others=G2C.filter(function(_,k){return k!==ca;});
-      return others.indexOf(agId)===0 ? nord : sud;
-    }
-    // Fallback
-    return agId.split('_')[0]==='g1' ? nord : sud;
-  }
+  // Table de rotation mensuelle depuis votre fichier Excel
+  var TABLE = {
+    'g1_1': ['nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou'],
+    'g1_2': ['sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord'],
+    'g1_3': ['cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud'],
+    'g1_4': ['nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou'],
+    'g1_5': ['sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord'],
+    'g1_6': ['cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud'],
+    'g1_8': ['nord','sud','nord','sud','nord','sud','nord','sud','nord','sud','nord','sud'],
+    'g1_9': ['sud','nord','sud','nord','sud','nord','sud','nord','sud','nord','sud','nord'],
+    'g2_1': ['nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou'],
+    'g2_2': ['sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord'],
+    'g2_3': ['cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud'],
+    'g2_4': ['nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou'],
+    'g2_5': ['sud','cantou','nord','sud','cantou','nord','sud','cantou','nord','sud','cantou','nord'],
+    'g2_7': ['sud','nord','sud','nord','sud','nord','sud','nord','sud','nord','sud','nord'],
+    'g2_8': ['nord','sud','nord','sud','nord','sud','nord','sud','nord','sud','nord','sud'],
+    'g2_9': ['sud','nord','sud','nord','sud','nord','sud','nord','sud','nord','sud','nord'],
+  };
 
+  var row = TABLE[agId];
+  if(row) return row[mois] || 'cantou';
+
+  // Fallback
+  return agId.indexOf('g1')===0 ? 'nord' : 'sud';
+}
   // ═══════════════════════════════════════════════════════
   //  APPLICATION DU ROULEMENT AS
   // ═══════════════════════════════════════════════════════
   AGENTS.filter(function(ag){ return ag.spec==='AS' && ag.actif!==false; }).forEach(function(ag){
     var pat = AS_PAT[ag.id];
     if(!pat) return;
-    var sec = getSecteurAS(ag.id);
+    var sec = getSecteurAS(ag.id, d);
 
     if(!planning[ag.id]) planning[ag.id]={};
     if(!secteurJour[ag.id]) secteurJour[ag.id]={};
