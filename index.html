@@ -4588,8 +4588,16 @@ async function roEnsureEtabId() {
 
 // Appelé au clic sur une cellule dispo
 async function roAddDispo(poste, dateStr) {
-  if (!roVerified) { alert('Veuillez valider votre code PIN d\'abord.'); return; }
-  if (!roCurrentEtabId) return;
+  if (!roVerified) {
+    alert('Validez votre PIN pour déclarer une disponibilité.');
+    return;
+  }
+  // S'assurer que l'etab ID est chargé
+  await roEnsureEtabId();
+  if (!roCurrentEtabId) {
+    alert('Impossible de contacter le serveur. Vérifiez votre connexion internet.');
+    return;
+  }
 
   var existing = roDispos[poste + '_' + dateStr];
   // Cycle : vide → DISPO_SUP → DISPO_WE → DISPO_RAPPEL → vide
