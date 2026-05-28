@@ -1473,18 +1473,23 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
 <!-- VIEW 5 : RÈGLES & TEMPS -->
 <!-- ═══════════════════════════════════════════ -->
 <div class="view" id="view-regles">
-  <div class="toolbar" style="flex-wrap:wrap;gap:8px;">
-    <span class="toolbar-title">⏱ Règles métier & Calcul du temps</span>
-    <button onclick="downloadExcelTemplate()" style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">📥 Modèle Excel</button>
-    <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">
-      📤 Importer Excel <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(this)" style="display:none;">
-    </label>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;" id="regles-main-tabs">
+  <div class="toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+
+    <!-- GAUCHE : onglets de navigation -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;" id="regles-main-tabs">
       <button class="filter-btn active" onclick="showReglesTab('spec',this)">⚙ Règles par spécialité</button>
       <button class="filter-btn" onclick="showReglesTab('calcul',this)">Calcul des heures</button>
       <button class="filter-btn" onclick="showReglesTab('conges',this)">Congés FPT</button>
-
     </div>
+
+    <!-- DROITE : actions Excel -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button onclick="downloadExcelTemplate()" style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Télécharger le modèle Excel">📥 Modèle Excel</button>
+      <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Importer un fichier Excel">
+        📤 Importer Excel <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(this)" style="display:none;">
+      </label>
+    </div>
+
   </div>
 
   <!-- TAB : RÈGLES PAR SPÉCIALITÉ -->
