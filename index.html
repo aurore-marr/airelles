@@ -4243,6 +4243,13 @@ async function doLogin() {
   // Load planning data
   await loadPlanningFromDB();
 
+  // Persist session
+  localStorage.setItem('planning_session', JSON.stringify({
+    user: data,
+    etab: etab,
+    savedAt: Date.now()
+  }));
+
   // Show app
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('user-bar-name').textContent  = data.prenom + ' ' + data.nom;
@@ -4266,6 +4273,7 @@ async function doLogout() {
   if (sessionId) await SB.from('sessions_actives').delete().eq('id', sessionId);
   clearInterval(pingInterval);
   currentUser = null; currentEtab = null; sessionId = null;
+  localStorage.removeItem('planning_session');
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('user-bar-name').textContent = '—';
 }
@@ -4718,16 +4726,65 @@ async function deleteDispoAdmin(id) {
 
 // ── INIT ──────────────────────────────────────
 updateSectorCSSVars();
-if (!(window.location.search && window.location.search.indexOf('readonly=1') !== -1)) {
+
+const isReadonly = window.location.search && window.location.search.indexOf('readonly=1') !== -1;
+
+if (!isReadonly) {
   loadEtablissements();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (isReadonly) return;
+
   loadEtablissements();
-  // Enter key on password field
   document.getElementById('auth-password')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
+
+  // Restore session if exists and < 8h old
+  try {
+    const saved = localStorage.getItem('planning_session');
+    if (saved) {
+      const sess = JSON.parse(saved);
+      const age  = Date.now() - (sess.savedAt || 0);
+      if (age < 8 * 3600 * 1000 && sess.user && sess.etab) {
+        // Verify user still active in DB
+        const { data: check } = await SB.from('app_users')
+          .select('id,actif').eq('id', sess.user.id).single();
+        if (check && check.actif) {
+          currentUser = sess.user;
+          currentEtab = sess.etab;
+
+          // Re-create session ping entry
+          const { data: newSess } = await SB.from('sessions_actives')
+            .insert({ user_id: currentUser.id, etablissement_id: currentEtab.id })
+            .select().single();
+          if (newSess) sessionId = newSess.id;
+          pingInterval = setInterval(pingSession, 30000);
+          setInterval(updateConnectedCount, 15000);
+          updateConnectedCount();
+
+          await loadPlanningFromDB();
+
+          document.getElementById('auth-screen').style.display = 'none';
+          document.getElementById('user-bar-name').textContent  = currentUser.prenom + ' ' + currentUser.nom;
+          document.getElementById('user-bar-role').textContent  = ROLE_LABELS[currentUser.role] || currentUser.role;
+          document.getElementById('user-bar-role').style.cssText = 'padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;' + (ROLE_COLORS[currentUser.role]||'');
+          if (currentUser.role === 'ADMIN') {
+            document.getElementById('btn-admin-users').style.display = 'block';
+          }
+          buildPlanning();
+          updateSectorCSSVars();
+          checkDispoNotif();
+          setInterval(checkDispoNotif, 60000);
+          return;
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('Session restore failed:', e);
+  }
+  localStorage.removeItem('planning_session');
 });
 
 // ══════════════════════════════════════════════════════════
