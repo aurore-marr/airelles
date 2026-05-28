@@ -1071,6 +1071,15 @@
   }
 
 </style>
+<script>
+// Cacher l'écran auth immédiatement si mode agent
+if (window.location.search && window.location.search.indexOf('readonly=1') !== -1) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var a = document.getElementById('auth-screen');
+    if (a) a.style.display = 'none';
+  });
+}
+</script>
 </head>
 <body>
 
@@ -4675,7 +4684,9 @@ async function deleteDispoAdmin(id) {
 
 // ── INIT ──────────────────────────────────────
 updateSectorCSSVars();
-loadEtablissements();
+if (!(window.location.search && window.location.search.indexOf('readonly=1') !== -1)) {
+  loadEtablissements();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   loadEtablissements();
@@ -4979,9 +4990,11 @@ function roBuild() {
       var hdr = document.querySelector('header');
       var nav = document.querySelector('nav');
       var mn  = document.querySelector('main');
-      if (hdr) hdr.style.display = 'none';
-      if (nav) nav.style.display = 'none';
-      if (mn)  mn.style.display  = 'none';
+      var auth = document.getElementById('auth-screen');
+      if (hdr)  hdr.style.display  = 'none';
+      if (nav)  nav.style.display  = 'none';
+      if (mn)   mn.style.display   = 'none';
+      if (auth) auth.style.display = 'none';
       openReadonly();
     }
     if (document.readyState === 'loading') {
