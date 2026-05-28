@@ -3202,7 +3202,6 @@ function buildAgents() {
 
           <div class="agent-card-body" style="padding-top:6px;">
             <span class="tag" style="font-weight:700;">${a.spec}</span>
-            <span class="tag">Secteur : ${sectCurrent}</span>
             <span class="tag" style="background:#fef9c3;color:#854d0e;">CA : ${caAnnuels} j</span>
           </div>
 
@@ -3321,34 +3320,9 @@ let modalExclu    = 'none';
 let modalFixeOn   = false;
 let modalFixeSect = '';
 
-function buildSectFixeBtns() {
-  const wrap = document.getElementById('sect-fix-btns');
-  wrap.innerHTML = '';
-  sectors.filter(s=>s.active).forEach(s => {
-    const r=parseInt(s.color.slice(1,3),16),g=parseInt(s.color.slice(3,5),16),b=parseInt(s.color.slice(5,7),16);
-    const btn = document.createElement('button');
-    btn.className='sect-fix-btn' + (s.code===modalFixeSect?' active':'');
-    btn.style.cssText=`background:rgba(${r},${g},${b},.1);color:${s.color};border-color:${s.code===modalFixeSect?s.color:'rgba('+r+','+g+','+b+',.3)'};`;
-    btn.textContent='• ' + (s.label||s.code);
-    btn.onclick = () => {
-      modalFixeSect = s.code;
-      document.getElementById('f-secteur-fixe').value = s.code;
-      document.querySelectorAll('.sect-fix-btn').forEach(x=>{x.classList.remove('active');x.style.borderColor=`rgba(0,0,0,.1)`;});
-      btn.classList.add('active'); btn.style.borderColor=s.color;
-    };
-    wrap.appendChild(btn);
-  });
-}
+function buildSectFixeBtns() { /* secteur fixe supprimé */ }
+function toggleFixeSwitch()  { /* secteur fixe supprimé */ }
 
-function toggleFixeSwitch() {
-  modalFixeOn = !modalFixeOn;
-  const sw = document.getElementById('fixe-toggle-sw');
-  sw.classList.toggle('on', modalFixeOn);
-  document.getElementById('fixe-toggle-label').textContent = modalFixeOn
-    ? 'Activé — secteur fixe pour tout le cycle'
-    : 'Désactivé — rotation automatique';
-  document.getElementById('sect-fix-btns').style.display = modalFixeOn ? 'flex' : 'none';
-}
 
 function selectStatut(val, btn) {
   document.getElementById('f-statut').value = val;
@@ -3426,16 +3400,9 @@ function openModal(mode, poste, fixeMode) {
       // Exclu
       modalExclu = a.horaireExclu||'none';
       selectExclu(modalExclu);
-      // Fixe
-      modalFixeOn   = a.fixe==='O';
+      // Fixe (désactivé — rotation auto par défaut)
+      modalFixeOn   = false;
       modalFixeSect = a.secteur||'';
-      document.getElementById('f-secteur-fixe').value = modalFixeSect;
-      const sw=document.getElementById('fixe-toggle-sw');
-      sw.className='toggle-switch'+(modalFixeOn?' on':'');
-      document.getElementById('fixe-toggle-label').textContent = modalFixeOn
-        ?'Activé — secteur fixe pour tout le cycle':'Désactivé — rotation automatique';
-      document.getElementById('sect-fix-btns').style.display = modalFixeOn?'flex':'none';
-      buildSectFixeBtns();
       modalRotation = [...a.rot];
     }
     if (fixeMode) {
@@ -3458,10 +3425,6 @@ function openModal(mode, poste, fixeMode) {
     modalJoursOff=[]; document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
     modalExclu='none'; selectExclu('none');
     modalFixeOn=false; modalFixeSect='';
-    document.getElementById('fixe-toggle-sw').className='toggle-switch';
-    document.getElementById('fixe-toggle-label').textContent='Désactivé — rotation automatique';
-    document.getElementById('sect-fix-btns').style.display='none';
-    buildSectFixeBtns();
     modalRotation=['GENERAL','CANTOU','ALZHEIMER'];
     modalEditPoste='';
   }
@@ -3483,10 +3446,10 @@ function saveAgent() {
   if (!nom)   { errEl.textContent='Le nom est obligatoire.';   errEl.style.display='block'; return; }
   if (!original && agents.find(a=>a.poste===poste)) { errEl.textContent=`Le poste "${poste}" existe déjà.`; errEl.style.display='block'; return; }
   const fixe    = modalFixeOn?'O':'N';
-  const secteur = modalFixeOn ? (document.getElementById('f-secteur-fixe').value||'GENERAL') : (modalRotation[0]||'GENERAL');
+  const secteur = modalRotation[0]||'GENERAL';
   const updated = {
-    poste, nom, spec, grp, sg, taux, statut, secteur, fixe,
-    rot: modalFixeOn?[secteur]:modalRotation,
+    poste, nom, spec, grp, sg, taux, statut, secteur, fixe:'N',
+    rot: modalRotation,
     rotOffset:0, joursOff:[...modalJoursOff], horaireExclu:modalExclu, actif:true,
   };
   if (original) { const idx=agents.findIndex(a=>a.poste===original); if(idx!==-1) agents[idx]=updated; }
