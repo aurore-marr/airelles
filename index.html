@@ -4507,68 +4507,83 @@ setInterval(async () => {
 // DISPONIBILITÉS AGENTS (vue QR)
 // ══════════════════════════════════════════════════════════
 
-var roVerified = false;   // PIN validé ?
-var roDispos   = {};      // cache { "poste_date": type }
+var roVerified      = false;
+var roDispos        = {};
 var roCurrentEtabId = null;
 
-// Appelé quand l'agent sélectionne son nom
+// Quand l'agent sélectionne son nom → afficher champ PIN
 function roOnAgentChange() {
-  var sel   = document.getElementById('ro-agent-select');
-  var poste = sel ? sel.value : '';
+  var sel    = document.getElementById('ro-agent-select');
+  var poste  = sel ? sel.value : '';
   roVerified = false;
   var pinWrap = document.getElementById('ro-pin-wrap');
   var pinErr  = document.getElementById('ro-pin-error');
   if (pinWrap) pinWrap.style.display = poste ? 'block' : 'none';
-  if (pinErr)  pinErr.textContent = '';
+  if (pinErr)  pinErr.textContent    = '';
   var pinInput = document.getElementById('ro-pin-input');
   if (pinInput) pinInput.value = '';
-  // Masquer planning tant que non vérifié
-  document.getElementById('ro-card').style.display     = 'none';
+  document.getElementById('ro-card').style.display      = 'none';
   document.getElementById('ro-table-wrap').style.display = 'none';
-  document.getElementById('ro-empty').style.display    = 'block';
+  document.getElementById('ro-empty').style.display      = 'block';
 }
 
-// Vérification PIN = 4 derniers chiffres du numéro de poste
-function roVerifyPin() {
+// Vérification PIN
+async function roVerifyPin() {
   var sel   = document.getElementById('ro-agent-select');
   var poste = sel ? sel.value : '';
-  var pin   = document.getElementById('ro-pin-input').value.trim();
+  var pin   = (document.getElementById('ro-pin-input').value || '').trim();
   var err   = document.getElementById('ro-pin-error');
+  var btn   = document.querySelector('#ro-pin-wrap button');
 
   if (!poste) return;
-  // Le PIN = les 4 derniers chiffres du numéro de poste
-  var digits = poste.replace(/\D/g,'');
-  var expected = digits.slice(-4);
+
+  // PIN = 4 derniers chiffres du numéro de poste (padding avec 0 si besoin)
+  var digits   = poste.replace(/[^0-9]/g, '');
+  var expected = digits.padStart(4, '0').slice(-4);
 
   if (pin !== expected) {
-    err.textContent = 'Code incorrect.';
+    err.textContent = '❌ Code incorrect — saisissez les 4 derniers chiffres de votre matricule.';
     document.getElementById('ro-pin-input').value = '';
     return;
   }
+
+  // PIN OK
   err.textContent = '';
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
   roVerified = true;
   document.getElementById('ro-pin-wrap').style.display = 'none';
 
-  // Charger les dispos existantes puis afficher
-  roLoadDispos(poste).then(function() { roBuild(); });
+  // Charger l'etab ID et les dispos existantes
+  try {
+    if (!roCurrentEtabId) {
+      var resp = await SB.from('etablissements').select('id').limit(1);
+      roCurrentEtabId = (resp.data && resp.data.length) ? resp.data[0].id : null;
+    }
+    if (roCurrentEtabId) {
+      var resp2 = await SB.from('agent_dispos')
+        .select('*')
+        .eq('etablissement_id', roCurrentEtabId)
+        .eq('agent_poste', poste);
+      roDispos = {};
+      (resp2.data || []).forEach(function(d) {
+        roDispos[d.agent_poste + '_' + d.date] = d.type_dispo;
+      });
+    }
+  } catch(e) {
+    console.warn('Dispo load error:', e);
+  }
+
+  roBuild();
 }
 
-// Charge les dispos de l'agent depuis Supabase
-async function roLoadDispos(poste) {
-  roDispos = {};
-  // Récupérer l'etab id depuis la 1ère session active ou le 1er établissement
-  if (!roCurrentEtabId) {
-    var { data: etabs } = await SB.from('etablissements').select('id').limit(1);
-    roCurrentEtabId = etabs && etabs.length ? etabs[0].id : null;
-  }
-  if (!roCurrentEtabId) return;
-  var { data } = await SB.from('agent_dispos')
-    .select('*')
-    .eq('etablissement_id', roCurrentEtabId)
-    .eq('agent_poste', poste);
-  (data||[]).forEach(function(d) {
-    roDispos[d.agent_poste + '_' + d.date] = d.type_dispo;
-  });
+// Charge les dispos (appelé aussi depuis roAddDispo)
+async function roEnsureEtabId() {
+  if (roCurrentEtabId) return;
+  try {
+    var resp = await SB.from('etablissements').select('id').limit(1);
+    roCurrentEtabId = (resp.data && resp.data.length) ? resp.data[0].id : null;
+  } catch(e) { console.warn('etab load error', e); }
 }
 
 // Appelé au clic sur une cellule dispo
@@ -4595,14 +4610,26 @@ async function roAddDispo(poste, dateStr) {
     delete roDispos[poste + '_' + dateStr];
   } else {
     // Upsert
-    await SB.from('agent_dispos').upsert({
+    var upsertResult = await SB.from('agent_dispos').upsert({
       etablissement_id: roCurrentEtabId,
       agent_poste: poste,
       agent_nom:   agentNom,
       date:        dateStr,
       type_dispo:  next
     }, { onConflict: 'etablissement_id,agent_poste,date' });
+    if (upsertResult.error) {
+      console.error('Upsert error:', upsertResult.error);
+      alert('Erreur lors de la sauvegarde : ' + upsertResult.error.message);
+      return;
+    }
     roDispos[poste + '_' + dateStr] = next;
+  }
+  // Feedback visuel
+  var feedbackEl = document.getElementById('ro-dispo-feedback');
+  if (feedbackEl) {
+    feedbackEl.textContent = next ? '✓ Dispo enregistrée !' : '✓ Dispo supprimée';
+    feedbackEl.style.display = 'block';
+    setTimeout(function() { feedbackEl.style.display = 'none'; }, 2000);
   }
   // Refresh affichage
   roBuild();
@@ -5073,6 +5100,9 @@ function roBuild() {
       </div>
     </div>
   </div>
+
+  <!-- Feedback dispo -->
+  <div id="ro-dispo-feedback" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#065f46;color:#6ee7b7;padding:10px 24px;border-radius:20px;font-size:13px;font-weight:700;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,.3);">✓ Dispo enregistrée !</div>
 
   <!-- Carte agent (masquée au départ) -->
   <div id="ro-card" style="display:none;padding:12px 16px 0;">
