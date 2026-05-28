@@ -4599,10 +4599,10 @@ async function roAddDispo(poste, dateStr) {
     return;
   }
 
-  var existing = roDispos[poste + '_' + dateStr];
+  var existing = roDispos[poste + '_' + dateStr] || null;
   // Cycle : vide → DISPO_SUP → DISPO_WE → DISPO_RAPPEL → vide
   var types = [null, 'DISPO_SUP', 'DISPO_WE', 'DISPO_RAPPEL'];
-  var idx   = types.indexOf(existing);
+  var idx   = types.indexOf(existing); // null → 0, donc next = DISPO_SUP
   var next  = types[(idx + 1) % types.length];
 
   var agent = agents.find(function(a) { return a.poste === poste; });
