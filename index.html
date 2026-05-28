@@ -4600,9 +4600,9 @@ async function roAddDispo(poste, dateStr) {
   }
 
   var existing = roDispos[poste + '_' + dateStr] || null;
-  // Cycle : vide → DISPO_SUP → DISPO_WE → DISPO_RAPPEL → vide
-  var types = [null, 'DISPO_SUP', 'DISPO_WE', 'DISPO_RAPPEL'];
-  var idx   = types.indexOf(existing); // null → 0, donc next = DISPO_SUP
+  // Cycle : vide → HS → DISPO → vide
+  var types = [null, 'DISPO_SUP', 'DISPO_WE'];
+  var idx   = types.indexOf(existing);
   var next  = types[(idx + 1) % types.length];
 
   var agent = agents.find(function(a) { return a.poste === poste; });
@@ -4673,11 +4673,10 @@ async function openDispoPanel() {
     .gte('date', new Date().toISOString().slice(0,10))
     .order('date', { ascending: true });
 
-  var TYPE_LABELS = { DISPO_SUP:'Heures sup', DISPO_WE:'WE / Férié', DISPO_RAPPEL:'Rappel possible' };
+  var TYPE_LABELS = { DISPO_SUP:'Heures sup', DISPO_WE:'Disponible' };
   var TYPE_COLORS = {
-    DISPO_SUP:   'background:#d1fae5;color:#065f46;',
-    DISPO_WE:    'background:#dbeafe;color:#1d4ed8;',
-    DISPO_RAPPEL:'background:#fef9c3;color:#854d0e;'
+    DISPO_SUP: 'background:#d1fae5;color:#065f46;',
+    DISPO_WE:  'background:#dbeafe;color:#1d4ed8;'
   };
 
   var rows = (data||[]).map(function(d) {
@@ -4934,11 +4933,10 @@ function roBuildOneMonth(agent, m, y) {
     if (isPast) {
       h += '<td style="padding:2px 1px;text-align:center;background:#fafafa;'+(ddow===0?'border-left:2px solid #dbeafe;':'')+'"></td>';
     } else {
-      var dispoBg = existDispo==='DISPO_SUP'?'background:#d1fae5;color:#065f46;':
-                   existDispo==='DISPO_WE'?'background:#dbeafe;color:#1d4ed8;':
-                   existDispo==='DISPO_RAPPEL'?'background:#fef9c3;color:#854d0e;':
-                   'background:#f0fdf4;color:#bbf7d0;';
-      var dispoTxt = existDispo==='DISPO_SUP'?'HS':existDispo==='DISPO_WE'?'WE':existDispo==='DISPO_RAPPEL'?'RP':'+';
+      var dispoBg = existDispo==='DISPO_SUP'?'background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;':
+                   existDispo==='DISPO_WE'?'background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;':
+                   'background:#f0fdf4;color:#bbf7d0;border:1px dashed #6ee7b7;';
+      var dispoTxt = existDispo==='DISPO_SUP'?'HS':existDispo==='DISPO_WE'?'DI':'+';
       h += '<td style="padding:2px 1px;text-align:center;background:#f0fdf4;'+(ddow===0?'border-left:2px solid #dbeafe;':'')+'border-top:1px solid #bbf7d0;">' +
         '<span data-poste="'+agent.poste+'" data-date="'+dateStr+'" onclick="roAddDispo(this.dataset.poste,this.dataset.date)" ' +
         'style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:18px;border-radius:3px;font-size:9px;font-weight:700;cursor:pointer;'+dispoBg+'">'+dispoTxt+'</span></td>';
