@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planning Roulement — EHPAD</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* ── TOKENS ─────────────────────────────── */
   :root {
@@ -995,9 +996,127 @@
     display: flex; align-items: center; justify-content: space-between;
     border-bottom: 1px solid var(--hdr-border);
   }
+
+  /* ── AUTH SCREEN ─────────────────────────── */
+  #auth-screen {
+    position:fixed;inset:0;background:#0b1220;z-index:10000;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'DM Sans',sans-serif;
+  }
+  .auth-card {
+    background:#0f1827;border:1px solid #1e3050;border-radius:16px;
+    padding:36px 40px;width:380px;max-width:95vw;
+    box-shadow:0 24px 80px rgba(0,0,0,.6);
+  }
+  .auth-logo {
+    display:flex;align-items:center;gap:12px;margin-bottom:28px;
+  }
+  .auth-logo-icon {
+    width:40px;height:40px;border-radius:10px;
+    background:linear-gradient(135deg,#1d4ed8,#38bdf8);
+    display:flex;align-items:center;justify-content:center;font-size:20px;
+  }
+  .auth-logo-text { font-size:14px;font-weight:700;color:#38bdf8;letter-spacing:.04em; }
+  .auth-logo-sub  { font-size:11px;color:#475569;margin-top:2px; }
+  .auth-field { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
+  .auth-field label { font-size:10.5px;font-weight:700;color:#60a5fa;letter-spacing:.06em; }
+  .auth-field input {
+    background:#162035;border:1.5px solid #1e3050;border-radius:8px;
+    padding:11px 14px;font-size:14px;color:#e2e8f0;font-family:'DM Sans',sans-serif;
+    outline:none;transition:border-color .15s;
+  }
+  .auth-field input:focus { border-color:#38bdf8; }
+  .auth-btn {
+    width:100%;background:linear-gradient(135deg,#1d4ed8,#38bdf8);
+    border:none;border-radius:9px;padding:13px;
+    font-size:14px;font-weight:700;color:#fff;cursor:pointer;
+    font-family:'DM Sans',sans-serif;margin-top:6px;transition:opacity .15s;
+  }
+  .auth-btn:hover { opacity:.9; }
+  .auth-error { color:#f87171;font-size:11.5px;margin-top:8px;text-align:center;min-height:18px; }
+  .auth-etab {
+    background:#162035;border:1.5px solid #1e3050;border-radius:8px;
+    padding:11px 14px;font-size:14px;color:#e2e8f0;font-family:'DM Sans',sans-serif;
+    outline:none;width:100%;cursor:pointer;
+  }
+
+  /* ── USER BAR ────────────────────────────── */
+  #user-bar {
+    display:flex;align-items:center;gap:8px;
+    background:#162035;border:1px solid #1e3050;border-radius:8px;
+    padding:4px 10px;font-size:11px;color:#94a3b8;
+  }
+  .user-badge {
+    padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;
+  }
+  .connected-dot {
+    width:7px;height:7px;border-radius:50%;background:#22c55e;
+    box-shadow:0 0 4px #22c55e;display:inline-block;
+  }
+
+  /* ── ADMIN PANEL ─────────────────────────── */
+  #admin-panel-overlay {
+    display:none;position:fixed;inset:0;background:rgba(5,10,20,.8);
+    z-index:600;align-items:center;justify-content:center;
+  }
+  .admin-panel {
+    background:#0f1827;border:1px solid #1e3050;border-radius:14px;
+    width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;
+    box-shadow:0 24px 80px rgba(0,0,0,.6);
+  }
+  .admin-panel-header {
+    background:#0a1020;padding:14px 20px;display:flex;align-items:center;
+    justify-content:space-between;border-bottom:1px solid #1e3050;
+    position:sticky;top:0;z-index:2;
+  }
+
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- AUTH SCREEN                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏥</div>
+      <div>
+        <div class="auth-logo-text">PLANNING ROULEMENT</div>
+        <div class="auth-logo-sub">Connexion requise</div>
+      </div>
+    </div>
+    <div class="auth-field">
+      <label>ÉTABLISSEMENT</label>
+      <select id="auth-etab" class="auth-etab">
+        <option value="">Chargement...</option>
+      </select>
+    </div>
+    <div class="auth-field">
+      <label>IDENTIFIANT</label>
+      <input type="text" id="auth-login" placeholder="votre.login" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label>MOT DE PASSE</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="auth-btn" onclick="doLogin()">Se connecter →</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ADMIN PANEL OVERLAY                        -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="admin-panel-overlay" style="display:none;position:fixed;inset:0;background:rgba(5,10,20,.8);z-index:600;align-items:center;justify-content:center;">
+  <div class="admin-panel">
+    <div class="admin-panel-header">
+      <span style="color:#38bdf8;font-size:13px;font-weight:700;">⚙ Gestion des accès</span>
+      <button onclick="closeAdminPanel()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">×</button>
+    </div>
+    <div style="padding:20px;" id="admin-panel-body"></div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -1006,6 +1125,13 @@
     PLANNING ROULEMENT
   </div>
   <div class="header-right">
+    <div id="user-bar">
+      <span class="connected-dot"></span>
+      <span id="user-bar-name">—</span>
+      <span class="user-badge" id="user-bar-role" style="background:#1e3050;color:#60a5fa;">—</span>
+      <span style="color:#334155;font-size:10px;" id="connected-count"></span>
+      <button onclick="doLogout()" style="background:none;border:none;color:#475569;cursor:pointer;font-size:11px;padding:0 4px;" title="Déconnexion">⏻</button>
+    </div>
     <div class="month-nav">
       <button onclick="changeMonth(-1)">‹</button>
       <span id="month-label">Juin 2026</span>
@@ -1014,6 +1140,7 @@
     <button onclick="openReadonly()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="Vue lecture seule agents">👁 Vue agent</button>
     <button id="btn-qr" onclick="showQRModal()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="QR Code accès agents">📱 QR Code</button>
     <button class="btn-export">⬇ Exporter Excel</button>
+  </div>
   </div>
 </header>
 
@@ -1024,6 +1151,7 @@
   <button onclick="showView('replacants',this)">🔄 Remplaçants</button>
   <button onclick="showView('regles',this)">⏱ Règles & Temps</button>
   <button onclick="showView('config',this)">⚙ Config secteurs</button>
+  <button id="btn-admin-users" onclick="openAdminPanel()" style="display:none;margin-left:auto;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">👤 Gérer accès</button>
 </nav>
 
 <!-- ═══════════════════════════════════════════ -->
@@ -1043,6 +1171,8 @@
       <button id="btn-view-agent"   onclick="setViewMode('agent')"   style="padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;background:transparent;color:var(--text-muted);transition:all .15s;">👤 Par agent</button>
     </div>
     <div class="search-box">🔍 <input type="text" placeholder="Rechercher un agent…" oninput="filterAgents(this.value)"></div>
+    <button onclick="openHistorique()" style="background:#f1f5f9;border:1.5px solid var(--border);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-muted);display:flex;align-items:center;gap:6px;" title="Historique des versions">📋 Historique</button>
+    <button onclick="savePlanningToDB('Sauvegarde manuelle').then(()=>{ var b=this; b.textContent='✓ Sauvegardé'; setTimeout(()=>b.textContent='💾 Sauvegarder',2000); })" style="background:#065f46;border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#6ee7b7;display:flex;align-items:center;gap:6px;" title="Sauvegarder le planning">💾 Sauvegarder</button>
     <button class="btn-print" onclick="printPlanning()" title="Imprimer le planning"
       style="background:#f1f5f9;border:1.5px solid var(--border);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-muted);display:flex;align-items:center;gap:6px;transition:all .15s;"
       onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
@@ -4004,10 +4134,373 @@ function printPlanning() {
 
 // ── INIT ──────────────────────────────────────
 updateSectorCSSVars();
-buildPlanning();
-// Initialise le premier sous-onglet spec au chargement de la vue règles
+// NE PAS appeler buildPlanning ici — sera appelé après login
+
+// ══════════════════════════════════════════════════════════
+// SUPABASE — CONFIG & AUTH
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://kvztwcwdfxpvgzmeuetm.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2enR3Y3dkZnhwdmd6bWV1ZXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODkyMjksImV4cCI6MjA5NTU2NTIyOX0.B3JMDwv3B3xE3PYPdwlvR4-0VGEZBJOajcsY3r0eWW8';
+const SB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const ROLE_LABELS = {
+  ADMIN:'Admin', IDEC:'IDEC', RESP_HOT:'Resp. Hôt.',
+  DIR:'Direction', ASS_DIR:'Ass. Dir.', BINOME:'Binôme'
+};
+const ROLE_COLORS = {
+  ADMIN:'background:#7f1d1d;color:#fca5a5;',
+  IDEC:'background:#1e3a5f;color:#93c5fd;',
+  RESP_HOT:'background:#064e3b;color:#6ee7b7;',
+  DIR:'background:#312e81;color:#c4b5fd;',
+  ASS_DIR:'background:#451a03;color:#fde68a;',
+  BINOME:'background:#1e293b;color:#94a3b8;'
+};
+
+// Droits de modification par rôle
+const CAN_EDIT = ['ADMIN','IDEC','RESP_HOT','DIR','ASS_DIR','BINOME'];
+
+let currentUser = null;
+let currentEtab = null;
+let sessionId   = null;
+let pingInterval = null;
+let connectedCount = 0;
+
+// ── SHA-256 simple (WebCrypto) ──────────────────────────
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── LOAD ÉTABLISSEMENTS ─────────────────────────────────
+async function loadEtablissements() {
+  const { data, error } = await SB.from('etablissements').select('*').order('nom');
+  const sel = document.getElementById('auth-etab');
+  if (error || !data || !data.length) {
+    sel.innerHTML = '<option value="">Aucun établissement</option>';
+    return;
+  }
+  sel.innerHTML = data.map(e =>
+    `<option value="${e.id}">${e.nom}</option>`
+  ).join('');
+}
+
+// ── LOGIN ───────────────────────────────────────────────
+async function doLogin() {
+  const etabId = document.getElementById('auth-etab').value;
+  const login  = document.getElementById('auth-login').value.trim();
+  const pw     = document.getElementById('auth-password').value;
+  const errEl  = document.getElementById('auth-error');
+  errEl.textContent = '';
+
+  if (!etabId || !login || !pw) {
+    errEl.textContent = 'Veuillez remplir tous les champs.'; return;
+  }
+
+  const hash = await sha256(pw);
+  const { data, error } = await SB
+    .from('app_users')
+    .select('*')
+    .eq('login', login)
+    .eq('password_hash', hash)
+    .eq('etablissement_id', etabId)
+    .eq('actif', true)
+    .single();
+
+  if (error || !data) {
+    errEl.textContent = 'Identifiant ou mot de passe incorrect.'; return;
+  }
+
+  currentUser = data;
+  // Load etab name
+  const { data: etab } = await SB.from('etablissements').select('*').eq('id', etabId).single();
+  currentEtab = etab;
+
+  // Create session
+  const { data: sess } = await SB.from('sessions_actives')
+    .insert({ user_id: data.id, etablissement_id: etabId })
+    .select().single();
+  if (sess) sessionId = sess.id;
+
+  // Start ping
+  pingInterval = setInterval(pingSession, 30000);
+
+  // Update connected count
+  updateConnectedCount();
+  setInterval(updateConnectedCount, 15000);
+
+  // Load planning data
+  await loadPlanningFromDB();
+
+  // Show app
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('user-bar-name').textContent  = data.prenom + ' ' + data.nom;
+  document.getElementById('user-bar-role').textContent  = ROLE_LABELS[data.role] || data.role;
+  document.getElementById('user-bar-role').style.cssText = 'padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;' + (ROLE_COLORS[data.role]||'');
+
+  // Show admin button only for ADMIN
+  if (data.role === 'ADMIN') {
+    document.getElementById('btn-admin-users').style.display = 'block';
+  }
+
+  buildPlanning();
+  updateSectorCSSVars();
+}
+
+// ── LOGOUT ──────────────────────────────────────────────
+async function doLogout() {
+  if (!confirm('Se déconnecter ?')) return;
+  if (sessionId) await SB.from('sessions_actives').delete().eq('id', sessionId);
+  clearInterval(pingInterval);
+  currentUser = null; currentEtab = null; sessionId = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('user-bar-name').textContent = '—';
+}
+
+// ── SESSION PING ────────────────────────────────────────
+async function pingSession() {
+  if (!sessionId) return;
+  await SB.from('sessions_actives').update({ last_ping: new Date().toISOString() }).eq('id', sessionId);
+  // Clean dead sessions (no ping for > 2 min)
+  const cutoff = new Date(Date.now() - 120000).toISOString();
+  await SB.from('sessions_actives').delete().lt('last_ping', cutoff);
+}
+
+async function updateConnectedCount() {
+  if (!currentEtab) return;
+  const cutoff = new Date(Date.now() - 120000).toISOString();
+  const { count } = await SB.from('sessions_actives')
+    .select('*', { count:'exact', head:true })
+    .eq('etablissement_id', currentEtab.id)
+    .gte('last_ping', cutoff);
+  connectedCount = count || 1;
+  const el = document.getElementById('connected-count');
+  if (el) el.textContent = connectedCount > 1 ? '· ' + connectedCount + ' connectés' : '';
+}
+
+// ── SAVE / LOAD PLANNING ────────────────────────────────
+async function savePlanningToDB(label) {
+  if (!currentUser || !currentEtab) return;
+  const snapshot = {
+    agents: agents,
+    sectors: sectors,
+    cellOverrides: cellOverrides,
+    replacants: replacants,
+    RULES: RULES,
+    savedAt: new Date().toISOString()
+  };
+  // Save current
+  await SB.from('planning_data')
+    .upsert({
+      etablissement_id: currentEtab.id,
+      data: snapshot,
+      saved_by: currentUser.id,
+      saved_by_name: currentUser.prenom + ' ' + currentUser.nom
+    }, { onConflict: 'etablissement_id' });
+
+  // Save to historique
+  await SB.from('planning_historique').insert({
+    etablissement_id: currentEtab.id,
+    data: snapshot,
+    saved_by_name: currentUser.prenom + ' ' + currentUser.nom,
+    label: label || 'Sauvegarde manuelle'
+  });
+
+  // Keep only last 20
+  const { data: hist } = await SB.from('planning_historique')
+    .select('id, created_at')
+    .eq('etablissement_id', currentEtab.id)
+    .order('created_at', { ascending: false });
+  if (hist && hist.length > 20) {
+    const toDelete = hist.slice(20).map(h => h.id);
+    await SB.from('planning_historique').delete().in('id', toDelete);
+  }
+}
+
+async function loadPlanningFromDB() {
+  if (!currentEtab) return;
+  const { data, error } = await SB.from('planning_data')
+    .select('*')
+    .eq('etablissement_id', currentEtab.id)
+    .single();
+  if (data && data.data) {
+    const snap = data.data;
+    if (snap.agents)        { agents.length=0; snap.agents.forEach(a=>agents.push(a)); }
+    if (snap.sectors)       { sectors.length=0; snap.sectors.forEach(s=>sectors.push(s)); }
+    if (snap.cellOverrides) { Object.assign(cellOverrides, snap.cellOverrides); }
+    if (snap.replacants)    { replacants.length=0; snap.replacants.forEach(r=>replacants.push(r)); }
+    if (snap.RULES)         { Object.assign(RULES, snap.RULES); }
+    clearAffCache();
+  }
+}
+
+// ── HISTORIQUE ──────────────────────────────────────────
+async function openHistorique() {
+  const { data } = await SB.from('planning_historique')
+    .select('*')
+    .eq('etablissement_id', currentEtab.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const html = `
+    <div style="color:#e2e8f0;padding:20px;">
+      <div style="font-size:13px;font-weight:700;color:#38bdf8;margin-bottom:14px;">📋 Historique des sauvegardes</div>
+      ${(data||[]).map(h => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#162035;border-radius:8px;margin-bottom:6px;border:1px solid #1e3050;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#e2e8f0;">${h.label||'Sauvegarde'}</div>
+            <div style="font-size:10px;color:#475569;margin-top:2px;">Par ${h.saved_by_name} · ${new Date(h.created_at).toLocaleString('fr-FR')}</div>
+          </div>
+          <button onclick="restoreVersion('${h.id}')" style="background:#1d4ed8;border:none;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">↩ Restaurer</button>
+        </div>
+      `).join('')}
+      ${!data||!data.length ? '<div style="color:#475569;text-align:center;padding:20px;">Aucun historique</div>' : ''}
+    </div>`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hist-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,10,20,.8);z-index:700;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<div style="background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:560px;max-width:96vw;max-height:80vh;overflow-y:auto;">${html}<div style="padding:0 20px 20px;"><button onclick="document.getElementById('hist-overlay').remove()" style="width:100%;background:#162035;border:1px solid #1e3050;color:#60a5fa;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;font-weight:600;">Fermer</button></div></div>`;
+  document.body.appendChild(overlay);
+}
+
+async function restoreVersion(histId) {
+  if (!confirm('Restaurer cette version ? Les modifications non sauvegardées seront perdues.')) return;
+  const { data } = await SB.from('planning_historique').select('*').eq('id', histId).single();
+  if (!data || !data.data) return;
+  const snap = data.data;
+  if (snap.agents)        { agents.length=0; snap.agents.forEach(a=>agents.push(a)); }
+  if (snap.sectors)       { sectors.length=0; snap.sectors.forEach(s=>sectors.push(s)); }
+  if (snap.cellOverrides) { Object.assign(cellOverrides, snap.cellOverrides); }
+  if (snap.replacants)    { replacants.length=0; snap.replacants.forEach(r=>replacants.push(r)); }
+  if (snap.RULES)         { Object.assign(RULES, snap.RULES); }
+  clearAffCache();
+  buildPlanning();
+  await savePlanningToDB('Restauration — ' + new Date(data.created_at).toLocaleString('fr-FR'));
+  document.getElementById('hist-overlay')?.remove();
+  alert('Version restaurée avec succès !');
+}
+
+// ── ADMIN PANEL ─────────────────────────────────────────
+function openAdminPanel() {
+  document.getElementById('admin-panel-overlay').style.display = 'flex';
+  buildAdminPanel();
+}
+function closeAdminPanel() {
+  document.getElementById('admin-panel-overlay').style.display = 'none';
+}
+
+async function buildAdminPanel() {
+  const body = document.getElementById('admin-panel-body');
+  body.innerHTML = '<div style="color:#60a5fa;padding:20px;text-align:center;">Chargement...</div>';
+
+  const [{ data: users }, { data: etabs }] = await Promise.all([
+    SB.from('app_users').select('*').order('nom'),
+    SB.from('etablissements').select('*').order('nom')
+  ]);
+
+  const etabOpts = (etabs||[]).map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
+  const roleOpts = Object.entries(ROLE_LABELS).map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+
+  body.innerHTML = `
+    <div style="color:#e2e8f0;">
+
+      <!-- Add/Edit user form -->
+      <div style="background:#162035;border:1px solid #1e3050;border-radius:10px;padding:16px;margin-bottom:18px;">
+        <div style="font-size:11px;font-weight:700;color:#38bdf8;letter-spacing:.06em;margin-bottom:12px;">+ NOUVEL UTILISATEUR</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">PRÉNOM</label>
+            <input id="au-prenom" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;" placeholder="Marie"></div>
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">NOM</label>
+            <input id="au-nom" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;" placeholder="DUPONT"></div>
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">LOGIN</label>
+            <input id="au-login" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;" placeholder="marie.dupont"></div>
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">MOT DE PASSE</label>
+            <input id="au-pw" type="password" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;" placeholder="••••••••"></div>
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">RÔLE</label>
+            <select id="au-role" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;">${roleOpts}</select></div>
+          <div><label style="font-size:9.5px;color:#60a5fa;font-weight:700;display:block;margin-bottom:4px;">ÉTABLISSEMENT</label>
+            <select id="au-etab" style="width:100%;background:#0f1827;border:1px solid #1e3050;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:12px;outline:none;">${etabOpts}</select></div>
+        </div>
+        <button onclick="createUser()" style="background:#1d4ed8;border:none;color:#fff;border-radius:7px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;">+ Créer l'utilisateur</button>
+        <span id="au-msg" style="font-size:11px;margin-left:10px;"></span>
+      </div>
+
+      <!-- User list -->
+      <div style="font-size:11px;font-weight:700;color:#60a5fa;letter-spacing:.06em;margin-bottom:10px;">UTILISATEURS EXISTANTS</div>
+      <div id="au-list">
+        ${(users||[]).map(u => `
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#162035;border-radius:8px;margin-bottom:6px;border:1px solid ${u.actif?'#1e3050':'#7f1d1d'};">
+            <div style="flex:1;">
+              <span style="font-size:12px;font-weight:600;color:#e2e8f0;">${u.prenom} ${u.nom}</span>
+              <span style="font-size:10px;color:#475569;margin-left:8px;">${u.login}</span>
+            </div>
+            <span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;${ROLE_COLORS[u.role]||''}">${ROLE_LABELS[u.role]||u.role}</span>
+            <span style="font-size:10px;color:${u.actif?'#22c55e':'#ef4444'};">${u.actif?'Actif':'Inactif'}</span>
+            <button onclick="toggleUser('${u.id}',${u.actif})" style="background:${u.actif?'#7f1d1d':'#064e3b'};border:none;color:#fff;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;">${u.actif?'Désactiver':'Activer'}</button>
+            <button onclick="resetPassword('${u.id}')" style="background:#1e3050;border:none;color:#60a5fa;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;">🔑 MdP</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Historique & Save buttons -->
+      <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid #1e3050;">
+        <button onclick="openHistorique()" style="flex:1;background:#162035;border:1px solid #1e3050;color:#60a5fa;border-radius:7px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;">📋 Historique</button>
+        <button onclick="savePlanningToDB('Sauvegarde manuelle');alert('Planning sauvegardé !')" style="flex:1;background:#065f46;border:none;color:#6ee7b7;border-radius:7px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;">💾 Sauvegarder</button>
+      </div>
+    </div>`;
+}
+
+async function createUser() {
+  const prenom = document.getElementById('au-prenom').value.trim();
+  const nom    = document.getElementById('au-nom').value.trim();
+  const login  = document.getElementById('au-login').value.trim();
+  const pw     = document.getElementById('au-pw').value;
+  const role   = document.getElementById('au-role').value;
+  const etabId = document.getElementById('au-etab').value;
+  const msg    = document.getElementById('au-msg');
+
+  if (!prenom||!nom||!login||!pw||!role||!etabId) {
+    msg.style.color='#f87171'; msg.textContent='Tous les champs sont requis.'; return;
+  }
+  const hash = await sha256(pw);
+  const { error } = await SB.from('app_users').insert({
+    prenom, nom, login, password_hash: hash, role, etablissement_id: etabId, actif: true
+  });
+  if (error) { msg.style.color='#f87171'; msg.textContent='Erreur: '+(error.message||'Login déjà utilisé'); return; }
+  msg.style.color='#22c55e'; msg.textContent='Utilisateur créé !';
+  buildAdminPanel();
+}
+
+async function toggleUser(id, actif) {
+  await SB.from('app_users').update({ actif: !actif }).eq('id', id);
+  buildAdminPanel();
+}
+
+async function resetPassword(id) {
+  const pw = prompt('Nouveau mot de passe :');
+  if (!pw) return;
+  const hash = await sha256(pw);
+  await SB.from('app_users').update({ password_hash: hash }).eq('id', id);
+  alert('Mot de passe mis à jour.');
+}
+
+// ── AUTO-SAVE toutes les 5 minutes ──────────────────────
+setInterval(async () => {
+  if (currentUser) await savePlanningToDB('Sauvegarde auto');
+}, 300000);
+
+// ── INIT ──────────────────────────────────────
+updateSectorCSSVars();
+loadEtablissements();
+
 document.addEventListener('DOMContentLoaded', () => {
-  // pré-init silencieux sans afficher la vue
+  loadEtablissements();
+  // Enter key on password field
+  document.getElementById('auth-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
 });
 
 // ══════════════════════════════════════════════════════════
