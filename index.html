@@ -4065,10 +4065,35 @@ function openReadonly() {
   ov.style.fontFamily = 'DM Sans, sans-serif';
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
+  roSpec = 'ALL';
+  // Reset spec filter buttons
+  document.querySelectorAll('#ro-spec-filters button').forEach(function(b,i) {
+    if (i===0) b.style.cssText = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #38bdf8;background:#0f2744;color:#38bdf8;';
+    else b.style.cssText = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;';
+  });
+  roPopulateSelect();
+  roMonth = currentMonth;
+  roYear  = currentYear;
+  roUpdateLabel();
+  roBuild();
+}
+
+var roSpec = 'ALL';
+
+function roSetSpec(spec, btn) {
+  roSpec = spec;
+  document.querySelectorAll('#ro-spec-filters button').forEach(function(b) {
+    b.style.cssText = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;';
+  });
+  btn.style.cssText = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #38bdf8;background:#0f2744;color:#38bdf8;';
+  roPopulateSelect();
+}
+
+function roPopulateSelect() {
   var sel = document.getElementById('ro-agent-select');
-  // Populate
-  var sorted = agents.filter(function(a){ return a.actif !== false; })
-    .sort(function(a,b){ return a.nom.localeCompare(b.nom,'fr'); });
+  var sorted = agents.filter(function(a) {
+    return a.actif !== false && (roSpec === 'ALL' || a.spec === roSpec);
+  }).sort(function(a,b) { return a.nom.localeCompare(b.nom,'fr'); });
   sel.innerHTML = '<option value="">— Sélectionner mon nom —</option>';
   sorted.forEach(function(a) {
     var opt = document.createElement('option');
@@ -4076,10 +4101,10 @@ function openReadonly() {
     opt.textContent = a.nom + '  ·  ' + a.spec + '  Gr.' + a.grp + a.sg;
     sel.appendChild(opt);
   });
-  roMonth = currentMonth;
-  roYear  = currentYear;
-  roUpdateLabel();
-  roBuild();
+  // Reset card/planning when filter changes
+  document.getElementById('ro-card').style.display    = 'none';
+  document.getElementById('ro-table-wrap').style.display = 'none';
+  document.getElementById('ro-empty').style.display   = 'block';
 }
 
 function closeReadonly() {
@@ -4311,9 +4336,18 @@ function roBuild() {
   <!-- Sélecteur agent -->
   <div style="padding:14px 16px 0;">
     <div style="background:#fff;border:1px solid #e2e8f4;border-radius:10px;padding:12px 14px;box-shadow:0 2px 8px rgba(15,24,39,.06);">
-      <div style="font-size:10px;font-weight:700;color:#6b7fa8;letter-spacing:.06em;margin-bottom:8px;">👤 MON NOM</div>
+      <div style="font-size:10px;font-weight:700;color:#6b7fa8;letter-spacing:.06em;margin-bottom:10px;">👤 MON NOM</div>
+      <!-- Filtres spécialité -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="ro-spec-filters">
+        <button onclick="roSetSpec('ALL',this)" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #38bdf8;background:#0f2744;color:#38bdf8;">Tous</button>
+        <button onclick="roSetSpec('AS',this)"   style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;">AS</button>
+        <button onclick="roSetSpec('IDE',this)"  style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;">IDE</button>
+        <button onclick="roSetSpec('Nuit',this)" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;">Nuit</button>
+        <button onclick="roSetSpec('AUX',this)"  style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;">AUX</button>
+        <button onclick="roSetSpec('AE',this)"   style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f4;background:#f8fafd;color:#6b7fa8;">AE</button>
+      </div>
       <select id="ro-agent-select" onchange="roBuild()"
-        style="width:100%;border:1.5px solid #e2e8f4;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;color:#1a2540;font-family:'DM Sans',sans-serif;background:#fff;outline:none;cursor:pointer;">
+        style="width:100%;border:1.5px solid #e2e8f4;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;color:#1a2540;background:#fff;outline:none;cursor:pointer;">
         <option value="">— Sélectionner mon nom —</option>
       </select>
     </div>
