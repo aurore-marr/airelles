@@ -1256,21 +1256,28 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
 
   </div>
 
-  <div class="legend">
-    <div class="leg-item"><span class="leg-badge code-M">M</span> Matin 06h45–18h45</div>
-    <div class="leg-item"><span class="leg-badge code-S">S</span> Soir 09h00–21h00</div>
-    <div class="leg-item"><span class="leg-badge code-J">J</span> Journée 08h30–20h30</div>
-    <div class="leg-item"><span class="leg-badge code-N" style="background:#1e293b;color:#7dd3fc;border:1px solid #0369a1;">N</span> Nuit 21h–07h</div>
-    <div class="leg-item"><span class="leg-badge code-R">R</span> Repos</div>
-    <div class="leg-item" style="margin-left:14px;">
+  <div class="legend" style="justify-content:space-between;align-items:center;">
+
+    <!-- GAUCHE : secteurs -->
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.04em;margin-right:2px;">SECTEURS</span>
       <span class="sect-pill sect-GENERAL">GENERAL · Nord</span>
-    </div>
-    <div class="leg-item">
       <span class="sect-pill sect-CANTOU">CANTOU</span>
-    </div>
-    <div class="leg-item">
       <span class="sect-pill sect-ALZHEIMER">ALZHEIMER · 2ème Sud</span>
     </div>
+
+    <!-- SÉPARATEUR -->
+    <div style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></div>
+
+    <!-- DROITE : horaires dynamiques -->
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;" id="legend-horaires">
+      <div class="leg-item"><span class="leg-badge code-M">M</span> <span id="leg-h-M">Matin</span></div>
+      <div class="leg-item"><span class="leg-badge code-S">S</span> <span id="leg-h-S">Soir</span></div>
+      <div class="leg-item"><span class="leg-badge code-J">J</span> <span id="leg-h-J">Journée</span></div>
+      <div class="leg-item"><span class="leg-badge code-N" style="background:#1e293b;color:#7dd3fc;border:1px solid #0369a1;">N</span> <span id="leg-h-N">Nuit</span></div>
+      <div class="leg-item"><span class="leg-badge code-R">R</span> Repos</div>
+    </div>
+
   </div>
 
   <!-- En-tête impression (masqué en écran) -->
@@ -2329,6 +2336,7 @@ function buildStatsBar() {
 
 
 function buildPlanning() {
+  updateLegend();
   document.getElementById('month-label').textContent = MONTHS_FR[currentMonth] + ' ' + currentYear;
   const head = document.getElementById('planning-head');
   const body = document.getElementById('planning-body');
@@ -3711,10 +3719,24 @@ function changeMonth(dir) {
   clearAffCache(); buildPlanning();
 }
 
+function updateLegend() {
+  // Récupère les horaires selon la spécialité filtrée (ou AS par défaut si ALL)
+  const spec = (currentSpec && currentSpec !== 'ALL') ? currentSpec : 'AS';
+  const h = (RULES.specRules[spec] && RULES.specRules[spec].horaires) ? RULES.specRules[spec].horaires : RULES.horaires;
+  const label = currentSpec === 'ALL' ? '' : ' <span style="font-size:9px;font-weight:700;opacity:.6;">(' + currentSpec + ')</span>';
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.innerHTML = val + label; };
+  set('leg-h-M', 'Matin '   + (h.M || ''));
+  set('leg-h-S', 'Soir '    + (h.S || ''));
+  set('leg-h-J', 'Journée ' + (h.J || ''));
+  set('leg-h-N', 'Nuit '    + (h.N || (RULES.specRules[spec] && RULES.specRules[spec].horaires && RULES.specRules[spec].horaires.M ? RULES.specRules[spec].horaires.M : '21h–07h')));
+}
+
 function filterSpec(spec, btn) {
   currentSpec=spec;
   document.querySelectorAll('#spec-filters .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); buildPlanning();
+  btn.classList.add('active');
+  updateLegend();
+  buildPlanning();
 }
 
 function filterSect(sect, btn) {
