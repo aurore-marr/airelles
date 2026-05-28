@@ -1560,6 +1560,24 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
         <button class="cm-btn cm-RC" onclick="selectCellCode('RC')"><span class="cm-btn-code">RC</span><span class="cm-btn-label">RÉCUP.</span></button>
       </div>
     </div>
+    <!-- Plage de dates (CA / Maladie / Absences) -->
+    <div class="cm-section" id="cm-range-section" style="display:none;">
+      <div class="cm-section-title">📅 <span style="color:#f59e0b;">APPLIQUER SUR UNE PLAGE DE DATES</span></div>
+      <div style="font-size:10px;color:#64748b;margin-bottom:8px;">Optionnel — laissez vide pour n'appliquer qu'à ce jour</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:9.5px;color:#60a5fa;font-weight:700;">DÉBUT</label>
+          <input type="date" id="cm-date-start" style="background:#162035;border:1px solid #1e3050;border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;outline:none;">
+        </div>
+        <div style="font-size:16px;color:#475569;margin-top:16px;">→</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:9.5px;color:#60a5fa;font-weight:700;">FIN</label>
+          <input type="date" id="cm-date-end" style="background:#162035;border:1px solid #1e3050;border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;outline:none;">
+        </div>
+        <div style="font-size:10px;color:#475569;margin-top:16px;" id="cm-range-count"></div>
+      </div>
+    </div>
+
     <!-- Secteur ce jour -->
     <div class="cm-section" id="cm-sect-section">
       <div class="cm-section-title">📍 SECTEUR CE JOUR</div>
@@ -1620,6 +1638,13 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <div class="form-row">
         <label>NOTES</label>
         <input type="text" id="rf-notes" placeholder="Agence intérim, remarques…">
+      </div>
+      <div class="form-row" style="background:#1a2540;border-radius:8px;padding:10px 12px;border:1px solid #1e3050;">
+        <label style="color:#f59e0b;">🔑 CODE PIN (4 chiffres) — pour accès vue agent</label>
+        <input type="text" id="rf-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+          placeholder="Ex: 1234"
+          style="letter-spacing:6px;font-size:18px;font-weight:700;width:100px;text-align:center;">
+        <div style="font-size:10px;color:#64748b;margin-top:4px;">Ce code sera demandé au vacataire pour accéder à ses disponibilités via QR code.</div>
       </div>
       <div id="repl-modal-error" style="color:#dc2626;font-size:11.5px;display:none;"></div>
     </div>
@@ -2782,7 +2807,42 @@ function selectCellCode(code) {
   document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`.cm-${code}`);
   if (btn) btn.classList.add('active');
+
+  // Afficher la plage de dates pour CA, MO, AT, FO, GR, CF, EM
+  const rangeSection = document.getElementById('cm-range-section');
+  if (rangeSection) {
+    const showRange = ['CA','MO','AT','FO','GR','CF','EM'].includes(code);
+    rangeSection.style.display = showRange ? 'block' : 'none';
+    if (showRange) {
+      // Pré-remplir avec la date courante
+      const parts = cellModalState.dateKey.split('-');
+      const dateStr = parts.slice(-3).join('-');
+      const startEl = document.getElementById('cm-date-start');
+      const endEl   = document.getElementById('cm-date-end');
+      if (startEl && !startEl.value) startEl.value = dateStr;
+      if (endEl   && !endEl.value)   endEl.value   = dateStr;
+      updateRangeCount();
+    }
+  }
 }
+
+function updateRangeCount() {
+  const s = document.getElementById('cm-date-start')?.value;
+  const e = document.getElementById('cm-date-end')?.value;
+  const el = document.getElementById('cm-range-count');
+  if (!el || !s || !e) return;
+  const ds = new Date(s), de = new Date(e);
+  if (de < ds) { el.textContent = '⚠ Date fin < début'; el.style.color='#f87171'; return; }
+  const days = Math.round((de-ds)/86400000) + 1;
+  el.style.color = '#6ee7b7';
+  el.textContent = days + ' jour' + (days>1?'s':'');
+}
+
+// Attach listeners to date inputs
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('cm-date-start')?.addEventListener('change', updateRangeCount);
+  document.getElementById('cm-date-end')?.addEventListener('change', updateRangeCount);
+});
 
 function selectMod(mod) {
   cellModalState.mod = mod;
@@ -2851,8 +2911,29 @@ function validateCell() {
   const parts = dateKey.split("-");
   const clickedDate = new Date(parseInt(parts[parts.length-3]), parseInt(parts[parts.length-2])-1, parseInt(parts[parts.length-1]));
 
-  // Si code non travaillé → appliquer directement
+  // Si code non travaillé → vérifier plage de dates
   if (!["M","S","J"].includes(currentCode)) {
+    const startVal = document.getElementById('cm-date-start')?.value;
+    const endVal   = document.getElementById('cm-date-end')?.value;
+    const useRange = ['CA','MO','AT','FO','GR','CF','EM'].includes(currentCode) && startVal && endVal;
+
+    if (useRange) {
+      const ds = new Date(startVal + 'T00:00:00');
+      const de = new Date(endVal   + 'T00:00:00');
+      if (de >= ds) {
+        let d = new Date(ds);
+        while (d <= de) {
+          const y=d.getFullYear(), m=d.getMonth(), day=d.getDate();
+          const dk = agentPoste+'-'+y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+          cellOverrides[dk] = {code: currentCode, secteur, mod};
+          d.setDate(d.getDate()+1);
+        }
+        closeCellModal();
+        buildPlanning();
+        return;
+      }
+    }
+    // Pas de plage → juste ce jour
     cellOverrides[dateKey] = {code: currentCode, secteur, mod};
     closeCellModal();
     buildPlanning();
@@ -2930,6 +3011,15 @@ function clearCellModal() {
 }
 
 function closeCellModal() {
+  // Reset date range
+  const s = document.getElementById('cm-date-start');
+  const e = document.getElementById('cm-date-end');
+  const r = document.getElementById('cm-range-section');
+  const c = document.getElementById('cm-range-count');
+  if (s) s.value = '';
+  if (e) e.value = '';
+  if (r) r.style.display = 'none';
+  if (c) c.textContent = '';
   document.getElementById('cell-modal-overlay').classList.remove('open');
 }
 
@@ -3469,11 +3559,12 @@ function openReplModal(id) {
       document.getElementById('rf-type').value  = r.type;
       document.getElementById('rf-tel').value   = r.tel||'';
       document.getElementById('rf-notes').value = r.notes||'';
+      document.getElementById('rf-pin').value   = r.pin||'';
     }
   } else {
     document.getElementById('rf-nom').value=''; document.getElementById('rf-spec').value='AS';
     document.getElementById('rf-type').value='VAC'; document.getElementById('rf-tel').value='';
-    document.getElementById('rf-notes').value='';
+    document.getElementById('rf-notes').value=''; document.getElementById('rf-pin').value='';
   }
   document.getElementById('repl-modal-overlay').classList.add('open');
 }
@@ -3481,11 +3572,17 @@ function openReplModal(id) {
 function saveReplacant() {
   const nom = document.getElementById('rf-nom').value.trim();
   if (!nom) { document.getElementById('repl-modal-error').textContent='Le nom est obligatoire.'; document.getElementById('repl-modal-error').style.display='block'; return; }
+  const pinVal = document.getElementById('rf-pin').value.trim();
+  if (pinVal && !/^[0-9]{4}$/.test(pinVal)) {
+    document.getElementById('repl-modal-error').textContent='Le code PIN doit être 4 chiffres.';
+    document.getElementById('repl-modal-error').style.display='block'; return;
+  }
   const data = {
     nom, spec:document.getElementById('rf-spec').value,
     type:document.getElementById('rf-type').value,
     tel:document.getElementById('rf-tel').value,
     notes:document.getElementById('rf-notes').value,
+    pin: pinVal || null,
   };
   if (replEditId) {
     const r=replacants.find(x=>x.id===replEditId); if(r) Object.assign(r,data);
@@ -4521,15 +4618,24 @@ var roCurrentEtabId = null;
 
 // Quand l'agent sélectionne son nom → afficher champ PIN
 function roOnAgentChange() {
-  var sel    = document.getElementById('ro-agent-select');
-  var poste  = sel ? sel.value : '';
+  var sel  = document.getElementById('ro-agent-select');
+  var val  = sel ? sel.value : '';
   roVerified = false;
-  var pinWrap = document.getElementById('ro-pin-wrap');
-  var pinErr  = document.getElementById('ro-pin-error');
-  if (pinWrap) pinWrap.style.display = poste ? 'block' : 'none';
+  var pinWrap  = document.getElementById('ro-pin-wrap');
+  var pinErr   = document.getElementById('ro-pin-error');
+  var pinLabel = document.getElementById('ro-pin-label');
+  if (pinWrap) pinWrap.style.display = val ? 'block' : 'none';
   if (pinErr)  pinErr.textContent    = '';
   var pinInput = document.getElementById('ro-pin-input');
   if (pinInput) pinInput.value = '';
+  // Adapter le libellé selon agent ou vacataire
+  if (pinLabel) {
+    if (val && val.indexOf('repl_') === 0) {
+      pinLabel.textContent = '🔒 CODE PIN (défini par votre responsable)';
+    } else {
+      pinLabel.textContent = '🔒 4 DERNIERS CHIFFRES DE VOTRE MATRICULE';
+    }
+  }
   document.getElementById('ro-card').style.display      = 'none';
   document.getElementById('ro-table-wrap').style.display = 'none';
   document.getElementById('ro-empty').style.display      = 'block';
@@ -4538,22 +4644,40 @@ function roOnAgentChange() {
 // Vérification PIN
 async function roVerifyPin() {
   var sel   = document.getElementById('ro-agent-select');
-  var poste = sel ? sel.value : '';
+  var val   = sel ? sel.value : '';
   var pin   = (document.getElementById('ro-pin-input').value || '').trim();
   var err   = document.getElementById('ro-pin-error');
   var btn   = document.querySelector('#ro-pin-wrap button');
 
-  if (!poste) return;
+  if (!val) return;
 
-  // PIN = 4 derniers chiffres du numéro de poste (padding avec 0 si besoin)
-  var digits   = poste.replace(/[^0-9]/g, '');
-  var expected = digits.padStart(4, '0').slice(-4);
+  var expected = '';
+  var isRepl = val.indexOf('repl_') === 0;
+
+  if (isRepl) {
+    // Vacataire : PIN défini dans sa fiche
+    var replId = val.replace('repl_', '');
+    var repl   = replacants.find(function(r) { return r.id === replId; });
+    expected   = repl && repl.pin ? repl.pin : null;
+    if (!expected) {
+      err.textContent = '❌ Aucun code PIN défini. Contactez votre responsable.';
+      return;
+    }
+  } else {
+    // Agent permanent : 4 derniers chiffres du matricule
+    var poste  = val.replace('agent_', '');
+    var digits = poste.replace(/[^0-9]/g, '');
+    expected   = digits.padStart(4, '0').slice(-4);
+  }
 
   if (pin !== expected) {
-    err.textContent = '❌ Code incorrect — saisissez les 4 derniers chiffres de votre matricule.';
+    err.textContent = '❌ Code incorrect.';
     document.getElementById('ro-pin-input').value = '';
     return;
   }
+
+  // Mettre à jour val pour la suite (compatibilité)
+  var poste = isRepl ? val : val.replace('agent_', '');
 
   // PIN OK
   err.textContent = '';
@@ -4568,15 +4692,9 @@ async function roVerifyPin() {
       var resp = await SB.from('etablissements').select('id').limit(1);
       roCurrentEtabId = (resp.data && resp.data.length) ? resp.data[0].id : null;
     }
+    roDispos = {};
     if (roCurrentEtabId) {
-      var resp2 = await SB.from('agent_dispos')
-        .select('*')
-        .eq('etablissement_id', roCurrentEtabId)
-        .eq('agent_poste', poste);
-      roDispos = {};
-      (resp2.data || []).forEach(function(d) {
-        roDispos[d.agent_poste + '_' + d.date] = d.type_dispo;
-      });
+      await roLoadDisposForPoste(poste);
     }
   } catch(e) {
     console.warn('Dispo load error:', e);
@@ -4586,6 +4704,21 @@ async function roVerifyPin() {
 }
 
 // Charge les dispos (appelé aussi depuis roAddDispo)
+// Charge les dispos en adaptant la clé selon agent ou vacataire
+async function roLoadDisposForPoste(poste) {
+  if (!roCurrentEtabId) await roEnsureEtabId();
+  if (!roCurrentEtabId) return;
+  // poste peut être "repl_ID" ou "AS001"
+  var agentPoste = poste.indexOf('repl_')===0 ? poste : poste;
+  var resp = await SB.from('agent_dispos')
+    .select('*')
+    .eq('etablissement_id', roCurrentEtabId)
+    .eq('agent_poste', agentPoste);
+  (resp.data||[]).forEach(function(d) {
+    roDispos[d.agent_poste + '_' + d.date] = d.type_dispo;
+  });
+}
+
 async function roEnsureEtabId() {
   if (roCurrentEtabId) return;
   try {
@@ -4607,14 +4740,18 @@ async function roAddDispo(poste, dateStr) {
     return;
   }
 
-  var existing = roDispos[poste + '_' + dateStr] || null;
+  // La clé peut être "repl_ID_date" ou "poste_date"
+  var dispoKey = poste + '_' + dateStr;
+  var existing = roDispos[dispoKey] || null;
   // Cycle : vide → HS → DISPO → vide
   var types = [null, 'DISPO_SUP', 'DISPO_WE'];
   var idx   = types.indexOf(existing);
   var next  = types[(idx + 1) % types.length];
 
-  var agent = agents.find(function(a) { return a.poste === poste; });
-  var agentNom = agent ? agent.nom : poste;
+  var isReplPoste = poste.indexOf('repl_')===0;
+  var agent    = !isReplPoste ? agents.find(function(a){ return a.poste===poste; }) : null;
+  var replItem = isReplPoste ? replacants.find(function(r){ return r.id===poste.replace('repl_',''); }) : null;
+  var agentNom = agent ? agent.nom : (replItem ? replItem.nom : poste);
 
   if (next === null) {
     // Supprimer
@@ -4623,7 +4760,7 @@ async function roAddDispo(poste, dateStr) {
       .eq('etablissement_id', roCurrentEtabId)
       .eq('agent_poste', poste)
       .eq('date', dateStr);
-    delete roDispos[poste + '_' + dateStr];
+    delete roDispos[dispoKey];
   } else {
     // Upsert
     var upsertResult = await SB.from('agent_dispos').upsert({
@@ -4638,7 +4775,7 @@ async function roAddDispo(poste, dateStr) {
       alert('Erreur lors de la sauvegarde : ' + upsertResult.error.message);
       return;
     }
-    roDispos[poste + '_' + dateStr] = next;
+    roDispos[dispoKey] = next;
   }
   // Feedback visuel
   var feedbackEl = document.getElementById('ro-dispo-feedback');
@@ -4675,42 +4812,112 @@ async function checkDispoNotif() {
 
 async function openDispoPanel() {
   if (!currentUser || !currentEtab) return;
-  var { data } = await SB.from('agent_dispos')
-    .select('*')
-    .eq('etablissement_id', currentEtab.id)
-    .gte('date', new Date().toISOString().slice(0,10))
-    .order('date', { ascending: true });
+
+  // Charger dispos + vacataires/intérims en parallèle
+  var [dispoResp] = await Promise.all([
+    SB.from('agent_dispos')
+      .select('*')
+      .eq('etablissement_id', currentEtab.id)
+      .gte('date', new Date().toISOString().slice(0,10))
+      .order('date', { ascending: true })
+  ]);
+  var data = dispoResp.data || [];
 
   var TYPE_LABELS = { DISPO_SUP:'Heures sup', DISPO_WE:'Disponible' };
   var TYPE_COLORS = {
     DISPO_SUP: 'background:#d1fae5;color:#065f46;',
     DISPO_WE:  'background:#dbeafe;color:#1d4ed8;'
   };
+  var SPEC_COLORS = {
+    AS:'background:#dbeafe;color:#1d4ed8;', IDE:'background:#ede9fe;color:#6d28d9;',
+    Nuit:'background:#1e293b;color:#7dd3fc;', AUX:'background:#d1fae5;color:#065f46;',
+    AE:'background:#fef9c3;color:#854d0e;'
+  };
 
-  var rows = (data||[]).map(function(d) {
-    var dateF = new Date(d.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#162035;border-radius:8px;margin-bottom:5px;border:1px solid #1e3050;">' +
-      '<div style="flex:1;">' +
-        '<div style="font-size:12px;font-weight:600;color:#e2e8f0;">' + d.agent_nom + '</div>' +
-        '<div style="font-size:10px;color:#475569;">' + dateF + '</div>' +
+  // Enrichir avec spécialité depuis agents[]
+  function getAgentSpec(poste) {
+    var a = agents.find(function(x){ return x.poste===poste; });
+    return a ? a.spec : '?';
+  }
+  function getAgentType(poste) {
+    var a = agents.find(function(x){ return x.poste===poste; });
+    return a ? (a.statut==='int'?'Intérim': a.statut==='con'?'Vacataire':'') : '';
+  }
+
+  // Séparer permanents et vacataires/intérims
+  var permanents = data.filter(function(d){
+    var a = agents.find(function(x){ return x.poste===d.agent_poste; });
+    return !a || (a.statut!=='int');
+  });
+  var vacInt = data.filter(function(d){
+    var a = agents.find(function(x){ return x.poste===d.agent_poste; });
+    return a && a.statut==='int';
+  });
+  // Vacataires depuis replacants[]
+  var vacRepl = replacants.filter(function(r){
+    return Object.keys(r.dispos||{}).some(function(k){
+      var dd = new Date(k);
+      return dd >= new Date() && r.dispos[k]==='O';
+    });
+  });
+
+  function renderRow(d) {
+    var dateF = new Date(d.date + 'T00:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+    var spec  = getAgentSpec(d.agent_poste);
+    var atype = getAgentType(d.agent_poste);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#162035;border-radius:8px;margin-bottom:5px;border:1px solid #1e3050;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<span style="font-size:12px;font-weight:600;color:#e2e8f0;">' + d.agent_nom + '</span>' +
+          '<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;' + (SPEC_COLORS[spec]||'background:#1e293b;color:#94a3b8;') + '">' + spec + '</span>' +
+          (atype ? '<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#451a03;color:#fde68a;">' + atype + '</span>' : '') +
+        '</div>' +
+        '<div style="font-size:10px;color:#475569;margin-top:2px;">' + dateF + '</div>' +
       '</div>' +
-      '<span style="padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;' + (TYPE_COLORS[d.type_dispo]||'') + '">' + (TYPE_LABELS[d.type_dispo]||d.type_dispo) + '</span>' +
-      '<button data-id="'+d.id+'" onclick="deleteDispoAdmin(this.dataset.id)" style="background:none;border:none;color:#475569;cursor:pointer;font-size:14px;" title="Supprimer">✕</button>' +
+      '<span style="padding:2px 10px;border-radius:10px;font-size:10px;font-weight:700;flex-shrink:0;' + (TYPE_COLORS[d.type_dispo]||'') + '">' + (TYPE_LABELS[d.type_dispo]||d.type_dispo) + '</span>' +
+      '<button data-id="'+d.id+'" onclick="deleteDispoAdmin(this.dataset.id)" style="background:none;border:none;color:#475569;cursor:pointer;font-size:14px;flex-shrink:0;" title="Supprimer">✕</button>' +
     '</div>';
-  }).join('');
+  }
+
+  function renderReplRow(r) {
+    var dispos = Object.keys(r.dispos||{})
+      .filter(function(k){ return new Date(k)>=new Date() && r.dispos[k]==='O'; })
+      .sort().slice(0,3)
+      .map(function(k){ return new Date(k+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); })
+      .join(', ');
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d1f35;border-radius:8px;margin-bottom:5px;border:1px solid #1e3050;">' +
+      '<div style="flex:1;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<span style="font-size:12px;font-weight:600;color:#e2e8f0;">' + r.nom + '</span>' +
+          '<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;' + (SPEC_COLORS[r.spec]||'') + '">' + r.spec + '</span>' +
+          '<span style="padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:#451a03;color:#fde68a;">' + r.type + '</span>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#475569;margin-top:2px;">📅 ' + (dispos||'Voir planning') + (Object.keys(r.dispos||{}).filter(function(k){return new Date(k)>=new Date()&&r.dispos[k]==='O';}).length>3?'…':'') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var rowsHtml = '';
+  if (permanents.length || vacInt.length) {
+    rowsHtml += '<div style="font-size:9.5px;font-weight:700;color:#60a5fa;letter-spacing:.06em;margin-bottom:8px;">AGENTS PERMANENTS</div>';
+    rowsHtml += permanents.map(renderRow).join('') || '<div style="color:#475569;font-size:11px;padding:8px;">Aucune dispo</div>';
+  }
+  if (vacRepl.length) {
+    rowsHtml += '<div style="font-size:9.5px;font-weight:700;color:#fde68a;letter-spacing:.06em;margin:14px 0 8px;">VIVIER VACATAIRES / INTÉRIMS</div>';
+    rowsHtml += vacRepl.map(renderReplRow).join('');
+  }
+  if (!rowsHtml) rowsHtml = '<div style="color:#475569;text-align:center;padding:24px;">Aucune disponibilité déclarée</div>';
 
   var overlay = document.createElement('div');
   overlay.id = 'dispo-panel-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,10,20,.8);z-index:700;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
-    '<div style="background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:520px;max-width:96vw;max-height:85vh;overflow-y:auto;">' +
-      '<div style="background:#0a1020;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3050;position:sticky;top:0;">' +
-        '<span style="color:#38bdf8;font-size:13px;font-weight:700;">🟢 Disponibilités agents à venir</span>' +
+    '<div style="background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:560px;max-width:96vw;max-height:85vh;overflow-y:auto;">' +
+      '<div style="background:#0a1020;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3050;position:sticky;top:0;z-index:2;">' +
+        '<span style="color:#38bdf8;font-size:13px;font-weight:700;">🟢 Disponibilités à venir</span>' +
         '<button onclick="closePanelOverlay()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">×</button>' +
       '</div>' +
-      '<div style="padding:16px;">' +
-        (rows || '<div style="color:#475569;text-align:center;padding:24px;">Aucune disponibilité déclarée</div>') +
-      '</div>' +
+      '<div style="padding:16px;">' + rowsHtml + '</div>' +
     '</div>';
   document.body.appendChild(overlay);
 }
@@ -4871,17 +5078,43 @@ function roPopulateSelect() {
   var sorted = agents.filter(function(a) {
     return a.actif !== false && (roSpec === 'ALL' || a.spec === roSpec);
   }).sort(function(a,b) { return a.nom.localeCompare(b.nom,'fr'); });
+
   sel.innerHTML = '<option value="">— Sélectionner mon nom —</option>';
-  sorted.forEach(function(a) {
-    var opt = document.createElement('option');
-    opt.value = a.poste;
-    opt.textContent = a.nom + '  ·  ' + a.spec + '  Gr.' + a.grp + a.sg;
-    sel.appendChild(opt);
-  });
-  // Reset card/planning when filter changes
-  document.getElementById('ro-card').style.display    = 'none';
+
+  // Agents permanents
+  if (sorted.length) {
+    var grp = document.createElement('optgroup');
+    grp.label = '👥 Agents';
+    sorted.forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = 'agent_' + a.poste;
+      opt.textContent = a.nom + '  ·  ' + a.spec + '  Gr.' + a.grp + a.sg;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  }
+
+  // Vacataires / intérims avec PIN défini
+  var replFiltered = replacants.filter(function(r) {
+    return r.pin && (roSpec === 'ALL' || r.spec === roSpec);
+  }).sort(function(a,b) { return a.nom.localeCompare(b.nom,'fr'); });
+
+  if (replFiltered.length) {
+    var grp2 = document.createElement('optgroup');
+    grp2.label = '🔄 Vacataires / Intérims';
+    replFiltered.forEach(function(r) {
+      var opt = document.createElement('option');
+      opt.value = 'repl_' + r.id;
+      opt.textContent = r.nom + '  ·  ' + r.spec + '  (' + r.type + ')';
+      grp2.appendChild(opt);
+    });
+    sel.appendChild(grp2);
+  }
+
+  // Reset
+  document.getElementById('ro-card').style.display      = 'none';
   document.getElementById('ro-table-wrap').style.display = 'none';
-  document.getElementById('ro-empty').style.display   = 'block';
+  document.getElementById('ro-empty').style.display      = 'block';
 }
 
 function closeReadonly() {
@@ -4902,6 +5135,50 @@ function roChangeMonth(dir) {
   if (roMonth > 11) { roMonth = 0;  roYear++; }
   roUpdateLabel();
   roBuild();
+}
+
+// Build month view for a vacataire (just dispo row, no planning row)
+function roBuildReplMonth(repl, m, y) {
+  var nbDays      = getDaysOfMonth(y, m);
+  var firstOffset = getFirstDayOffset(y, m);
+  var todayDate   = new Date();
+  var isCurMonth  = todayDate.getFullYear()===y && todayDate.getMonth()===m;
+  var DN = ['L','M','M','J','V','S','D'];
+
+  var h = '<div style="background:#fff;border:1px solid #e2e8f4;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(15,24,39,.06);margin-bottom:14px;">';
+  h += '<div style="background:#0f1827;color:#38bdf8;padding:10px 14px;font-size:12px;font-weight:700;">' + MONTHS_FR[m] + ' ' + y + '</div>';
+  h += '<div style="overflow-x:auto;"><table style="border-collapse:collapse;width:max-content;min-width:100%;">';
+  h += '<thead><tr>';
+  h += '<th style="position:sticky;left:0;z-index:2;background:#f8fafd;min-width:60px;padding:3px 8px;font-size:9px;color:#94a3b8;border-right:2px solid #e2e8f4;">Dispo</th>';
+  for (var d=1; d<=nbDays; d++) {
+    var dow=(firstOffset+d-1)%7, isWE=dow>=5;
+    var isTdy=isCurMonth&&todayDate.getDate()===d;
+    h += '<th style="min-width:26px;padding:3px 1px;text-align:center;font-size:9px;font-weight:700;' +
+      'background:'+(isTdy?'#1d4ed8':isWE?'#fff7ed':'#f8fafd')+';' +
+      'color:'+(isTdy?'#fff':isWE?'#c2570a':'#94a3b8')+';' +
+      (dow===0?'border-left:2px solid #dbeafe;':'') + '">' + DN[dow] + '<br>' + d + '</th>';
+  }
+  h += '</tr></thead><tbody><tr>';
+  h += '<td style="position:sticky;left:0;z-index:2;background:#f0fdf4;padding:3px 8px;font-size:9px;font-weight:700;color:#065f46;border-right:2px solid #e2e8f4;white-space:nowrap;">+ Dispo</td>';
+  for (var dd=1; dd<=nbDays; dd++) {
+    var ddow=(firstOffset+dd-1)%7;
+    var dateStr=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+    var existDispo=roDispos['repl_'+repl.id+'_'+dateStr]||null;
+    var isPast=new Date(y,m,dd)<new Date(todayDate.getFullYear(),todayDate.getMonth(),todayDate.getDate());
+    if(isPast){
+      h+='<td style="padding:2px 1px;text-align:center;background:#fafafa;'+(ddow===0?'border-left:2px solid #dbeafe;':'')+'"></td>';
+    } else {
+      var dispoBg=existDispo==='DISPO_SUP'?'background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;':
+                  existDispo==='DISPO_WE'?'background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;':
+                  'background:#f0fdf4;color:#bbf7d0;border:1px dashed #6ee7b7;';
+      var dispoTxt=existDispo==='DISPO_SUP'?'HS':existDispo==='DISPO_WE'?'DI':'+';
+      h+='<td style="padding:2px 1px;text-align:center;background:#f0fdf4;'+(ddow===0?'border-left:2px solid #dbeafe;':'')+'border-top:1px solid #bbf7d0;">' +
+        '<span data-poste="repl_'+repl.id+'" data-date="'+dateStr+'" onclick="roAddDispo(this.dataset.poste,this.dataset.date)" ' +
+        'style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:18px;border-radius:3px;font-size:9px;font-weight:700;cursor:pointer;'+dispoBg+'">'+dispoTxt+'</span></td>';
+    }
+  }
+  h+='</tr></tbody></table></div></div>';
+  return h;
 }
 
 function roBuildOneMonth(agent, m, y) {
@@ -5006,7 +5283,44 @@ function roBuildOneMonth(agent, m, y) {
 function roBuild() {
   var sel   = document.getElementById('ro-agent-select');
   var poste = sel ? sel.value : '';
-  var agent = agents.find(function(a){ return a.poste === poste; });
+  var val    = (document.getElementById('ro-agent-select')?.value) || '';
+  var isRepl = val.indexOf('repl_') === 0;
+  var replId = isRepl ? val.replace('repl_', '') : null;
+  var repl   = isRepl ? replacants.find(function(r){ return r.id===replId; }) : null;
+  var agent  = !isRepl ? agents.find(function(a){ return a.poste === poste; }) : null;
+
+  // Pour un vacataire sans planning, afficher une carte simplifiée
+  if (isRepl && repl) {
+    card.style.display    = 'block';
+    tblWrap.style.display = 'none';
+    empty.style.display   = 'none';
+    document.getElementById('ro-name').textContent = repl.nom;
+    document.getElementById('ro-info').textContent = repl.spec + '  ·  ' + repl.type + (repl.tel ? '  ·  ' + repl.tel : '');
+    document.getElementById('ro-sect-badge').innerHTML =
+      '<span style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#1e293b;color:#7dd3fc;border:1px solid #0369a1;">' + repl.type + '</span>';
+    // Compter les dispos déclarées
+    var nbDispos = Object.keys(roDispos).filter(function(k){ return k.indexOf(poste+'_')===0; }).length;
+    var sg2 = document.getElementById('ro-stats');
+    var db  = document.createElement('div');
+    db.style.cssText='background:#eff6ff;border-radius:8px;padding:14px;text-align:center;grid-column:1/-1;';
+    db.innerHTML='<div style="font-size:22px;font-weight:800;color:#1d4ed8;">'+nbDispos+'</div>'+
+      '<div style="font-size:10px;color:#6b7fa8;font-weight:600;margin-top:3px;">Dispos déclarées</div>'+
+      '<div style="font-size:10px;color:#94a3b8;margin-top:6px;">Cliquez sur les mois ci-dessous pour déclarer vos disponibilités</div>';
+    sg2.innerHTML=''; sg2.appendChild(db);
+    tblWrap.style.display = 'block';
+    // Afficher quand même les mois pour qu'il puisse ajouter des dispos
+    var nb2 = parseInt(document.getElementById('ro-nb-months')?.value||3);
+    var container2 = document.getElementById('ro-months-container');
+    var html2 = '';
+    for (var ii=0; ii<nb2; ii++) {
+      var mm=roMonth+ii, yy=roYear;
+      while(mm>11){mm-=12;yy++;}
+      html2 += roBuildReplMonth(repl, mm, yy);
+    }
+    container2.innerHTML = html2;
+    roUpdateLabel();
+    return;
+  }
 
   var card    = document.getElementById('ro-card');
   var tblWrap = document.getElementById('ro-table-wrap');
@@ -5151,7 +5465,7 @@ function roBuild() {
       </select>
       <!-- Vérification PIN -->
       <div id="ro-pin-wrap" style="display:none;margin-top:10px;">
-        <div style="font-size:10px;font-weight:700;color:#6b7fa8;letter-spacing:.06em;margin-bottom:6px;">🔒 4 DERNIERS CHIFFRES DU MATRICULE</div>
+        <div style="font-size:10px;font-weight:700;color:#6b7fa8;letter-spacing:.06em;margin-bottom:6px;" id="ro-pin-label">🔒 4 DERNIERS CHIFFRES DU MATRICULE</div>
         <div style="display:flex;gap:8px;align-items:center;">
           <input id="ro-pin-input" type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*"
             placeholder="••••"
