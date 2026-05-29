@@ -246,7 +246,7 @@
     padding: 3px;
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
-    height: 38px;
+    height: 42px;
   }
   tr.agent-row:hover td { background-color: #f8faff !important; }
 
@@ -259,6 +259,10 @@
   /* agent name */
   .agent-name { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; }
   .agent-poste { font-size: 10px; color: var(--text); font-weight: 700; font-family: 'DM Mono', monospace; }
+
+  .code-HS_M { color:#93c5fd !important; background:#1e3a6e !important; border:1px solid #3b82f6 !important; }
+  .code-HS_S { color:#c4b5fd !important; background:#2d1b69 !important; border:1px solid #7c3aed !important; }
+  .code-HS_J { color:#6ee7b7 !important; background:#064e3b !important; border:1px solid #059669 !important; }
 
   /* code badges */
   .code {
@@ -1186,7 +1190,10 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <div id="user-menu-dropdown" style="display:none;position:absolute;top:38px;right:0;background:#0f1827;border:1px solid #1e3050;border-radius:10px;padding:6px;min-width:180px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.5);">
         <div style="font-size:9.5px;font-weight:700;color:#475569;letter-spacing:.06em;padding:4px 8px 6px;">PARAMÈTRES</div>
         <button onclick="showView('regles',document.getElementById('nav-btn-regles'));toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">⏱ Règles & Temps</button>
-        <button onclick="showView('config',document.getElementById('nav-btn-config'));toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">⚙ Config secteurs</button>
+        <button onclick="showView('config',document.getElementById('nav-btn-config'));toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">⚙ Config établissement</button>
+        <div style="height:1px;background:#1e3050;margin:4px 0;"></div>
+        <button onclick="openReadonlyModal();toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">👁 Vue agent</button>
+        <button onclick="showQRModal();toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">📱 QR Code</button>
         <div style="height:1px;background:#1e3050;margin:4px 0;"></div>
         <button onclick="openAdminPanel();toggleUserMenu();" id="menu-admin-btn" style="display:none;width:100%;text-align:left;background:none;border:none;color:#93c5fd;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">👤 Gérer accès</button>
       </div>
@@ -1196,8 +1203,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <span id="month-label">Juin 2026</span>
       <button onclick="changeMonth(1)">›</button>
     </div>
-    <button onclick="openReadonly()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="Vue lecture seule agents">👁 Vue agent</button>
-    <button id="btn-qr" onclick="showQRModal()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="QR Code accès agents">📱 QR Code</button>
+
   </div>
   </div>
 </header>
@@ -1208,7 +1214,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
   <button onclick="showView('agents',this)">👥 Agents</button>
   <button onclick="showView('replacants',this)">🔄 Remplaçants</button>
   <button id="nav-btn-regles" onclick="showView('regles',this)" style="display:none;">⏱ Règles & Temps</button>
-  <button id="nav-btn-config" onclick="showView('config',this)" style="display:none;">⚙ Config secteurs</button>
+  <button id="nav-btn-config" onclick="showView('config',this)" style="display:none;">⚙ Config établissement</button>
   <!-- btn-admin-users déplacé dans le menu utilisateur -->
   <button id="btn-dispo-notif" onclick="openDispoPanel()" style="display:none;background:#065f46;color:#6ee7b7;border:none;border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;align-items:center;gap:5px;animation:pulse 2s infinite;">🟢 Dispos</button>
 </nav>
@@ -1292,6 +1298,10 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <div class="leg-item"><span class="leg-badge code-J">J</span> <span id="leg-h-J">Journée</span></div>
       <div class="leg-item"><span class="leg-badge code-N" style="background:#1e293b;color:#7dd3fc;border:1px solid #0369a1;">N</span> <span id="leg-h-N">Nuit</span></div>
       <div class="leg-item"><span class="leg-badge code-R">R</span> Repos</div>
+      <div class="leg-item">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:20px;border-radius:4px;font-size:8px;font-weight:900;background:repeating-linear-gradient(45deg,#fef3c7,#fef3c7 3px,#fde68a 3px,#fde68a 6px);color:#92400e;border:1px solid #d97706;">⚡M</span>
+        Repos travaillé
+      </div>
     </div>
 
   </div>
@@ -1453,8 +1463,14 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
 <!-- VIEW 3 : CONFIG -->
 <!-- ═══════════════════════════════════════════ -->
 <div class="view" id="view-config">
-  <div class="toolbar">
-    <span class="toolbar-title">Configuration des secteurs</span>
+  <div class="toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span class="toolbar-title">Configuration de l'établissement</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button onclick="downloadExcelTemplate()" style="background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Télécharger le modèle Excel">📥 Modèle Excel</button>
+      <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Importer un fichier Excel">
+        📤 Importer Excel <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(this)" style="display:none;">
+      </label>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start;">
 
@@ -1471,19 +1487,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     <!-- ── Règles rotation ── -->
     <div class="config-card">
       <div class="config-card-title">RÈGLES DE ROTATION</div>
-      <table class="rules-table">
-        <thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead>
-        <tbody>
-          <tr><td>Cycle</td><td><span class="param-val">42 jours</span></td></tr>
-          <tr><td>Jours travaillés</td><td><span class="param-val">21 / cycle</span></td></tr>
-          <tr><td>Matin (M)</td><td><span class="param-val" id="rot-horaire-M">—</span></td></tr>
-          <tr><td>Soir (S)</td><td><span class="param-val" id="rot-horaire-S">—</span></td></tr>
-          <tr><td>Journée (J)</td><td><span class="param-val" id="rot-horaire-J">—</span></td></tr>
-          <tr><td>Nuit (N)</td><td><span class="param-val" id="rot-horaire-N">—</span></td></tr>
-          <tr><td>Rotation</td><td><span class="param-val">MENSUELLE</span></td></tr>
-          <tr><td>Ordre</td><td><span class="param-val">SÉQUENTIEL</span></td></tr>
-        </tbody>
-      </table>
+      <div id="rot-rules-content"></div>
     </div>
   </div>
 </div>
@@ -1495,7 +1499,16 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
   <div class="repl-toolbar">
     <button class="btn-primary" onclick="openReplModal()">+ Ajouter</button>
     <button class="btn-outline" onclick="alert('Import Excel bientôt disponible')">📥 Import Excel</button>
-    <div class="repl-toolbar-right" id="repl-count-label"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-size:11px;color:var(--text-muted);">Afficher :</span>
+      <select id="repl-nb-months" onchange="buildReplacants()"
+        style="background:var(--card-bg);border:1px solid var(--border);color:var(--accent);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;outline:none;font-family:'DM Sans',sans-serif;">
+        <option value="1">1 mois</option>
+        <option value="2">2 mois</option>
+        <option value="3" selected>3 mois</option>
+      </select>
+      <div id="repl-count-label" style="font-size:11px;color:var(--text-muted);"></div>
+    </div>
   </div>
   <div class="repl-spec-filters" style="margin-bottom:14px;">
     <button class="filter-btn active" onclick="filterRepl('TOUS',this)">TOUS</button>
@@ -1651,6 +1664,17 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
         <button class="cm-btn cm-J" onclick="selectCellCode('J')"><span class="cm-btn-code">J</span><span class="cm-btn-label">08h30–20h30</span></button>
       </div>
     </div>
+    <!-- Heures supplémentaires = jour de repos travaillé -->
+    <div class="cm-section">
+      <div class="cm-section-title">⚡ JOUR DE REPOS TRAVAILLÉ (HS)</div>
+      <div style="font-size:9.5px;color:#64748b;margin-bottom:8px;">L'agent vient travailler sur son jour de repos. Sélectionner le type de journée effectuée.</div>
+      <div class="cm-grid">
+        <button class="cm-btn" onclick="selectCellCode('HS_M')" style="background:#1e3a6e;border-color:#3b82f6;"><span class="cm-btn-code" style="color:#93c5fd;">HS M</span><span class="cm-btn-label" style="color:#60a5fa;">REPOS → MATIN</span></button>
+        <button class="cm-btn" onclick="selectCellCode('HS_S')" style="background:#2d1b69;border-color:#7c3aed;"><span class="cm-btn-code" style="color:#c4b5fd;">HS S</span><span class="cm-btn-label" style="color:#a78bfa;">REPOS → SOIR</span></button>
+        <button class="cm-btn" onclick="selectCellCode('HS_J')" style="background:#064e3b;border-color:#059669;"><span class="cm-btn-code" style="color:#6ee7b7;">HS J</span><span class="cm-btn-label" style="color:#34d399;">REPOS → JOURNÉE</span></button>
+      </div>
+      <div id="cm-hs-section" style="display:none;"></div>
+    </div>
       <!-- Congés & droits -->
     <div class="cm-section">
       <div class="cm-section-title">🌴 CONGÉS & DROITS</div>
@@ -1672,7 +1696,17 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
         <button class="cm-btn cm-FO" onclick="selectCellCode('FO')"><span class="cm-btn-code">FO</span><span class="cm-btn-label">FORMATION</span></button>
         <button class="cm-btn cm-GR" onclick="selectCellCode('GR')"><span class="cm-btn-code">GR</span><span class="cm-btn-label">GRÈVE</span></button>
         <button class="cm-btn cm-R" onclick="selectCellCode('R')"><span class="cm-btn-code">R</span><span class="cm-btn-label">— REPOS</span></button>
-        <button class="cm-btn cm-RC" onclick="selectCellCode('RC')"><span class="cm-btn-code">RC</span><span class="cm-btn-label">RÉCUP.</span></button>
+        <button class="cm-btn cm-RC" onclick="selectCellCode('RC')"><span class="cm-btn-code">RC</span><span class="cm-btn-label">REPOS COMP.</span></button>
+      </div>
+      <!-- Champ heures RC -->
+      <div id="cm-rc-section" style="display:none;margin-top:10px;background:#0d1f35;border:1px solid #0369a1;border-radius:8px;padding:10px 14px;">
+        <div style="font-size:10px;font-weight:700;color:#38bdf8;margin-bottom:6px;">🔵 REPOS COMPENSATOIRE — heures utilisées</div>
+        <div style="font-size:9.5px;color:#64748b;margin-bottom:8px;">Indiquez le nombre d'heures de RC consommées ce jour (déduit du compteur HS).</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" id="cm-rc-hours" min="1" max="24" step="0.5" value="7"
+            style="width:65px;background:#162035;border:1.5px solid #0369a1;border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;font-family:monospace;color:#38bdf8;text-align:center;">
+          <span style="font-size:10px;color:#94a3b8;">heure(s) de repos compensatoire</span>
+        </div>
       </div>
     </div>
     <!-- Plage de dates (CA / Maladie / Absences) -->
@@ -1700,13 +1734,45 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     </div>
     <!-- Modificateur horaire -->
     <div class="cm-section">
-      <div class="cm-section-title">▼ <span style="color:#f59e0b;">⚠ Modificateur horaire (HS / départ anticipé / retard)</span></div>
-      <div style="font-size:10px;color:#64748b;margin-bottom:8px;">S'ajoute ou se retire des heures calculées du code sélectionné.</div>
-      <div class="cm-mod-btns">
-        <button class="cm-mod-btn" id="cm-mod-hs"   onclick="selectMod('hs')">+ HEURES SUP</button>
-        <button class="cm-mod-btn" id="cm-mod-dep"  onclick="selectMod('dep')">DÉPART ANTICIPÉ</button>
-        <button class="cm-mod-btn" id="cm-mod-ret"  onclick="selectMod('ret')">RETARD</button>
-        <button class="cm-mod-btn active-aucun" id="cm-mod-none" onclick="selectMod('none')">AUCUN</button>
+      <div class="cm-section-title">⚠ MODIFICATEUR HORAIRE</div>
+      <div style="font-size:10px;color:#64748b;margin-bottom:8px;">Sur un jour travaillé normal — ajuste les heures comptées.</div>
+      <div class="cm-mod-btns" style="flex-direction:column;gap:10px;">
+
+        <!-- Heures supplémentaires -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="cm-mod-btn" id="cm-mod-hs" onclick="selectMod('hs')" style="min-width:150px;background:#064e3b;border-color:#059669;color:#6ee7b7;">⚡ HEURES SUP</button>
+          <div id="cm-mod-hs-hours" style="display:none;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:#6ee7b7;font-weight:700;">+</span>
+            <input type="number" id="cm-hs-extra" min="0.5" max="10" step="0.5" value="1"
+              style="width:60px;background:#162035;border:1.5px solid #059669;border-radius:6px;padding:4px 7px;font-size:13px;font-weight:700;font-family:monospace;color:#6ee7b7;text-align:center;">
+            <span style="font-size:10px;color:#94a3b8;">heure(s) en plus</span>
+          </div>
+        </div>
+
+        <!-- Départ anticipé -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="cm-mod-btn" id="cm-mod-dep" onclick="selectMod('dep')" style="min-width:150px;">🏃 DÉPART ANTICIPÉ</button>
+          <div id="cm-mod-dep-hours" style="display:none;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:#fdba74;font-weight:700;">−</span>
+            <input type="number" id="cm-dep-hours" min="0.5" max="10" step="0.5" value="1"
+              style="width:60px;background:#162035;border:1.5px solid #7c2d12;border-radius:6px;padding:4px 7px;font-size:13px;font-weight:700;font-family:monospace;color:#fdba74;text-align:center;">
+            <span style="font-size:10px;color:#94a3b8;">heure(s) retirées</span>
+          </div>
+        </div>
+
+        <!-- Retard -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="cm-mod-btn" id="cm-mod-ret" onclick="selectMod('ret')" style="min-width:150px;">⏰ RETARD</button>
+          <div id="cm-mod-ret-hours" style="display:none;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:#93c5fd;font-weight:700;">−</span>
+            <input type="number" id="cm-ret-hours" min="0.5" max="10" step="0.5" value="0.5"
+              style="width:60px;background:#162035;border:1.5px solid #1e3a6e;border-radius:6px;padding:4px 7px;font-size:13px;font-weight:700;font-family:monospace;color:#93c5fd;text-align:center;">
+            <span style="font-size:10px;color:#94a3b8;">heure(s) retirées</span>
+          </div>
+        </div>
+
+        <!-- Aucun -->
+        <button class="cm-mod-btn active-aucun" id="cm-mod-none" onclick="selectMod('none')" style="min-width:150px;">✓ AUCUN MODIFICATEUR</button>
       </div>
     </div>
     <div class="cm-footer">
@@ -2472,11 +2538,9 @@ function buildPlanningByAgent(body, nbDays, firstOffset) {
 
 // ── Lignes remplaçants disponibles sous le planning ──
 function appendReplacantRows(body, grp, nbDays, firstOffset) {
-  // Spec des agents du groupe
   const grpSpecs = [...new Set(agents.filter(a=>a.grp===grp&&a.actif!==false).map(a=>a.spec))];
   const replDispo = replacants.filter(r => {
     if (!grpSpecs.includes(r.spec)) return false;
-    // A-t-il au moins 1 dispo dans le mois courant ?
     return Object.keys(r.dispos||{}).some(k => {
       const [y,m] = k.split('-').map(Number);
       return y===currentYear && m===(currentMonth+1);
@@ -2487,46 +2551,82 @@ function appendReplacantRows(body, grp, nbDays, firstOffset) {
   // Séparateur titre
   const titleRow=document.createElement('tr');
   const titleTd=document.createElement('td'); titleTd.colSpan=3+nbDays;
-  titleTd.style.cssText='background:#0f2744;color:#38bdf8;font-size:10px;font-weight:700;padding:4px 12px;letter-spacing:.06em;border-top:2px solid #1e3050;';
+  titleTd.style.cssText='background:#1e3a5f;color:#93c5fd;font-size:10px;font-weight:700;padding:5px 12px;letter-spacing:.06em;border-top:2px solid #2563eb;border-bottom:1px solid #1e3050;';
   titleTd.textContent='🔄 REMPLAÇANTS DISPONIBLES CE MOIS';
   titleRow.appendChild(titleTd); body.appendChild(titleRow);
 
+  const todayObj = new Date();
+  const isCurMonth = todayObj.getFullYear()===currentYear && todayObj.getMonth()===currentMonth;
+  const todayD = isCurMonth ? todayObj.getDate() : -1;
+
   replDispo.forEach(r => {
     const tr=document.createElement('tr'); tr.className='agent-row';
-    tr.style.background='#0d1f35';
+    tr.style.cssText='background:#f0f7ff;border-bottom:1px solid #dbeafe;';
 
-    const tdP=document.createElement('td'); tdP.className='col-poste'; tdP.style.background='#0d1f35';
-    tdP.innerHTML=`<span style="font-size:9px;font-weight:700;color:#38bdf8;">${r.type}</span>`;
+    // Col type
+    const tdP=document.createElement('td'); tdP.className='col-poste';
+    tdP.style.cssText='background:#e0eeff;border-right:1px solid #bfdbfe;';
+    tdP.innerHTML=`<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;background:${r.type==='VAC'?'#1d4ed8':'#6d28d9'};color:#fff;">${r.type}</span>`;
     tr.appendChild(tdP);
 
-    const tdN=document.createElement('td'); tdN.className='col-nom'; tdN.style.cssText='background:#0d1f35;';
-    tdN.innerHTML=`<span style="font-size:11px;color:#e2e8f0;font-weight:600;">${r.nom}</span>
-      <span style="font-size:9px;color:#64748b;margin-left:6px;">${r.spec}</span>`;
+    // Col nom
+    const tdN=document.createElement('td'); tdN.className='col-nom';
+    tdN.style.cssText='background:#f0f7ff;';
+    const dispoCount = Object.keys(r.dispos||{}).filter(k=>{
+      const[y,m]=k.split('-').map(Number); return y===currentYear&&m===(currentMonth+1)&&r.dispos[k]==='O';
+    }).length;
+    tdN.innerHTML=`<div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:11px;color:#1e3a5f;font-weight:700;">${r.nom}</span>
+      <span style="font-size:9px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px;font-weight:600;">${r.spec}</span>
+      <span style="font-size:9px;color:#059669;margin-left:auto;">${dispoCount}✓</span>
+    </div>`;
     tr.appendChild(tdN);
 
-    const tdS=document.createElement('td'); tdS.className='col-spec'; tdS.style.background='#0d1f35';
-    tdS.innerHTML=`<span style="font-size:9px;color:#94a3b8;">${r.notes||''}</span>`;
+    // Col spec
+    const tdS=document.createElement('td'); tdS.className='col-spec';
+    tdS.style.cssText='background:#f0f7ff;font-size:9px;color:#475569;';
+    tdS.textContent = r.tel || '';
     tr.appendChild(tdS);
 
     for(let d=1;d<=nbDays;d++){
       const dateKey=`${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dispo=r.dispos?.[dateKey];
       const dow=(firstOffset+d-1)%7, isWE=dow>=5;
+      const isToday = d===todayD;
       const td=document.createElement('td');
-      td.style.cssText=`background:#0d1f35;padding:1px 2px;`;
       if(dow===0) td.classList.add('week-sep');
 
+      // Vérifier si ce remplaçant est assigné ce jour (via cellOverrides)
+      const assignKey = `REPL_${r.id}_${dateKey}`;
+      const assignOv  = cellOverrides[assignKey];
+      const isAssigned = !!assignOv;
+
       if(dispo==='O'){
-        // Dispo : afficher une pastille cliquable pour assigner
-        td.innerHTML=`<span onclick="openAssignModal('${r.id}','${dateKey}')"
-          style="display:inline-flex;align-items:center;justify-content:center;
-          width:20px;height:20px;border-radius:50%;background:#065f46;color:#6ee7b7;
-          font-size:9px;font-weight:700;cursor:pointer;border:1px solid #059669;"
-          title="Disponible — cliquer pour assigner">✓</span>`;
+        if (isAssigned) {
+          // Assigné : afficher le code + poste remplacé
+          const hor = assignOv.code || assignCode;
+          const posteR = assignOv.posteRemplace || '';
+          const horColor = hor==='M'?'#1d4ed8':hor==='S'?'#7c3aed':'#065f46';
+          const horBg    = hor==='M'?'#dbeafe':hor==='S'?'#ede9fe':'#d1fae5';
+          td.style.cssText=`padding:1px 2px;background:#fef9c3;border:1.5px solid #d97706;${isToday?'outline:2px solid #d97706;outline-offset:-1px;':''}`;
+          td.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;" onclick="openAssignModal('${r.id}','${dateKey}')" title="${r.nom} — assigné${posteR?' (remplace '+posteR+')':''}">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:14px;border-radius:3px;background:${horBg};color:${horColor};font-size:9px;font-weight:800;">${hor}</span>
+            ${posteR ? `<span style="font-size:7px;font-weight:700;color:#92400e;line-height:1;">${posteR}</span>` : ''}
+          </div>`;
+        } else {
+          td.style.cssText=`padding:1px 2px;background:${isToday?'#bbf7d0':'#d1fae5'};${isToday?'outline:2px solid #059669;outline-offset:-1px;':''}`;
+          td.innerHTML=`<span onclick="openAssignModal('${r.id}','${dateKey}')"
+            style="display:inline-flex;align-items:center;justify-content:center;
+            width:20px;height:18px;border-radius:4px;background:#059669;color:#fff;
+            font-size:9px;font-weight:800;cursor:pointer;border:1px solid #047857;"
+            title="${r.nom} — disponible, cliquer pour assigner">✓</span>`;
+        }
       } else if(dispo==='N'){
-        td.innerHTML=`<span style="color:#374151;font-size:9px;">✕</span>`;
+        td.style.cssText=`padding:1px 2px;background:${isWE?'#fef2f2':'#fff5f5'};`;
+        td.innerHTML=`<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:18px;border-radius:4px;background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;">✕</span>`;
       } else {
-        td.innerHTML=`<span style="color:#1e3050;font-size:9px;">—</span>`;
+        td.style.cssText=`padding:1px 2px;background:${isWE?'#eff6ff':'#f0f7ff'};${isToday?'outline:2px solid #3b82f6;outline-offset:-1px;':''}`;
+        td.innerHTML=`<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:18px;border-radius:4px;color:#bfdbfe;font-size:10px;">·</span>`;
       }
       tr.appendChild(td);
     }
@@ -2676,10 +2776,25 @@ function openAssignModal(replId, dateKey) {
   const dateLabel=`${parseInt(d)}/${parseInt(m)}/${y}`;
   const sectOpts=sectors.filter(s=>s.active).map(s=>
     `<option value="${s.code}">${s.label||s.code}</option>`).join('');
+
+  // Agents de même spécialité pour le sélecteur "poste remplacé"
+  const agentsSameSpec = agents.filter(a=>a.spec===r.spec && a.actif!==false)
+    .sort((a,b)=>a.poste.localeCompare(b.poste,'fr'));
+  const posteOpts = `<option value="">— Aucun poste spécifique —</option>` +
+    agentsSameSpec.map(a=>`<option value="${a.poste}">${a.poste} — ${a.nom}</option>`).join('');
+
   const html=`
     <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;">
-      <div style="background:#0f1827;border:1px solid #1e3050;border-radius:12px;padding:20px;width:320px;color:#e2e8f0;">
+      <div style="background:#0f1827;border:1px solid #1e3050;border-radius:12px;padding:20px;width:340px;color:#e2e8f0;">
         <div style="font-size:13px;font-weight:700;color:#38bdf8;margin-bottom:14px;">Assigner ${r.nom} — ${dateLabel}</div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;font-weight:600;color:#60a5fa;display:block;margin-bottom:4px;">POSTE REMPLACÉ</label>
+          <select id="assign-poste" style="width:100%;background:#162035;border:1px solid #1e3050;color:#e2e8f0;border-radius:6px;padding:7px;font-size:12px;">
+            ${posteOpts}
+          </select>
+        </div>
+
         <div style="margin-bottom:10px;">
           <label style="font-size:10px;font-weight:600;color:#60a5fa;display:block;margin-bottom:4px;">SECTEUR</label>
           <select id="assign-sect" style="width:100%;background:#162035;border:1px solid #1e3050;color:#e2e8f0;border-radius:6px;padding:7px;font-size:12px;">
@@ -2714,12 +2829,12 @@ function selectAssignCode(c){
 
 function confirmAssign(replId, dateKey){
   const sect=document.getElementById('assign-sect')?.value||'GENERAL';
-  // Crée un agent temporaire avec ce code sur ce jour
+  const posteRemplace=document.getElementById('assign-poste')?.value||'';
   const r=replacants.find(x=>x.id===replId);
   if(!r) return;
-  // On stocke dans cellOverrides avec un identifiant spécial
   const key=`REPL_${replId}_${dateKey}`;
-  cellOverrides[key]={code:assignCode, secteur:sect, mod:'none', replId, dateKey, nom:r.nom};
+  cellOverrides[key]={code:assignCode, secteur:sect, mod:'none', replId, dateKey, nom:r.nom,
+    ...(posteRemplace ? {posteRemplace} : {})};
   document.getElementById('assign-modal')?.remove();
   buildPlanning();
 }
@@ -2740,8 +2855,14 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   const tdN=document.createElement('td'); tdN.className='col-nom';
   const secteurActuel = getAgentSecteur(agent);
   const scA = getSectColor(secteurActuel);
+  // Badge secteur fermé
+  const secteurFerme = sectors.find(sx => sx.code === secteurActuel && !sx.active);
+  const fermeBadge = secteurFerme
+    ? `<span style="font-size:7px;font-weight:800;background:#dc2626;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">🚧</span>`
+    : '';
+
   const sectBadge = agentMode
-    ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:${scA.rowBg};color:${scA.color};border:1px solid ${scA.border};white-space:nowrap;margin-left:4px;">${secteurActuel}</span>`
+    ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:${scA.rowBg};color:${scA.color};border:1px solid ${scA.border};white-space:nowrap;margin-left:4px;">${secteurActuel}${fermeBadge}</span>`
     : '';
   const statLbl2b={tit:'Tit.',con:'Cont.',sta:'Stag.',int:'Int.'};
   const tauxPct2b=Math.round((agent.taux||1)*100);
@@ -2783,13 +2904,14 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   const trSect = (day1Code === codePrevLastDay && ['M','S','J'].includes(day1Code)) ? secteurPrevMois : secteurActuel;
   const scTr = getSectColor(trSect);
 
-  // Appliquer fond à la ligne et aux colonnes sticky
-  tr.style.cssText = `background:${scTr.rowBg};`;
+  // Fond de ligne = toujours secteur courant (sc passé en paramètre)
+  // Les cellules carry gèrent leur propre couleur individuellement
+  tr.style.cssText = `background:${sc.rowBg};`;
   if (isFixe && !agentMode) tr.style.cssText += `border-left:3px solid ${sc.color};`;
   if (agentMode) tr.style.cssText += `border-left:3px solid ${getSectColor(secteur).color};`;
-  tdP.style.background = scTr.rowBg;
-  tdN.style.background = scTr.rowBg;
-  tdS.style.background = scTr.rowBg;
+  tdP.style.background = sc.rowBg;
+  tdN.style.background = sc.rowBg;
+  tdS.style.background = sc.rowBg;
 
   // ── Jour aujourd'hui ──
   const todayNow = new Date();
@@ -2831,23 +2953,51 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
     }
 
     const scEff = getSectColor(effectiveSect);
+    const isHSCode = ['HS_M','HS_S','HS_J'].includes(displayCode);
+    const hsShift  = isHSCode ? displayCode.replace('HS_','') : null; // 'M', 'S' ou 'J'
 
-    if (agentMode) {
+    // ── Label modificateur visible dans la cellule ──
+    const modLbl = override?.mod === 'dep' ? `<div style="font-size:7.5px;font-weight:800;color:#fb923c;line-height:1;margin-top:1px;">DA-${Math.abs(override.modHours||1)}h</div>`
+                 : override?.mod === 'ret' ? `<div style="font-size:7.5px;font-weight:800;color:#818cf8;line-height:1;margin-top:1px;">RET-${Math.abs(override.modHours||0.5)}h</div>`
+                 : override?.mod === 'hs'  ? `<div style="font-size:7.5px;font-weight:800;color:#34d399;line-height:1;margin-top:1px;">HS+${override.modHours||1}h</div>`
+                 : (displayCode==='RC' && override?.rcHours) ? `<div style="font-size:7.5px;font-weight:800;color:#38bdf8;line-height:1;margin-top:1px;">RC ${override.rcHours}h</div>`
+                 : '';
+
+    if (isHSCode) {
+      // ── Rendu spécial JOUR DE REPOS TRAVAILLÉ ──────────────
+      // Fond amber/doré avec motif hachuré + badge HS + code du shift
+      const hsShiftColor = hsShift==='M' ? '#1d4ed8' : hsShift==='S' ? '#7c3aed' : '#065f46';
+      const hsShiftBg    = hsShift==='M' ? '#dbeafe' : hsShift==='S' ? '#ede9fe' : '#d1fae5';
+      td.style.cssText = `background:repeating-linear-gradient(45deg,#fef3c7,#fef3c7 3px,#fde68a 3px,#fde68a 6px);padding:1px 2px;vertical-align:middle;`;
+      td.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+        <div style="font-size:7px;font-weight:900;color:#92400e;letter-spacing:.02em;line-height:1;">⚡HS</div>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:16px;border-radius:3px;font-size:9px;font-weight:800;background:${hsShiftBg};color:${hsShiftColor};border:1px solid ${hsShiftColor}40;">${hsShift}</span>
+        ${modLbl}
+      </div>`;
+      td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
+    } else if (agentMode) {
       if (displayCode==='R') {
         td.style.background=isWE?'#eef0f5':'#f8faff';
         td.innerHTML=`<span class="code" style="background:transparent;border-color:transparent;color:#c0c8da;">${displayCode}</span>`;
       } else {
         td.style.background = scEff.rowBg;
-        td.innerHTML=`<span class="code" style="background:${scEff.rowBg};border:1px solid ${scEff.border};color:${scEff.color};border-radius:4px;padding:0 3px;${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
+        td.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span class="code" style="background:${scEff.rowBg};border:1px solid ${scEff.border};color:${scEff.color};border-radius:4px;padding:0 3px;${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>
+          ${modLbl}
+        </div>`;
       }
       td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
     } else {
       if (displayCode==='R') {
         td.style.background=isWE?'#eef0f5':'#f4f6fb';
+        td.innerHTML=`<span class="code code-${displayCode}" style="background:transparent;border-color:transparent;color:#c0c8da;">${displayCode}</span>`;
       } else {
         td.style.background=isFixe?scEff.fixeBg:scEff.rowBg;
+        td.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span class="code code-${displayCode}" style="background:transparent;border-color:transparent;color:${scEff.color};${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>
+          ${modLbl}
+        </div>`;
       }
-      td.innerHTML=`<span class="code code-${displayCode}" style="background:transparent;border-color:transparent;color:${displayCode==='R'?'#c0c8da':scEff.color};${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
       td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
     }
 
@@ -2888,9 +3038,12 @@ function appendGroupHeader(body, grp, groupAgents, nbDays) {
 // CELL MODAL
 // ══════════════════════════════════════════════════════════
 let cellModalState = { agentPoste:'', dateKey:'', currentCode:'R', secteur:'', mod:'none' };
+let cellModalOriginalState = null; // État au moment de l'ouverture — FERMER ne doit rien valider
 
 function openCellModal(agent, date, dateKey, currentCode, secteur) {
   cellModalState = { agentPoste: agent.poste, dateKey, currentCode, secteur, mod:'none' };
+  // Mémoriser l'état d'origine pour pouvoir annuler proprement
+  cellModalOriginalState = { agentPoste: agent.poste, dateKey, currentCode, secteur, mod:'none' };
   // Title
   const dow = date.getDay(); // 0=dim
   const dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -2935,7 +3088,9 @@ function openCellModal(agent, date, dateKey, currentCode, secteur) {
 function selectCellCode(code) {
   cellModalState.currentCode = code;
   document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.cm-${code}`);
+  // Pour les codes HS, trouver le bon bouton
+  const btn = document.querySelector(`.cm-${code}`) ||
+    [...document.querySelectorAll('.cm-btn')].find(b => b.getAttribute('onclick') === `selectCellCode('${code}')`);
   if (btn) btn.classList.add('active');
 
   // Afficher la plage de dates pour CA, MO, AT, FO, GR, CF, EM
@@ -2944,7 +3099,6 @@ function selectCellCode(code) {
     const showRange = ['CA','MO','AT','FO','GR','CF','EM'].includes(code);
     rangeSection.style.display = showRange ? 'block' : 'none';
     if (showRange) {
-      // Pré-remplir avec la date courante
       const parts = cellModalState.dateKey.split('-');
       const dateStr = parts.slice(-3).join('-');
       const startEl = document.getElementById('cm-date-start');
@@ -2954,6 +3108,17 @@ function selectCellCode(code) {
       updateRangeCount();
     }
   }
+
+  // Afficher le champ nb heures HS
+  const hsSection = document.getElementById('cm-hs-section');
+  if (hsSection) {
+    const isHS = ['HS_M','HS_S','HS_J'].includes(code);
+    hsSection.style.display = isHS ? 'block' : 'none';
+  }
+
+  // Afficher le champ heures RC
+  const rcSection = document.getElementById('cm-rc-section');
+  if (rcSection) rcSection.style.display = code==='RC' ? 'block' : 'none';
 }
 
 function updateRangeCount() {
@@ -2980,6 +3145,18 @@ function selectMod(mod) {
     const el = document.getElementById(`cm-mod-${m==='none'?'none':m}`);
     if (el) el.className = 'cm-mod-btn' + (m===mod ? ` active-${m==='none'?'aucun':m}` : '');
   });
+  // Réinitialiser styles hs quand inactif
+  const hsBtn = document.getElementById('cm-mod-hs');
+  if (hsBtn && mod !== 'hs') {
+    hsBtn.style.background='#064e3b'; hsBtn.style.borderColor='#059669'; hsBtn.style.color='#6ee7b7';
+  }
+  // Afficher/masquer les champs heures
+  const hsH  = document.getElementById('cm-mod-hs-hours');
+  const depH = document.getElementById('cm-mod-dep-hours');
+  const retH = document.getElementById('cm-mod-ret-hours');
+  if (hsH)  hsH.style.display  = mod==='hs'  ? 'flex' : 'none';
+  if (depH) depH.style.display = mod==='dep' ? 'flex' : 'none';
+  if (retH) retH.style.display = mod==='ret' ? 'flex' : 'none';
 }
 
 // ── Détecte le bloc (suite de jours consécutifs avec le même code) ──
@@ -3034,6 +3211,7 @@ function showBlocToast(blocEnd, nextBlocStart) {
 }
 
 function validateCell() {
+  cellModalOriginalState = null; // On valide → l'état original n'est plus nécessaire
   const {agentPoste, dateKey, currentCode, secteur, mod} = cellModalState;
   const agent = agents.find(a => a.poste === agentPoste);
 
@@ -3063,8 +3241,26 @@ function validateCell() {
         return;
       }
     }
+    // Ajouter les heures HS si applicable
+    const hsHoursVal = ['HS_M','HS_S','HS_J'].includes(currentCode)
+      ? (parseFloat(document.getElementById('cm-hs-hours')?.value) || 1)
+      : undefined;
+    // Heures RC
+    const rcHoursVal = currentCode==='RC'
+      ? (parseFloat(document.getElementById('cm-rc-hours')?.value) || 7)
+      : undefined;
+    // Heures dep/ret/hs
+    const modHoursVal = mod==='hs'  ? +(parseFloat(document.getElementById('cm-hs-extra')?.value)||1)
+                      : mod==='dep' ? -(parseFloat(document.getElementById('cm-dep-hours')?.value)||1)
+                      : mod==='ret' ? -(parseFloat(document.getElementById('cm-ret-hours')?.value)||0.5)
+                      : undefined;
     // Pas de plage → juste ce jour
-    cellOverrides[dateKey] = {code: currentCode, secteur, mod};
+    cellOverrides[dateKey] = {
+      code: currentCode, secteur, mod,
+      ...(hsHoursVal !== undefined ? {hsHours: hsHoursVal} : {}),
+      ...(rcHoursVal !== undefined ? {rcHours: rcHoursVal} : {}),
+      ...(modHoursVal !== undefined ? {modHours: modHoursVal} : {})
+    };
     closeCellModal();
     buildPlanning();
     return;
@@ -3141,6 +3337,11 @@ function clearCellModal() {
 }
 
 function closeCellModal() {
+  // Réinitialiser : FERMER n'enregistre RIEN — on restaure l'état d'origine
+  if (cellModalOriginalState) {
+    cellModalState = { ...cellModalOriginalState };
+    cellModalOriginalState = null;
+  }
   // Reset date range
   const s = document.getElementById('cm-date-start');
   const e = document.getElementById('cm-date-end');
@@ -3153,9 +3354,16 @@ function closeCellModal() {
   document.getElementById('cell-modal-overlay').classList.remove('open');
 }
 
-// Close cell modal on overlay click
+// Close cell modal on overlay click — stopPropagation pour éviter que le clic traverse vers le planning
 document.getElementById('cell-modal-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('cell-modal-overlay')) closeCellModal();
+  if (e.target === document.getElementById('cell-modal-overlay')) {
+    e.stopPropagation();
+    closeCellModal();
+  }
+});
+// Empêcher les clics à l'intérieur de la modale de traverser vers le planning
+document.querySelector('#cell-modal-overlay .cell-modal').addEventListener('click', e => {
+  e.stopPropagation();
 });
 
 // ══════════════════════════════════════════════════════════
@@ -3278,6 +3486,7 @@ function buildConfig() {
   const list = document.getElementById('sect-list');
   list.innerHTML = '';
   sectors.forEach((s,idx) => renderSector(s,idx,list));
+  buildRotationRules();
 
   // Sync horaires in "Règles de rotation" from RULES codes horaires
   const r = RULES;
@@ -3652,6 +3861,101 @@ function toggleUserMenu() {
   }
 }
 
+// ── Gestion créneaux de pause ──────────────────────────────
+function getPauseDuration(r, shift) {
+  if (!r.pauses || !r.pauses[shift]) return r.durations.pause || 0;
+  return r.pauses[shift].reduce((acc, p) => {
+    if (!p.start || !p.end) return acc;
+    const [sh, sm] = p.start.split(':').map(Number);
+    const [eh, em] = p.end.split(':').map(Number);
+    const diff = (eh * 60 + em - sh * 60 - sm) / 60;
+    return acc + (diff > 0 ? diff : 0);
+  }, 0);
+}
+
+function setPauseField(sp, shift, idx, field, val) {
+  if (!RULES.specRules[sp].pauses) RULES.specRules[sp].pauses = {};
+  if (!RULES.specRules[sp].pauses[shift]) RULES.specRules[sp].pauses[shift] = [{}];
+  if (!RULES.specRules[sp].pauses[shift][idx]) RULES.specRules[sp].pauses[shift][idx] = {};
+  RULES.specRules[sp].pauses[shift][idx][field] = val;
+  // Recalcul durée pause globale pour compatibilité
+  RULES.specRules[sp].durations.pause = getPauseDuration(RULES.specRules[sp], shift);
+  syncGlobalRules();
+  buildSpecContent(sp);
+}
+
+function addPause(sp, shift) {
+  if (!RULES.specRules[sp].pauses) RULES.specRules[sp].pauses = {};
+  if (!RULES.specRules[sp].pauses[shift]) RULES.specRules[sp].pauses[shift] = [];
+  RULES.specRules[sp].pauses[shift].push({ start: '', end: '' });
+  buildSpecContent(sp);
+}
+
+function removePause(sp, shift, idx) {
+  if (!RULES.specRules[sp].pauses || !RULES.specRules[sp].pauses[shift]) return;
+  RULES.specRules[sp].pauses[shift].splice(idx, 1);
+  RULES.specRules[sp].durations.pause = getPauseDuration(RULES.specRules[sp], shift);
+  syncGlobalRules();
+  buildSpecContent(sp);
+}
+
+// ── Règles de rotation modifiables ────────────────────────
+function buildRotationRules() {
+  const wrap = document.getElementById('rot-rules-content');
+  if (!wrap) return;
+  const r = RULES;
+  const CYCLE = 42;
+  const TRAVAIL = 21;
+  wrap.innerHTML = `
+    <table class="rules-table" style="width:100%;">
+      <thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead>
+      <tbody>
+        <tr><td>Cycle</td><td><span class="param-val">${CYCLE} jours</span></td></tr>
+        <tr><td>Jours travaillés</td><td><span class="param-val">${TRAVAIL} / cycle</span></td></tr>
+        <tr>
+          <td>Matin (M)</td>
+          <td><input type="text" value="${r.specRules.AS?.horaires?.M||r.horaires?.M||'06h45–18h45'}"
+            onchange="updateRotHoraire('M',this.value)"
+            style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:monospace;background:var(--card-bg);color:var(--text);"></td>
+        </tr>
+        <tr>
+          <td>Soir (S)</td>
+          <td><input type="text" value="${r.specRules.AS?.horaires?.S||r.horaires?.S||'09h00–21h00'}"
+            onchange="updateRotHoraire('S',this.value)"
+            style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:monospace;background:var(--card-bg);color:var(--text);"></td>
+        </tr>
+        <tr>
+          <td>Journée (J)</td>
+          <td><input type="text" value="${r.specRules.AS?.horaires?.J||r.horaires?.J||'08h30–20h30'}"
+            onchange="updateRotHoraire('J',this.value)"
+            style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:monospace;background:var(--card-bg);color:var(--text);"></td>
+        </tr>
+        <tr>
+          <td>Nuit (N)</td>
+          <td><input type="text" value="${r.nuHoraires?.NU1?.label||'21h00–07h00'}"
+            onchange="if(!RULES.nuHoraires)RULES.nuHoraires={};if(!RULES.nuHoraires.NU1)RULES.nuHoraires.NU1={};RULES.nuHoraires.NU1.label=this.value;syncGlobalRules();buildConfig();"
+            style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:monospace;background:var(--card-bg);color:var(--text);"></td>
+        </tr>
+        <tr><td>Rotation</td><td><span class="param-val">MENSUELLE</span></td></tr>
+        <tr><td>Ordre</td><td><span class="param-val">SÉQUENTIEL</span></td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:9.5px;color:#64748b;margin-top:8px;padding:6px 8px;background:#f8fafd;border-radius:6px;">
+      💡 Modifier un horaire ici l'applique à toutes les spécialités. Pour personnaliser par spécialité, utilisez l'onglet Règles & Temps.
+    </div>`;
+}
+
+function updateRotHoraire(shift, val) {
+  Object.keys(RULES.specRules).forEach(sp => {
+    if (!RULES.specRules[sp].horaires) RULES.specRules[sp].horaires = {};
+    RULES.specRules[sp].horaires[shift] = val;
+  });
+  if (!RULES.horaires) RULES.horaires = {};
+  RULES.horaires[shift] = val;
+  syncGlobalRules();
+  buildConfig();
+}
+
 function reactivateAgent(poste) {
   const a = agents.find(x => x.poste === poste);
   if (!a) return;
@@ -3756,13 +4060,11 @@ function buildReplacants() {
   const wrap = document.getElementById('repl-cards-wrap');
   if (!wrap) return;
   const specs = ['AS','IDE','Nuit','AUX','AE'];
-  const specLabel = {AS:'AS — Aide-soignant',IDE:'IDE — Infirmier(e)',Nuit:'Nuit',AUX:'AUX — Auxiliaire de vie',AE:'AE — Agent d\'entretien'};
+  const specLabel = {AS:'AS — Aide-soignant',IDE:'IDE — Infirmier(e)',Nuit:'Nuit',AUX:'AUX — Auxiliaire de vie',AE:"AE — Agent d'entretien"};
+  const nbMonths = parseInt(document.getElementById('repl-nb-months')?.value || 1);
+  const DAY_NAMES = ['L','M','M','J','V','S','D'];
+  const today = new Date(); today.setHours(0,0,0,0);
   let total=0, html='';
-
-  const nbDays=getDaysOfMonth(currentYear,currentMonth);
-  const firstOffset=getFirstDayOffset(currentYear,currentMonth);
-  const DAY_NAMES=['L','M','M','J','V','S','D'];
-  const today=new Date(); today.setHours(0,0,0,0);
 
   specs.forEach(sp => {
     if (replSpecFilter!=='TOUS' && replSpecFilter!==sp) return;
@@ -3776,59 +4078,79 @@ function buildReplacants() {
       </div>`;
 
     group.forEach(r => {
-      const dispoCount=Object.keys(r.dispos||{}).filter(k=>{
-        const[y,m]=k.split('-').map(Number); return y===currentYear&&m===(currentMonth+1)&&r.dispos[k]==='O';
-      }).length;
-      const hasDispos = dispoCount > 0;
+      // Compter dispos sur tous les mois affichés
+      let totalDispos = 0;
+      for (let mi=0; mi<nbMonths; mi++) {
+        let mm=currentMonth+mi, yy=currentYear;
+        while(mm>11){mm-=12;yy++;}
+        totalDispos += Object.keys(r.dispos||{}).filter(k=>{
+          const[y,m]=k.split('-').map(Number);
+          return y===yy && m===(mm+1) && r.dispos[k]==='O';
+        }).length;
+      }
 
       html+=`<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;">
-        <!-- Ligne info remplaçant -->
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;">
           <span style="font-size:13px;font-weight:700;flex:1;">${r.nom}</span>
           <span class="repl-card-type ${r.type==='VAC'?'type-vac':'type-int'}">${r.type}</span>
           ${r.tel?`<span style="font-size:10.5px;color:var(--text-muted);">${r.tel}</span>`:''}
-          <span style="font-size:10px;font-weight:600;color:${hasDispos?'#059669':'#94a3b8'};">${hasDispos?dispoCount+' dispo':'Pas de dispo'}</span>
-          <button onclick="openReplModal('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:10.5px;color:var(--text-muted);">✏</button>
+          <span style="font-size:10px;font-weight:600;color:${totalDispos>0?'#059669':'#94a3b8'};">${totalDispos>0?totalDispos+' dispo':'Pas de dispo'}</span>
+          <button onclick="openReplModal('${r.id}')" style="background:#1d4ed8;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;color:#fff;font-weight:600;">✏ Modifier</button>
           <button onclick="deleteReplacant('${r.id}')" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:10.5px;color:#dc2626;">✕</button>
-        </div>
+        </div>`;
 
-        <!-- Grille dispo mensuelle -->
-        <div style="overflow-x:auto;border-top:1px solid var(--border);">
-          <table style="border-collapse:collapse;width:max-content;min-width:100%;">
-            <thead>
-              <tr style="background:#f8fafd;">
-                <td style="padding:3px 8px;font-size:9px;font-weight:600;color:var(--text-muted);position:sticky;left:0;background:#f8fafd;min-width:60px;z-index:1;"></td>
-                ${Array.from({length:nbDays},(_,i)=>{
-                  const d=i+1, dow=(firstOffset+i)%7, isWE=dow>=5;
-                  const dayDate=new Date(currentYear,currentMonth,d);
-                  const isToday=dayDate.getTime()===today.getTime();
-                  return `<td style="text-align:center;padding:2px 3px;font-size:9px;font-weight:600;color:${isToday?'#1d4ed8':isWE?'#c2570a':'var(--text-muted)'};${isToday?'background:#eff6ff;':''}min-width:22px;${dow===0?'border-left:2px solid #dbeafe;':''}">${DAY_NAMES[dow]}<br>${d}</td>`;
-                }).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding:3px 8px;font-size:9.5px;font-weight:700;color:#38bdf8;background:#0d1f35;position:sticky;left:0;z-index:1;">DISPO</td>
-                ${Array.from({length:nbDays},(_,i)=>{
-                  const d=i+1, dow=(firstOffset+i)%7, isWE=dow>=5;
-                  const dateKey=`${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                  const val=r.dispos?.[dateKey]||'—';
-                  const bg=val==='O'?'#065f46':val==='N'?'#1a0a0a':'#0d1f35';
-                  const fg=val==='O'?'#6ee7b7':val==='N'?'#374151':'#1e3050';
-                  const txt=val==='O'?'✓':val==='N'?'✕':'·';
-                  return `<td style="text-align:center;background:${bg};padding:2px 1px;${dow===0?'border-left:2px solid #1e3050;':''}${isWE?'opacity:.7;':''}">
-                    <span onclick="toggleReplDispo('${r.id}','${dateKey}')"
-                      style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;
-                      background:${val==='O'?'#059669':val==='N'?'#1f2937':'#162035'};color:${fg};
-                      font-size:9px;font-weight:700;cursor:pointer;border:1px solid ${val==='O'?'#059669':val==='N'?'#374151':'#1e3050'};"
-                      title="${val==='O'?'Disponible — cliquer pour modifier':val==='N'?'Indisponible':'Non renseigné'}">${txt}</span>
-                  </td>`;
-                }).join('')}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>`;
+      // Un bloc par mois
+      for (let mi=0; mi<nbMonths; mi++) {
+        let mm=currentMonth+mi, yy=currentYear;
+        while(mm>11){mm-=12;yy++;}
+        const nbDays=getDaysOfMonth(yy,mm);
+        const firstOffset=getFirstDayOffset(yy,mm);
+        const dispoM=Object.keys(r.dispos||{}).filter(k=>{
+          const[y,m]=k.split('-').map(Number);
+          return y===yy && m===(mm+1) && r.dispos[k]==='O';
+        }).length;
+
+        html+=`<div style="border-top:1px solid var(--border);">
+          <div style="padding:5px 14px;background:${mi===0?'#f0f7ff':'#f8fafd'};display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #dbeafe;">
+            <span style="font-size:11px;font-weight:700;color:#1e3a5f;">${MONTHS_FR[mm]} ${yy}</span>
+            <span style="font-size:10px;color:${dispoM>0?'#059669':'#94a3b8'};font-weight:600;">${dispoM>0?dispoM+' ✓':'—'}</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="border-collapse:collapse;width:max-content;min-width:100%;">
+              <thead><tr style="background:#f8fafd;">
+                <td style="padding:4px 10px;font-size:9px;font-weight:700;color:#475569;position:sticky;left:0;background:#f0f7ff;min-width:50px;z-index:2;border-right:2px solid #dbeafe;"></td>`;
+
+        for (let i=0; i<nbDays; i++) {
+          const d=i+1, dow=(firstOffset+i)%7, isWE=dow>=5;
+          const isToday=new Date(yy,mm,d).getTime()===today.getTime();
+          html+=`<td style="text-align:center;padding:2px 3px;font-size:9px;font-weight:700;
+            color:${isToday?'#fff':isWE?'#c2570a':'#64748b'};
+            background:${isToday?'#1d4ed8':isWE?'#fff7ed':'#f8fafd'};
+            min-width:26px;${dow===0?'border-left:2px solid #dbeafe;':''}">${DAY_NAMES[dow]}<br>${d}</td>`;
+        }
+
+        html+=`</tr></thead><tbody><tr>
+          <td style="padding:4px 10px;font-size:9px;font-weight:600;color:#475569;position:sticky;left:0;background:#f0f7ff;z-index:2;border-right:2px solid #dbeafe;white-space:nowrap;">Dispo</td>`;
+
+        for (let i=0; i<nbDays; i++) {
+          const d=i+1, dow=(firstOffset+i)%7;
+          const dateKey=`${yy}-${String(mm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const val=r.dispos?.[dateKey]||'';
+          const isToday=new Date(yy,mm,d).getTime()===today.getTime();
+          let cellBg,spanBg,spanColor,spanBorder,txt;
+          if (val==='O')      { cellBg='#d1fae5';spanBg='#059669';spanColor='#fff';spanBorder='#047857';txt='✓'; }
+          else if (val==='N') { cellBg='#fee2e2';spanBg='#fca5a5';spanColor='#dc2626';spanBorder='#fca5a5';txt='✕'; }
+          else                { cellBg=dow>=5?'#fef9f0':'#f8fafd';spanBg='transparent';spanColor='#cbd5e1';spanBorder='#e2e8f0';txt='·'; }
+          html+=`<td style="text-align:center;padding:2px 2px;background:${cellBg};${isToday?'outline:2px solid #3b82f6;outline-offset:-1px;':''}${dow===0?'border-left:2px solid #dbeafe;':''}">
+            <span onclick="toggleReplDispo('${r.id}','${dateKey}')"
+              style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:20px;border-radius:5px;
+              background:${spanBg};color:${spanColor};font-size:10px;font-weight:800;cursor:pointer;border:1.5px solid ${spanBorder};">${txt}</span></td>`;
+        }
+
+        html+=`</tr></tbody></table></div></div>`;
+      }
+
+      html+=`</div>`;
     });
     html+='</div>';
   });
@@ -3837,7 +4159,6 @@ function buildReplacants() {
   wrap.innerHTML=html;
   document.getElementById('repl-count-label').textContent=total+' remplaçant'+(total>1?'s':'')+' enregistré'+(total>1?'s':'');
 }
-
 function toggleReplDispo(replId, dateKey) {
   const r=replacants.find(x=>x.id===replId);
   if (!r) return;
@@ -3977,7 +4298,148 @@ function setTauxSpec(spec, btn) {
   btn.classList.add('active');
   buildTauxConges();
 }
-function toggleSector(code, el) { el.classList.toggle('on'); const s=sectors.find(s=>s.code===code); if(s) s.active=!s.active; }
+function toggleSector(code, el) {
+  const s = sectors.find(s => s.code === code);
+  if (!s) return;
+
+  if (s.active) {
+    // ── Fermeture : ouvrir la modale de réassignation ──
+    openSectorClosureModal(code, el);
+  } else {
+    // ── Réouverture : simple, on réactive ──
+    s.active = true;
+    el.classList.add('on');
+    el.style.opacity = '1';
+    // Proposer de réassigner les agents qui avaient ce secteur
+    const agentsFixe = agents.filter(a => a.fixe==='O' && a.secteur===code && a.actif!==false);
+    if (agentsFixe.length) {
+      alert(`✅ Secteur "${s.label}" réouvert.\n\n${agentsFixe.length} agent(s) fixe(s) sur ce secteur seront de nouveau actifs.`);
+    }
+    updateSectorCSSVars();
+    clearAffCache();
+    buildPlanning();
+    buildConfig();
+  }
+}
+
+function openSectorClosureModal(code, toggleEl) {
+  const s = sectors.find(x => x.code === code);
+  if (!s) return;
+  const agentsDuSecteur = agents.filter(a => a.actif!==false && (a.fixe==='O' ? a.secteur===code : getAgentSecteur(a)===code));
+  const agentsFixeOnly  = agents.filter(a => a.actif!==false && a.fixe==='O' && a.secteur===code);
+  const autresSects = sectors.filter(x => x.active && x.code !== code);
+  const today = new Date().toISOString().slice(0,10);
+
+  const panel = document.createElement('div');
+  panel.id = 'sector-closure-panel';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(5,10,20,.85);z-index:900;display:flex;align-items:center;justify-content:center;';
+
+  const sectOpts = autresSects.map(x => `<option value="${x.code}">${x.label||x.code}</option>`).join('');
+
+  panel.innerHTML = `
+    <div style="background:#0f1827;border:1px solid #dc2626;border-radius:14px;width:540px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.6);">
+      <div style="background:#1a0a0a;padding:14px 20px;border-bottom:1px solid #dc2626;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#f87171;">🚧 Fermeture du secteur "${s.label}"</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${agentsDuSecteur.length} agent(s) actuellement sur ce secteur ce mois</div>
+        </div>
+        <button onclick="document.getElementById('sector-closure-panel').remove()" style="background:none;border:none;color:#64748b;font-size:22px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Date de fermeture -->
+        <div style="background:#162035;border:1px solid #1e3050;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:8px;">📅 DATE DE FERMETURE</div>
+          <input type="date" id="closure-date" value="${today}"
+            style="background:#0f1827;border:1px solid #1e3050;color:#e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:160px;">
+          <div style="font-size:9.5px;color:#64748b;margin-top:6px;">Le secteur sera fermé à partir de cette date.</div>
+        </div>
+
+        ${agentsFixeOnly.length > 0 ? `
+        <!-- Agents fixes à réassigner -->
+        <div style="background:#162035;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px;">⚠ ${agentsFixeOnly.length} AGENT(S) FIXE(S) — à réassigner</div>
+          <div style="font-size:9.5px;color:#94a3b8;margin-bottom:10px;">Ces agents sont fixés sur ce secteur. Choisissez leur nouveau secteur ou passez-les en rotation.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${agentsFixeOnly.map(a => `
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0f1827;border-radius:8px;border:1px solid #1e3050;">
+              <div style="flex:1;">
+                <span style="font-size:12px;font-weight:600;color:#e2e8f0;">${a.nom}</span>
+                <span style="font-size:10px;color:#64748b;margin-left:6px;">${a.poste} · ${a.spec}</span>
+              </div>
+              <select id="reassign-${a.poste}" style="background:#162035;border:1px solid #1e3050;color:#e2e8f0;border-radius:6px;padding:4px 7px;font-size:11px;outline:none;">
+                <option value="ROT">↺ Passer en rotation</option>
+                ${sectOpts}
+              </select>
+            </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        ${agentsDuSecteur.length > agentsFixeOnly.length ? `
+        <div style="background:#162035;border:1px solid #1e3050;border-radius:10px;padding:10px 14px;">
+          <div style="font-size:10px;color:#64748b;">
+            ℹ ${agentsDuSecteur.length - agentsFixeOnly.length} agent(s) en rotation sur ce secteur ce mois seront répartis automatiquement sur les autres secteurs actifs.
+          </div>
+        </div>` : ''}
+
+        <!-- Boutons -->
+        <div style="display:flex;gap:8px;">
+          <button onclick="document.getElementById('sector-closure-panel').remove()"
+            style="flex:1;background:#162035;border:1px solid #1e3050;color:#94a3b8;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;font-weight:600;">
+            Annuler
+          </button>
+          <button onclick="confirmSectorClosure('${code}')"
+            style="flex:2;background:#dc2626;border:none;color:#fff;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;font-weight:700;">
+            🚧 Confirmer la fermeture
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(panel);
+}
+
+function confirmSectorClosure(code) {
+  const s = sectors.find(x => x.code === code);
+  if (!s) return;
+
+  // Réassigner les agents fixes
+  const agentsFixe = agents.filter(a => a.actif!==false && a.fixe==='O' && a.secteur===code);
+  let reassignCount = 0;
+  agentsFixe.forEach(a => {
+    const sel = document.getElementById('reassign-' + a.poste);
+    if (!sel) return;
+    const val = sel.value;
+    if (val === 'ROT') {
+      // Passer en rotation
+      a.fixe = 'N';
+      const autresSects = sectors.filter(x => x.active && x.code !== code).map(x => x.code);
+      a.rot = autresSects.length ? autresSects : a.rot;
+      a.secteur = autresSects[0] || a.secteur;
+    } else {
+      // Changer de secteur fixe
+      a.secteur = val;
+    }
+    reassignCount++;
+  });
+
+  // Stocker la date de fermeture sur le secteur
+  const closureDate = document.getElementById('closure-date')?.value || new Date().toISOString().slice(0,10);
+  s.closedFrom = closureDate;
+  s.active = false;
+
+  // Mettre à jour le toggle dans la config
+  document.getElementById('sector-closure-panel')?.remove();
+
+  clearAffCache();
+  updateSectorCSSVars();
+  buildPlanning();
+  buildConfig();
+
+  const msg = `🚧 Secteur "${s.label}" fermé à partir du ${closureDate.split('-').reverse().join('/')}.`
+    + (reassignCount ? `\n✅ ${reassignCount} agent(s) fixe(s) réassigné(s).` : '');
+  alert(msg);
+}
 
 // ══════════════════════════════════════════════════════════
 // RÈGLES & TEMPS
@@ -4075,15 +4537,30 @@ function buildSpecContent(sp) {
                 style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;font-family:monospace;color:${shift==='M'?'#1d4ed8':shift==='S'?'#6d28d9':'#065f46'};text-align:center;">
             </div>
             <div style="display:flex;flex-direction:column;gap:3px;">
-              <label style="font-size:9.5px;font-weight:600;color:var(--text-muted);">PAUSE (h)</label>
-              <input type="number" min="0" max="4" step="0.25" value="${r.durations.pause||0}"
-                onchange="RULES.specRules['${sp}'].durations.pause=parseFloat(this.value)||0;syncGlobalRules();"
-                style="width:65px;border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;font-family:monospace;color:#94a3b8;text-align:center;">
+              <label style="font-size:9.5px;font-weight:600;color:var(--text-muted);">PAUSE(S)</label>
+              <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                ${(r.pauses&&r.pauses[shift]?r.pauses[shift]:[{start:'',end:''}]).map((p,pi)=>`
+                  <div style="display:flex;align-items:center;gap:2px;background:#f1f5f9;border-radius:5px;padding:2px 5px;border:1px solid var(--border);">
+                    <input type="time" value="${p.start||''}"
+                      onchange="setPauseField('${sp}','${shift}',${pi},'start',this.value)"
+                      style="width:72px;border:none;background:transparent;font-size:11px;font-family:monospace;color:var(--text);padding:2px;">
+                    <span style="font-size:10px;color:var(--text-muted);">→</span>
+                    <input type="time" value="${p.end||''}"
+                      onchange="setPauseField('${sp}','${shift}',${pi},'end',this.value)"
+                      style="width:72px;border:none;background:transparent;font-size:11px;font-family:monospace;color:var(--text);padding:2px;">
+                    <button onclick="removePause('${sp}','${shift}',${pi})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:0 2px;line-height:1;">×</button>
+                  </div>
+                `).join('')}
+                <button onclick="addPause('${sp}','${shift}')" style="background:#eff6ff;border:1px dashed #3b82f6;color:#1d4ed8;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;">+ pause</button>
+              </div>
+              <div style="font-size:9px;color:#94a3b8;margin-top:2px;">
+                Total pause : <b>${getPauseDuration(r,'${shift}')}h</b>
+              </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:3px;">
               <label style="font-size:9.5px;font-weight:600;color:var(--text-muted);">PRÉSENCE TOTALE</label>
               <span style="font-size:13px;font-weight:700;color:#059669;font-family:monospace;padding:5px 8px;background:#d1fae5;border-radius:6px;">
-                ${(r.durations[shift]||0)+(r.durations.pause||0)}h
+                ${(r.durations[shift]||0)+getPauseDuration(r,shift)}h
               </span>
             </div>
           </div>
@@ -4261,22 +4738,28 @@ function buildDroitsTable() {
 }
 
 // ── Calcul des heures et congés par agent ──
-function getCellHours(code, agent) {
+function getCellHours(code, agent, override) {
   const r = RULES;
-  // Règles spécifiques à la spécialité de l'agent
   const sr = (agent && RULES.specRules[agent.spec]) ? RULES.specRules[agent.spec] : null;
   const dur = sr ? sr.durations : r.durations;
-  if (code==='M') return dur.M||r.durations.M;
-  if (code==='S') return dur.S||r.durations.S;
-  if (code==='J') return dur.J||r.durations.J;
-  if (code==='NU') return dur.NU||r.durations.NU;
-  if (code==='R' || code==='RC' || code==='MO') return 0;
-  if (code==='GR') return r.impacts.GR;
-  if (code==='CA' || code==='CF') return dur.ref||r.durations.ref;
-  if (code==='AT' || code==='FE') return dur.ref||r.durations.ref;
-  if (code==='FO') return r.impacts.FO;
-  if (code==='EM') return r.impacts.EM;
-  return 0;
+  let base = 0;
+  if (code==='M')    base = dur.M||r.durations.M;
+  else if (code==='S')    base = dur.S||r.durations.S;
+  else if (code==='J')    base = dur.J||r.durations.J;
+  else if (code==='NU')   base = dur.NU||r.durations.NU;
+  // HS = jour de repos travaillé = durée normale de la journée (pas de bonus)
+  else if (code==='HS_M') base = dur.M||r.durations.M;
+  else if (code==='HS_S') base = dur.S||r.durations.S;
+  else if (code==='HS_J') base = dur.J||r.durations.J;
+  else if (code==='R' || code==='RC' || code==='MO') base = 0;
+  else if (code==='CA' || code==='CF') base = 0;
+  else if (code==='GR') base = r.impacts?.GR||0;
+  else if (code==='AT' || code==='FE') base = dur.ref||r.durations.ref||0;
+  else if (code==='FO') base = r.impacts?.FO||0;
+  else if (code==='EM') base = r.impacts?.EM||0;
+  // Modificateur : hs = +extra, dep/ret = −heures
+  if (override?.modHours) base = Math.max(0, base + override.modHours);
+  return base;
 }
 
 function getJoursFeries(year) {
@@ -4510,7 +4993,7 @@ function downloadExcelTemplate() {
 
   // ── Onglet 2 : Secteurs ────────────────────────────────
   const wsSData = [
-    ['HORIZON PLANNING — Configuration des secteurs'],
+    ['HORIZON PLANNING \u2014 Configuration de l\u00e9tablissement'],
     ['Maximum 6 secteurs  |  Le code doit être unique et sans espace'],
     ['CODE\n★ obligatoire','LABEL\n★ obligatoire','COULEUR BG\n○ optionnel','COULEUR TEXTE\n○ optionnel','ORDRE\n○ optionnel'],
     ...sectActifs.map((s,i) => [s.code, s.label||s.code, '', s.color?(s.color.replace('#','')):'', i+1]),
@@ -5210,19 +5693,56 @@ async function openHistorique() {
 
 async function restoreVersion(histId) {
   if (!confirm('Restaurer cette version ? Les modifications non sauvegardées seront perdues.')) return;
-  const { data } = await SB.from('planning_historique').select('*').eq('id', histId).single();
-  if (!data || !data.data) return;
+  const { data, error } = await SB.from('planning_historique').select('*').eq('id', histId).single();
+  if (error || !data || !data.data) {
+    alert('Impossible de charger cette sauvegarde.');
+    return;
+  }
   const snap = data.data;
-  if (snap.agents)        { agents.length=0; snap.agents.forEach(a=>agents.push(a)); }
-  if (snap.sectors)       { sectors.length=0; snap.sectors.forEach(s=>sectors.push(s)); }
-  if (snap.cellOverrides) { Object.assign(cellOverrides, snap.cellOverrides); }
-  if (snap.replacants)    { replacants.length=0; snap.replacants.forEach(r=>replacants.push(r)); }
-  if (snap.RULES)         { Object.assign(RULES, snap.RULES); }
+
+  // Vérification de cohérence avant restauration
+  const nbAgents   = snap.agents   ? snap.agents.length : 0;
+  const nbSectors  = snap.sectors  ? snap.sectors.length : 0;
+  if (nbAgents === 0 && nbSectors === 0) {
+    if (!confirm(`⚠️ Cette sauvegarde semble vide (0 agent, 0 secteur). Voulez-vous vraiment restaurer ?`)) return;
+  }
+
+  // Restauration agents
+  if (snap.agents && snap.agents.length > 0) {
+    agents.length = 0;
+    snap.agents.forEach(a => agents.push(a));
+  }
+
+  // Restauration secteurs — uniquement si la sauvegarde en contient
+  if (snap.sectors && snap.sectors.length > 0) {
+    sectors.length = 0;
+    snap.sectors.forEach(s => sectors.push(s));
+  }
+
+  // Restauration cellOverrides — remplacement COMPLET (pas merge)
+  Object.keys(cellOverrides).forEach(k => delete cellOverrides[k]);
+  if (snap.cellOverrides) {
+    Object.assign(cellOverrides, snap.cellOverrides);
+  }
+
+  // Restauration remplaçants
+  if (snap.replacants) {
+    replacants.length = 0;
+    snap.replacants.forEach(r => replacants.push(r));
+  }
+
+  // Restauration règles
+  if (snap.RULES) {
+    Object.assign(RULES, snap.RULES);
+  }
+
   clearAffCache();
+  updateSectorCSSVars();
   buildPlanning();
+  updateInactifsBadge();
   await savePlanningToDB('Restauration — ' + new Date(data.created_at).toLocaleString('fr-FR'));
   document.getElementById('hist-overlay')?.remove();
-  alert('Version restaurée avec succès !');
+  alert(`✅ Version restaurée !\n• ${nbAgents} agent(s)\n• ${nbSectors} secteur(s)`);
 }
 
 // ── ADMIN PANEL ─────────────────────────────────────────
@@ -5997,7 +6517,19 @@ function roBuildOneMonth(agent, m, y) {
       (isTdy?'outline:2px solid #1d4ed8;outline-offset:-1px;':'') + '">' +
       '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:18px;border-radius:3px;font-size:9px;font-weight:700;'+st+'">' + code + '</span></td>';
   }
-  // Ligne disponibilités (si agent vérifié)
+  // ── Ligne secteur ──
+  h += '</tr><tr>';
+  h += '<td style="position:sticky;left:0;z-index:2;background:#f8fafd;padding:3px 6px;font-size:9px;font-weight:600;color:#475569;border-right:2px solid #e2e8f4;white-space:nowrap;">Secteur</td>';
+  var sectAgent = agent.fixe==='O' ? agent.secteur : (getAffectations(agent.grp,m)[agent.poste] || (agent.rot&&agent.rot[0]) || 'GENERAL');
+  var sectObj = sectors.find(function(s){ return s.code===sectAgent; });
+  var sectLbl = sectObj ? sectObj.label : sectAgent;
+  var sectClr = sectObj ? sectObj.color : '#64748b';
+  for (var d=1; d<=nbDays; d++) {
+    var dow=(firstOffset+d-1)%7;
+    var isTdy=isCurMonth&&todayDate.getDate()===d;
+    h += '<td style="padding:2px 1px;text-align:center;background:'+(isTdy?'#eff6ff':'#f8fafd')+';'+(dow===0?'border-left:2px solid #dbeafe;':'')+'" title="'+sectLbl+'">' +
+      '<span style="display:inline-block;font-size:7.5px;font-weight:800;color:'+sectClr+';white-space:nowrap;">' + sectLbl.substring(0,3) + '</span></td>';
+  }
   h += '<tr>';
   h += '<td style="position:sticky;left:0;z-index:2;background:#f0fdf4;padding:3px 6px;font-size:9px;font-weight:700;color:#065f46;border-right:2px solid #e2e8f4;border-top:1px solid #bbf7d0;white-space:nowrap;">+ Dispo</td>';
   for (var dd=1; dd<=nbDays; dd++) {
