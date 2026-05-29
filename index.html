@@ -2355,6 +2355,11 @@ function buildPlanning() {
   const firstOffset = getFirstDayOffset(currentYear, currentMonth);
   const DAY_NAMES = ['L','M','M','J','V','S','D'];
 
+  // ── Jour aujourd'hui ──
+  const todayObj = new Date();
+  const isCurrentMonth = todayObj.getFullYear() === currentYear && todayObj.getMonth() === currentMonth;
+  const todayDay = isCurrentMonth ? todayObj.getDate() : -1;
+
   // ── En-têtes colonnes ──
   const rHead = document.createElement('tr'); rHead.className='hdr-week';
   [['col-poste','Poste'],['col-nom','Nom'],['col-spec','Spéc.']].forEach(([cls,txt]) => {
@@ -2363,7 +2368,13 @@ function buildPlanning() {
   for (let d=1; d<=nbDays; d++) {
     const th = document.createElement('th');
     const dow=(firstOffset+d-1)%7, isWE=dow>=5;
-    th.textContent=d; th.style.cssText=`font-size:10px;padding:4px 2px;${isWE?'background:#f0f4ff;':''}`;
+    const isToday = d === todayDay;
+    if (isToday) {
+      th.style.cssText='font-size:10px;padding:4px 2px;background:#1d4ed8;color:#fff;font-weight:700;border-bottom:2px solid #60a5fa;';
+    } else {
+      th.style.cssText=`font-size:10px;padding:4px 2px;${isWE?'background:#f0f4ff;':''}`;
+    }
+    th.textContent=d;
     if (dow===0) th.classList.add('week-sep');
     rHead.appendChild(th);
   }
@@ -2375,7 +2386,14 @@ function buildPlanning() {
   for (let d=1; d<=nbDays; d++) {
     const th=document.createElement('th');
     const dow=(firstOffset+d-1)%7, isWE=dow>=5;
-    th.textContent=DAY_NAMES[dow]; th.style.cssText=`font-size:10px;padding:3px;${isWE?'background:#f0f4ff;color:#c2570a;font-weight:700;':''}`;
+    const isToday = d === todayDay;
+    if (isToday) {
+      th.textContent=DAY_NAMES[dow];
+      th.style.cssText='font-size:10px;padding:3px;background:#dbeafe;color:#1d4ed8;font-weight:700;border-bottom:2px solid #3b82f6;';
+    } else {
+      th.textContent=DAY_NAMES[dow];
+      th.style.cssText=`font-size:10px;padding:3px;${isWE?'background:#f0f4ff;color:#c2570a;font-weight:700;':''}`;
+    }
     if (dow===0) th.classList.add('week-sep');
     rDay.appendChild(th);
   }
@@ -2773,6 +2791,11 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   tdN.style.background = scTr.rowBg;
   tdS.style.background = scTr.rowBg;
 
+  // ── Jour aujourd'hui ──
+  const todayNow = new Date();
+  const isCurMonth = todayNow.getFullYear() === currentYear && todayNow.getMonth() === currentMonth;
+  const todayDayNum = isCurMonth ? todayNow.getDate() : -1;
+
   for (let d=1; d<=nbDays; d++) {
     const dayDate=new Date(currentYear,currentMonth,d);
     const dayOfYear=Math.round((Date.UTC(currentYear,currentMonth,d) - UTC_REF) / 86400000);
@@ -2780,6 +2803,7 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
     const dateKey=`${agent.poste}-${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const override=cellOverrides[dateKey];
     const code=override?override.code:((pattern[patIdx]||'R').trim()||'R');
+    const isToday = d === todayDayNum;
     const td=document.createElement('td'); td.className='planning-cell';
     const dow=(firstOffset+d-1)%7, isWE=dow>=5;
     if (dow===0) td.classList.add('week-sep');
@@ -2825,6 +2849,14 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
       }
       td.innerHTML=`<span class="code code-${displayCode}" style="background:transparent;border-color:transparent;color:${displayCode==='R'?'#c0c8da':scEff.color};${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
       td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
+    }
+
+    // ── Surbrillance aujourd'hui ──
+    if (isToday) {
+      td.style.outline = '2px solid #3b82f6';
+      td.style.outlineOffset = '-2px';
+      td.style.zIndex = '1';
+      td.style.position = 'relative';
     }
 
     tr.appendChild(td);
