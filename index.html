@@ -6675,15 +6675,51 @@ function roBuild() {
 // ── Auto-init si ?readonly=1 dans l'URL ──
 (function() {
   if (window.location.search && window.location.search.indexOf('readonly=1') !== -1) {
-    function go() {
-      var hdr = document.querySelector('header');
-      var nav = document.querySelector('nav');
-      var mn  = document.querySelector('main');
+    async function go() {
+      var hdr  = document.querySelector('header');
+      var nav  = document.querySelector('nav');
+      var mn   = document.querySelector('main');
       var auth = document.getElementById('auth-screen');
       if (hdr)  hdr.style.display  = 'none';
       if (nav)  nav.style.display  = 'none';
       if (mn)   mn.style.display   = 'none';
       if (auth) auth.style.display = 'none';
+
+      // Afficher un écran de chargement
+      var loadDiv = document.createElement('div');
+      loadDiv.id = 'ro-loading';
+      loadDiv.style.cssText = 'position:fixed;inset:0;background:#f4f6fb;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:DM Sans,sans-serif;';
+      loadDiv.innerHTML = '<div style="width:36px;height:36px;border:3px solid #e2e8f4;border-top-color:#38bdf8;border-radius:50%;animation:spin .7s linear infinite;"></div>'
+        + '<div style="font-size:13px;color:#475569;font-weight:600;">Chargement du planning...</div>'
+        + '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+      document.body.appendChild(loadDiv);
+
+      // Charger les données Supabase sans login
+      try {
+        var etabResp = await SB.from('etablissements').select('id').limit(1);
+        var etabId = (etabResp.data && etabResp.data.length) ? etabResp.data[0].id : null;
+        roCurrentEtabId = etabId;
+        if (etabId) {
+          var planResp = await SB.from('planning_data')
+            .select('data')
+            .eq('etablissement_id', etabId)
+            .single();
+          if (planResp.data && planResp.data.data) {
+            var snap = planResp.data.data;
+            if (snap.agents)        { agents.length=0;     snap.agents.forEach(function(a){agents.push(a);}); }
+            if (snap.sectors)       { sectors.length=0;    snap.sectors.forEach(function(s){sectors.push(s);}); }
+            if (snap.cellOverrides) { Object.keys(snap.cellOverrides).forEach(function(k){ cellOverrides[k]=snap.cellOverrides[k]; }); }
+            if (snap.replacants)    { replacants.length=0; snap.replacants.forEach(function(r){replacants.push(r);}); }
+            if (snap.RULES)         { Object.assign(RULES, snap.RULES); }
+            clearAffCache();
+          }
+        }
+      } catch(e) {
+        console.warn('Readonly load error:', e);
+      }
+
+      var ld = document.getElementById('ro-loading');
+      if (ld) ld.remove();
       openReadonly();
     }
     if (document.readyState === 'loading') {
