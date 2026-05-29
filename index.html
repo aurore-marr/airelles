@@ -6,6 +6,7 @@
 <title>Planning Roulement — EHPAD</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   /* ── TOKENS ─────────────────────────────── */
   :root {
@@ -50,7 +51,7 @@
     border-bottom: 1px solid var(--hdr-border);
     padding: 0 28px;
     display: flex; align-items: center; justify-content: space-between;
-    height: 58px; flex-shrink: 0;
+    height: 58px; flex-shrink: 0; position: relative;
   }
   .logo {
     display: flex; align-items: center; gap: 10px;
@@ -245,7 +246,7 @@
     padding: 3px;
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
-    height: 32px;
+    height: 38px;
   }
   tr.agent-row:hover td { background-color: #f8faff !important; }
 
@@ -257,7 +258,7 @@
 
   /* agent name */
   .agent-name { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; }
-  .agent-poste { font-size: 10px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .agent-poste { font-size: 10px; color: var(--text); font-weight: 700; font-family: 'DM Mono', monospace; }
 
   /* code badges */
   .code {
@@ -1166,13 +1167,29 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <text x="52" y="43" font-family="DM Sans, Arial, sans-serif" font-weight="300" font-size="9.5" fill="#64748B" letter-spacing="3">GESTION DU TEMPS</text>
     </svg>
   </div>
+  <!-- Nom établissement centré -->
+  <div id="etab-name-header" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;letter-spacing:.02em;" id="etab-name-label"></div>
+    <div style="font-size:10px;color:#475569;letter-spacing:.04em;text-transform:uppercase;" id="etab-name-sub">Établissement</div>
+  </div>
   <div class="header-right">
-    <div id="user-bar">
+    <div id="user-bar" style="position:relative;">
       <span class="connected-dot"></span>
       <span id="user-bar-name">—</span>
       <span class="user-badge" id="user-bar-role" style="background:#1e3050;color:#60a5fa;">—</span>
       <span style="color:#334155;font-size:10px;" id="connected-count"></span>
-      <button onclick="doLogout()" style="background:none;border:none;color:#475569;cursor:pointer;font-size:11px;padding:0 4px;" title="Déconnexion">⏻</button>
+      <!-- Bouton menu ▾ -->
+      <button onclick="toggleUserMenu()" id="user-menu-btn" style="background:#162035;border:1px solid #1e3050;color:#60a5fa;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:13px;line-height:1;" title="Paramètres">▾</button>
+      <!-- Déconnexion visible -->
+      <button onclick="doLogout()" style="background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;" title="Déconnexion">⏻ Déco</button>
+      <!-- Menu déroulant -->
+      <div id="user-menu-dropdown" style="display:none;position:absolute;top:38px;right:0;background:#0f1827;border:1px solid #1e3050;border-radius:10px;padding:6px;min-width:180px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.5);">
+        <div style="font-size:9.5px;font-weight:700;color:#475569;letter-spacing:.06em;padding:4px 8px 6px;">PARAMÈTRES</div>
+        <button onclick="showView('regles',document.getElementById('nav-btn-regles'));toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">⏱ Règles & Temps</button>
+        <button onclick="showView('config',document.getElementById('nav-btn-config'));toggleUserMenu();" style="width:100%;text-align:left;background:none;border:none;color:#94a3b8;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">⚙ Config secteurs</button>
+        <div style="height:1px;background:#1e3050;margin:4px 0;"></div>
+        <button onclick="openAdminPanel();toggleUserMenu();" id="menu-admin-btn" style="display:none;width:100%;text-align:left;background:none;border:none;color:#93c5fd;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#162035'" onmouseout="this.style.background='none'">👤 Gérer accès</button>
+      </div>
     </div>
     <div class="month-nav">
       <button onclick="changeMonth(-1)">‹</button>
@@ -1181,7 +1198,6 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     </div>
     <button onclick="openReadonly()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="Vue lecture seule agents">👁 Vue agent</button>
     <button id="btn-qr" onclick="showQRModal()" style="background:#0f2744;border:1px solid #1e3050;color:#38bdf8;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;" title="QR Code accès agents">📱 QR Code</button>
-    <button class="btn-export">⬇ Exporter Excel</button>
   </div>
   </div>
 </header>
@@ -1191,9 +1207,9 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
   <button class="active" onclick="showView('planning',this)">📅 Planning mensuel</button>
   <button onclick="showView('agents',this)">👥 Agents</button>
   <button onclick="showView('replacants',this)">🔄 Remplaçants</button>
-  <button onclick="showView('regles',this)">⏱ Règles & Temps</button>
-  <button onclick="showView('config',this)">⚙ Config secteurs</button>
-  <button id="btn-admin-users" onclick="openAdminPanel()" style="display:none;margin-left:auto;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">👤 Gérer accès</button>
+  <button id="nav-btn-regles" onclick="showView('regles',this)" style="display:none;">⏱ Règles & Temps</button>
+  <button id="nav-btn-config" onclick="showView('config',this)" style="display:none;">⚙ Config secteurs</button>
+  <!-- btn-admin-users déplacé dans le menu utilisateur -->
   <button id="btn-dispo-notif" onclick="openDispoPanel()" style="display:none;background:#065f46;color:#6ee7b7;border:none;border-radius:6px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;align-items:center;gap:5px;animation:pulse 2s infinite;">🟢 Dispos</button>
 </nav>
 
@@ -1306,6 +1322,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     </div>
     <!-- Infos centre -->
     <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;font-weight:700;color:#6366F1;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;" id="print-etab-label"></div>
       <div class="print-header-title" id="print-month-label" style="font-size:17px;color:#1a2540;"></div>
       <div class="print-header-sub" id="print-view-label" style="margin-top:2px;"></div>
     </div>
@@ -1338,7 +1355,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
 
   <!-- Pied de page impression (masqué en écran) -->
   <div class="print-footer" id="print-footer">
-    <span style="font-weight:600;color:#6366F1;">Horizon Planning</span> — Document généré le <span id="print-gen-date"></span> — Confidentiel
+    <span style="font-weight:600;color:#6366F1;">Horizon Planning</span> — <span id="print-etab-footer"></span> — Document généré le <span id="print-gen-date"></span> — Confidentiel
   </div>
 </div>
 
@@ -1356,6 +1373,10 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       style="padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
       border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
       background:transparent;color:var(--text-muted);transition:all .15s;">📊 Taux &amp; Congés</button>
+    <button id="atab-btn-inactifs" onclick="showAgentsTab('inactifs')"
+      style="padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
+      border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+      background:transparent;color:var(--text-muted);transition:all .15s;">🚫 Inactifs <span id="inactifs-badge" style="display:none;background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;vertical-align:middle;"></span></button>
   </div>
 
   <!-- Sous-onglet : LISTE -->
@@ -1415,6 +1436,16 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
         </table>
       </div>
     </div>
+  </div>
+
+
+  <!-- Sous-onglet : INACTIFS -->
+  <div id="atab-inactifs" style="display:none;">
+    <div class="toolbar" style="margin-bottom:14px;">
+      <span class="toolbar-title">Agents inactifs</span>
+      <div class="search-box">🔍 <input type="text" id="inactifs-search" placeholder="Rechercher…" oninput="buildAgentsInactifs()"></div>
+    </div>
+    <div class="agents-grid" id="inactifs-grid"></div>
   </div>
 </div>
 
@@ -1763,7 +1794,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
         <div class="agent-info-row"><span class="agent-info-label">CA annuels</span><span class="agent-info-val" id="mi-ca">17.5 j</span></div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button class="btn-save" style="flex:1;" onclick="switchToEditMode()">✏ MODIFIER</button>
-          <button class="btn-danger" onclick="deactivateAgent()" style="flex:1;">🚫 NE TRAVAILLE PLUS</button>
+          <button class="btn-danger" onclick="deactivateAgent()" style="flex:1;background:#92400e;border-color:#92400e;" title="L'agent ne travaille plus — restera accessible dans l'onglet Inactifs">🚫 Désactiver</button>
           <button class="btn-danger" style="flex:0;background:#7f1d1d;padding:8px 10px;" onclick="deleteAgent()" title="Supprimer définitivement">🗑</button>
         </div>
       </div>
@@ -1825,7 +1856,17 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
             </select>
           </div>
         </div>
-
+        <!-- Secteur fixe -->
+        <div class="form-row">
+          <label>SECTEUR FIXE</label>
+          <div class="toggle-switch-wrap" style="margin-bottom:8px;">
+            <div class="toggle-switch" id="fixe-toggle-sw" onclick="toggleFixeSwitch()"></div>
+            <span id="fixe-toggle-label">Désactivé — rotation automatique</span>
+          </div>
+          <div id="sect-fix-btns" style="display:flex;gap:7px;flex-wrap:wrap;display:none;"></div>
+          <input type="hidden" id="f-secteur-fixe" value="">
+          <p style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">Activez pour que cet agent reste toujours dans le même secteur.</p>
+        </div>
         <!-- Contraintes planning -->
         <div class="contraintes-box">
           <div class="contraintes-title">⚠ Contraintes de planning</div>
@@ -1898,43 +1939,22 @@ const PATTERNS = {
   'G2C': 'SRRJJRRRSSRRJJJRRMMRRRJJRRMMMRRSSRRRMMRRSS',
 };
 
-const agents = [
-  {poste:'AS001',nom:'DUPONT Jean',   spec:'AS',grp:1,sg:'A',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS002',nom:'MARTIN Sophie', spec:'AS',grp:1,sg:'A',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS003',nom:'BERNARD Luc',   spec:'AS',grp:1,sg:'A',taux:1,  statut:'con',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS004',nom:'THOMAS Marie',  spec:'AS',grp:1,sg:'B',taux:0.8,statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS005',nom:'ROBERT Paul',   spec:'AS',grp:1,sg:'B',taux:1,  statut:'sta',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS006',nom:'RICHARD Julie', spec:'AS',grp:1,sg:'B',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS007',nom:'LEROY Marc',    spec:'AS',grp:1,sg:'C',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS008',nom:'SIMON Claire',  spec:'AS',grp:1,sg:'C',taux:0.5,statut:'int',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS009',nom:'MOREAU Pierre', spec:'AS',grp:1,sg:'C',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS010',nom:'LAURENT Emma',  spec:'AS',grp:2,sg:'A',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS011',nom:'GARCIA Lucie',  spec:'AS',grp:2,sg:'A',taux:1,  statut:'con',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS012',nom:'PETIT Nicolas', spec:'AS',grp:2,sg:'A',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS013',nom:'ROUX Amélie',   spec:'AS',grp:2,sg:'B',taux:0.8,statut:'sta',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS014',nom:'DAVID Thomas',  spec:'AS',grp:2,sg:'B',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS015',nom:'BERTRAND Lisa', spec:'AS',grp:2,sg:'B',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS016',nom:'MOREL Antoine', spec:'AS',grp:2,sg:'C',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:0,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS017',nom:'SIMON Céline',  spec:'AS',grp:2,sg:'C',taux:0.5,statut:'int',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:1,joursOff:[],horaireExclu:'none',actif:true},
-  {poste:'AS018',nom:'FONTAINE Eva',  spec:'AS',grp:2,sg:'C',taux:1,  statut:'tit',secteur:'GENERAL',fixe:'N',rot:['GENERAL','CANTOU','ALZHEIMER'],rotOffset:2,joursOff:[],horaireExclu:'none',actif:true},
-];
+const agents = [];
 
 // Overrides de cellules : { 'poste-YYYY-MM-DD': { code, secteur, mod } }
 const cellOverrides = {};
 
 const sectors = [
-  {code:'GENERAL',   label:'1er étage',  color:'#1a56b0', active:true,  cible:{M:1,S:1,J:1}},
-  {code:'CANTOU',    label:'CANTOU',      color:'#c2570a', active:true,  cible:{M:1,S:1,J:1}},
-  {code:'ALZHEIMER', label:'2ème étage',  color:'#166534', active:true,  cible:{M:1,S:1,J:1}},
+  {code:'GENERAL',   label:'Secteur 1',   color:'#1a56b0', active:true,  cible:{M:1,S:1,J:1}},
+  {code:'CANTOU',    label:'Secteur 2',   color:'#c2570a', active:true,  cible:{M:1,S:1,J:1}},
+  {code:'ALZHEIMER', label:'Secteur 3',   color:'#166534', active:true,  cible:{M:1,S:1,J:1}},
   {code:'SECTEUR4',  label:'À définir',   color:'#92400e', active:false, cible:{M:1,S:1,J:1}},
   {code:'SECTEUR5',  label:'À définir',   color:'#831843', active:false, cible:{M:1,S:1,J:1}},
   {code:'SECTEUR6',  label:'À définir',   color:'#1e3a5f', active:false, cible:{M:1,S:1,J:1}},
 ];
 
 // Remplaçants
-let replacants = [
-  {id:'r1',nom:'abc',spec:'AS',type:'VAC',tel:'',notes:'',dispos:{}}
-];
+let replacants = [];
 let replWeekOffset = 0;
 let replSpecFilter = 'TOUS';
 let replDispoView  = false;
@@ -2028,7 +2048,7 @@ function getSectColor(sect) {
   const s = sectors.find(x => x.code === sect);
   const color = s ? s.color : '#64748b';
   const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
-  return { color, rowBg:`rgba(${r},${g},${b},0.06)`, fixeBg:`rgba(${r},${g},${b},0.14)`, border:`rgba(${r},${g},${b},0.35)` };
+  return { color, rowBg:`rgba(${r},${g},${b},0.13)`, fixeBg:`rgba(${r},${g},${b},0.25)`, border:`rgba(${r},${g},${b},0.45)` };
 }
 
 function getDaysOfMonth(year, month) { return new Date(year, month+1, 0).getDate(); }
@@ -2692,56 +2712,66 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   const pattern=getPattern(agent.grp, agent.sg);
   const tr=document.createElement('tr'); tr.className='agent-row';
 
-  // En mode agent, fond neutre ; en mode secteur, fond coloré
-  tr.style.cssText=`background:${sc.rowBg};`;
-  if (isFixe && !agentMode) tr.style.cssText+=`border-left:3px solid ${sc.color};`;
-  if (agentMode) tr.style.cssText+=`border-left:3px solid ${getSectColor(secteur).color};`;
-
-  // Colonne Poste
+  // Colonne Poste (fond temporaire, mis à jour après calcul scTr)
   const tdP=document.createElement('td'); tdP.className='col-poste';
-  tdP.style.background=sc.rowBg;
   const sectColor=getSectColor(secteur).color;
-  tdP.innerHTML=`<span class="agent-poste" style="color:${agentMode?sectColor:sc.color};">${isFixe?'📌 ':''}${agent.poste}</span>`;
+  tdP.innerHTML=`<span class="agent-poste">${isFixe?'📌 ':''}${agent.poste}</span>`;
   tr.appendChild(tdP);
 
   // Colonne Nom + badge secteur en mode agent
-  const tdN=document.createElement('td'); tdN.className='col-nom'; tdN.style.background=sc.rowBg;
+  const tdN=document.createElement('td'); tdN.className='col-nom';
   const secteurActuel = getAgentSecteur(agent);
   const scA = getSectColor(secteurActuel);
   const sectBadge = agentMode
     ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:${scA.rowBg};color:${scA.color};border:1px solid ${scA.border};white-space:nowrap;margin-left:4px;">${secteurActuel}</span>`
     : '';
+  const statLbl2b={tit:'Tit.',con:'Cont.',sta:'Stag.',int:'Int.'};
+  const tauxPct2b=Math.round((agent.taux||1)*100);
   tdN.innerHTML=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">
-    <span class="agent-name">${agent.nom}</span>${sectBadge}
+    <div style="display:flex;flex-direction:column;min-width:0;">
+      <span class="agent-name">${agent.nom}</span>
+      <span style="font-size:9px;color:var(--text-muted);font-family:'DM Sans',sans-serif;">${tauxPct2b}% · ${statLbl2b[agent.statut]||agent.statut}</span>
+    </div>${sectBadge}
     <button class="fixe-toggle ${isFixe?'fixe-on':''}" onclick="toggleFixe('${agent.poste}')" style="margin-left:auto;flex-shrink:0;" title="${isFixe?'Fixe':'En rotation'}">${isFixe?'📌':'🔄'}</button>
   </div>`;
   tr.appendChild(tdN);
 
   // Colonne Spec
-  const tdS=document.createElement('td'); tdS.className='col-spec'; tdS.style.background=sc.rowBg;
+  const tdS=document.createElement('td'); tdS.className='col-spec';
   tdS.innerHTML=`<span class="tag">${agent.spec}</span>`; tr.appendChild(tdS);
 
   // ── Tooltip taux/statut sur colonne Nom ──
   const statLabel2={tit:'Titulaire',con:'Contractuel',sta:'Stagiaire',int:'Intérimaire'};
   const tauxPct=Math.round(agent.taux*100);
   const tauxTip=`${tauxPct}% — ${statLabel2[agent.statut]||agent.statut}`;
-  tdN.title=tauxTip;
-  tdP.title=tauxTip;
-  tdS.title=tauxTip;
+  tdN.title=tauxTip; tdP.title=tauxTip; tdS.title=tauxTip;
 
   // Cellules jours
-  const UTC_REF = Date.UTC(2020, 10, 23); // ancre fixe cycle 42j (lundi 23 nov 2020)
+  const UTC_REF = Date.UTC(2020, 10, 23);
 
-  // ── Secteur du mois précédent (pour blocs qui débordent en début de mois) ──
+  // ── Secteur & code du mois précédent ──
   const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const prevYear  = currentMonth === 0 ? currentYear - 1 : currentYear;
   const secteurPrevMois = getAgentSecteur(agent, prevMonth);
-
-  // Calcule le code de la veille du 1er (dernier jour du mois précédent)
   const lastDayPrev = getDaysOfMonth(prevYear, prevMonth);
   const dayOfYearPrev = Math.round((Date.UTC(prevYear, prevMonth, lastDayPrev) - UTC_REF) / 86400000);
   const patIdxPrev = ((dayOfYearPrev % 42) + 42) % 42;
   const codePrevLastDay = (pattern[patIdxPrev] || 'R').trim() || 'R';
+
+  // ── Fond dominant de la ligne : dépend du carry-bloc au jour 1 ──
+  const day1PatIdx = ((Math.round((Date.UTC(currentYear,currentMonth,1)-UTC_REF)/86400000)%42)+42)%42;
+  const day1Ov = cellOverrides[`${agent.poste}-${currentYear}-${String(currentMonth+1).padStart(2,'0')}-01`];
+  const day1Code = day1Ov ? day1Ov.code : ((pattern[day1PatIdx]||'R').trim()||'R');
+  const trSect = (day1Code === codePrevLastDay && ['M','S','J'].includes(day1Code)) ? secteurPrevMois : secteurActuel;
+  const scTr = getSectColor(trSect);
+
+  // Appliquer fond à la ligne et aux colonnes sticky
+  tr.style.cssText = `background:${scTr.rowBg};`;
+  if (isFixe && !agentMode) tr.style.cssText += `border-left:3px solid ${sc.color};`;
+  if (agentMode) tr.style.cssText += `border-left:3px solid ${getSectColor(secteur).color};`;
+  tdP.style.background = scTr.rowBg;
+  tdN.style.background = scTr.rowBg;
+  tdS.style.background = scTr.rowBg;
 
   for (let d=1; d<=nbDays; d++) {
     const dayDate=new Date(currentYear,currentMonth,d);
@@ -2760,15 +2790,10 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
     const displayCode = isJourOff ? 'R' : code;
 
     // ── Détection bloc qui déborde du mois précédent ──
-    // Si on est en début de mois, que le code est le même que le dernier jour du mois précédent
-    // et qu'il n'y a pas d'override de secteur explicite → utiliser le secteur du mois précédent
     let effectiveSect = override?.secteur || secteurActuel;
+    let inCarryBloc = false;
     if (!override?.secteur && ['M','S','J'].includes(displayCode)) {
-      // Remonter jusqu'à d pour voir si le bloc commence avant le 1er du mois
-      let inCarryBloc = false;
       if (codePrevLastDay === displayCode) {
-        // Le dernier jour du mois précédent a le même code → ce bloc déborde
-        // Vérifier que les jours entre le 1er et d ont tous le même code sans rupture
         let sameBloc = true;
         for (let dd = 1; dd < d; dd++) {
           const doi = Math.round((Date.UTC(currentYear, currentMonth, dd) - UTC_REF) / 86400000);
@@ -2777,29 +2802,27 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
           const c   = ov ? ov.code : ((pattern[pi]||'R').trim()||'R');
           if (c !== displayCode) { sameBloc = false; break; }
         }
-        if (sameBloc) inCarryBloc = true;
+        if (sameBloc) { inCarryBloc = true; effectiveSect = secteurPrevMois; }
       }
-      if (inCarryBloc) effectiveSect = secteurPrevMois;
     }
 
+    const scEff = getSectColor(effectiveSect);
+
     if (agentMode) {
-      // Mode agent : cellule colorée selon secteur effectif
-      const cellSect = effectiveSect;
-      const csc = getSectColor(cellSect);
       if (displayCode==='R') {
         td.style.background=isWE?'#eef0f5':'#f8faff';
         td.innerHTML=`<span class="code" style="background:transparent;border-color:transparent;color:#c0c8da;">${displayCode}</span>`;
       } else {
-        td.style.background=csc.rowBg;
-        td.style.borderLeft=`2px solid ${csc.color}40`;
-        td.innerHTML=`<span class="code" style="background:${csc.rowBg};border:1px solid ${csc.border};color:${csc.color};border-radius:4px;padding:0 3px;${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
+        td.style.background = scEff.rowBg;
+        td.innerHTML=`<span class="code" style="background:${scEff.rowBg};border:1px solid ${scEff.border};color:${scEff.color};border-radius:4px;padding:0 3px;${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
       }
       td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
     } else {
-      // Mode secteur : utiliser effectiveSect si bloc déborde du mois précédent
-      const scEff = getSectColor(effectiveSect);
-      if (displayCode==='R') { td.style.background=isWE?'#eef0f5':'#f4f6fb'; }
-      else { td.style.background=isFixe?scEff.fixeBg:scEff.rowBg; }
+      if (displayCode==='R') {
+        td.style.background=isWE?'#eef0f5':'#f4f6fb';
+      } else {
+        td.style.background=isFixe?scEff.fixeBg:scEff.rowBg;
+      }
       td.innerHTML=`<span class="code code-${displayCode}" style="background:transparent;border-color:transparent;color:${displayCode==='R'?'#c0c8da':scEff.color};${hasOverride?'text-decoration:underline dotted;':''}">${displayCode}</span>`;
       td.onclick=()=>openCellModal(agent, dayDate, dateKey, displayCode, secteurActuel);
     }
@@ -3110,26 +3133,20 @@ let agentsTab = 'liste';
 
 function showAgentsTab(tab) {
   agentsTab = tab;
-  const tabListe = document.getElementById('atab-liste');
-  const tabTaux  = document.getElementById('atab-taux');
-  const btnListe = document.getElementById('atab-btn-liste');
-  const btnTaux  = document.getElementById('atab-btn-taux');
-  if (!tabListe) return;
-  const accent = 'var(--accent)';
-  const muted  = 'var(--text-muted)';
-  if (tab === 'liste') {
-    tabListe.style.display = 'block';
-    tabTaux.style.display  = 'none';
-    btnListe.style.cssText = "padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:sans-serif;border:none;border-bottom:2px solid var(--accent);margin-bottom:-2px;background:transparent;color:var(--accent);transition:all .15s;";
-    btnTaux.style.cssText  = "padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:sans-serif;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:transparent;color:var(--text-muted);transition:all .15s;";
-    buildAgents();
-  } else {
-    tabListe.style.display = 'none';
-    tabTaux.style.display  = 'block';
-    btnListe.style.cssText = "padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:sans-serif;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:transparent;color:var(--text-muted);transition:all .15s;";
-    btnTaux.style.cssText  = "padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:sans-serif;border:none;border-bottom:2px solid var(--accent);margin-bottom:-2px;background:transparent;color:var(--accent);transition:all .15s;";
-    buildTauxConges();
-  }
+  const tabs = ['liste','taux','inactifs'];
+  tabs.forEach(t => {
+    const el  = document.getElementById('atab-' + t);
+    const btn = document.getElementById('atab-btn-' + t);
+    if (!el || !btn) return;
+    const isActive = t === tab;
+    el.style.display  = isActive ? 'block' : 'none';
+    btn.style.cssText = 'padding:8px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:sans-serif;border:none;margin-bottom:-2px;background:transparent;transition:all .15s;' +
+      (isActive ? 'border-bottom:2px solid var(--accent);color:var(--accent);' : 'border-bottom:2px solid transparent;color:var(--text-muted);');
+  });
+  if (tab === 'liste')    buildAgents();
+  if (tab === 'taux')     buildTauxConges();
+  if (tab === 'inactifs') buildAgentsInactifs();
+  updateInactifsBadge();
 }
 
 function buildAgents() {
@@ -3202,6 +3219,7 @@ function buildAgents() {
 
           <div class="agent-card-body" style="padding-top:6px;">
             <span class="tag" style="font-weight:700;">${a.spec}</span>
+            <span class="tag">Secteur : ${sectCurrent}</span>
             <span class="tag" style="background:#fef9c3;color:#854d0e;">CA : ${caAnnuels} j</span>
           </div>
 
@@ -3250,7 +3268,6 @@ function renderSector(s, idx, container) {
     <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
       <div style="position:relative;flex-shrink:0;">
         <div class="sect-dot" style="background:${s.color};width:14px;height:14px;cursor:pointer;" onclick="pickColor(${idx})" title="Changer la couleur"></div>
-        <input type="color" id="color-picker-${idx}" value="${s.color}" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;" oninput="updateSectorColor(${idx},this.value)">
       </div>
       <div style="flex:1;">
         <div style="font-size:12px;font-weight:700;color:${s.color};margin-bottom:4px;letter-spacing:.04em;">${s.code}</div>
@@ -3280,8 +3297,89 @@ function renderSector(s, idx, container) {
   container.appendChild(div);
 }
 
-function pickColor(idx)    { document.getElementById(`color-picker-${idx}`).click(); }
-function updateSectorColor(idx,val) { sectors[idx].color=val; updateSectorCSSVars(); buildConfig(); buildPlanning(); }
+function pickColor(idx) {
+  // Ouvre un mini-panel de couleurs prédéfinies + input natif sans détruire le DOM
+  const existing = document.getElementById('color-panel-' + idx);
+  if (existing) { existing.remove(); return; }
+
+  const PRESET_COLORS = [
+    '#1a56b0','#1d4ed8','#2563eb','#0369a1','#0891b2',
+    '#6d28d9','#7c3aed','#9333ea','#be185d','#db2777',
+    '#065f46','#059669','#16a34a','#4d7c0f','#166534',
+    '#92400e','#c2570a','#d97706','#b45309','#78350f',
+    '#64748b','#475569','#334155','#dc2626','#991b1b',
+  ];
+
+  const s = sectors[idx];
+  const btn = document.querySelector('[onclick="pickColor('+idx+')"]') ||
+              document.querySelector('[onclick*="pickColor('+idx+')"]');
+
+  const panel = document.createElement('div');
+  panel.id = 'color-panel-' + idx;
+  panel.style.cssText = 'position:fixed;z-index:9999;background:#0f1827;border:1px solid #1e3050;border-radius:12px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);width:220px;';
+
+  // Positionner sous le bouton cliqué
+  if (btn) {
+    const rect = btn.getBoundingClientRect();
+    panel.style.top  = (rect.bottom + 6) + 'px';
+    panel.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+  } else {
+    panel.style.top = '50%'; panel.style.left = '50%';
+    panel.style.transform = 'translate(-50%,-50%)';
+  }
+
+  let html = '<div style="font-size:10px;font-weight:700;color:#60a5fa;letter-spacing:.06em;margin-bottom:8px;">🎨 COULEUR DU SECTEUR</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;">';
+  PRESET_COLORS.forEach(c => {
+    const isActive = c.toLowerCase() === (s.color||'').toLowerCase();
+    html += '<div onclick="applyColor('+idx+',\''+c+'\')" style="width:32px;height:32px;border-radius:6px;background:'+c+';cursor:pointer;border:2px solid '+(isActive?'#fff':'transparent')+';transition:transform .1s;" onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'scale(1)\'"></div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;align-items:center;gap:8px;">';
+  html += '<input type="color" id="cp-native-'+idx+'" value="'+(s.color||'#3b82f6')+'" onchange="applyColor('+idx+',this.value)" style="width:36px;height:28px;border:none;border-radius:4px;cursor:pointer;background:none;padding:0;">';
+  html += '<span style="font-size:10px;color:#60a5fa;">Couleur personnalisée</span></div>';
+  html += '<button onclick="document.getElementById(\'color-panel-'+idx+'\').remove()" style="width:100%;margin-top:10px;background:#162035;border:1px solid #1e3050;color:#94a3b8;border-radius:6px;padding:5px;font-size:11px;cursor:pointer;">Fermer</button>';
+
+  panel.innerHTML = html;
+  document.body.appendChild(panel);
+
+  // Fermer si clic en dehors
+  setTimeout(() => {
+    function closePanel(e) {
+      if (!panel.contains(e.target)) {
+        panel.remove();
+        document.removeEventListener('mousedown', closePanel);
+      }
+    }
+    document.addEventListener('mousedown', closePanel);
+  }, 100);
+}
+
+function applyColor(idx, val) {
+  sectors[idx].color = val;
+  updateSectorCSSVars();
+  buildPlanning();
+  // Mise à jour visuelle du secteur sans reconstruire tout le DOM
+  const div = document.querySelector('[data-idx="'+idx+'"]');
+  if (div) {
+    const dot = div.querySelector('.sect-dot');
+    if (dot) dot.style.background = val;
+    const swatch = div.querySelectorAll('[style*="cursor:pointer"]');
+    swatch.forEach(el => { if (el.style.width === '28px') el.style.background = val; });
+    const colorLabel = div.querySelector('[style*="font-weight:700;color"]');
+    if (colorLabel) colorLabel.style.color = val;
+    // Mettre à jour le panel ouvert
+    const panel = document.getElementById('color-panel-' + idx);
+    if (panel) {
+      panel.querySelectorAll('[onclick*="applyColor"]').forEach(el => {
+        const c = el.style.background;
+        el.style.border = (c.replace(/\s/g,'') === val.replace(/\s/g,'')) ? '2px solid #fff' : '2px solid transparent';
+      });
+    }
+  } else {
+    buildConfig();
+  }
+}
 function updateSectorLabel(idx,val) { sectors[idx].label=val; }
 function updateSectorCible(idx,hor,val) { if (!sectors[idx].cible) sectors[idx].cible={M:1,S:1,J:1}; sectors[idx].cible[hor]=parseInt(val)||0; }
 function addSector()    { if (sectors.length>=6) return; sectors.push({code:`SECTEUR${sectors.length+1}`,label:'À définir',color:'#64748b',active:false,cible:{M:1,S:1,J:1}}); buildConfig(); }
@@ -3307,7 +3405,7 @@ function toggleFixe(poste) {
   else { a.fixe='N'; a.rot=['GENERAL','CANTOU','ALZHEIMER']; a.secteur='GENERAL'; rebalanceOffsets(a.grp); refresh(); }
 }
 
-function refresh() { clearAffCache(); buildPlanning(); if (document.getElementById('view-agents').classList.contains('active')) buildAgents(); }
+function refresh() { clearAffCache(); buildPlanning(); if (document.getElementById('view-agents').classList.contains('active')) buildAgents(); updateInactifsBadge(); }
 
 // ══════════════════════════════════════════════════════════
 // MODAL AGENT (enrichi)
@@ -3320,9 +3418,34 @@ let modalExclu    = 'none';
 let modalFixeOn   = false;
 let modalFixeSect = '';
 
-function buildSectFixeBtns() { /* secteur fixe supprimé */ }
-function toggleFixeSwitch()  { /* secteur fixe supprimé */ }
+function buildSectFixeBtns() {
+  const wrap = document.getElementById('sect-fix-btns');
+  wrap.innerHTML = '';
+  sectors.filter(s=>s.active).forEach(s => {
+    const r=parseInt(s.color.slice(1,3),16),g=parseInt(s.color.slice(3,5),16),b=parseInt(s.color.slice(5,7),16);
+    const btn = document.createElement('button');
+    btn.className='sect-fix-btn' + (s.code===modalFixeSect?' active':'');
+    btn.style.cssText=`background:rgba(${r},${g},${b},.1);color:${s.color};border-color:${s.code===modalFixeSect?s.color:'rgba('+r+','+g+','+b+',.3)'};`;
+    btn.textContent='• ' + (s.label||s.code);
+    btn.onclick = () => {
+      modalFixeSect = s.code;
+      document.getElementById('f-secteur-fixe').value = s.code;
+      document.querySelectorAll('.sect-fix-btn').forEach(x=>{x.classList.remove('active');x.style.borderColor=`rgba(0,0,0,.1)`;});
+      btn.classList.add('active'); btn.style.borderColor=s.color;
+    };
+    wrap.appendChild(btn);
+  });
+}
 
+function toggleFixeSwitch() {
+  modalFixeOn = !modalFixeOn;
+  const sw = document.getElementById('fixe-toggle-sw');
+  sw.classList.toggle('on', modalFixeOn);
+  document.getElementById('fixe-toggle-label').textContent = modalFixeOn
+    ? 'Activé — secteur fixe pour tout le cycle'
+    : 'Désactivé — rotation automatique';
+  document.getElementById('sect-fix-btns').style.display = modalFixeOn ? 'flex' : 'none';
+}
 
 function selectStatut(val, btn) {
   document.getElementById('f-statut').value = val;
@@ -3400,9 +3523,16 @@ function openModal(mode, poste, fixeMode) {
       // Exclu
       modalExclu = a.horaireExclu||'none';
       selectExclu(modalExclu);
-      // Fixe (désactivé — rotation auto par défaut)
-      modalFixeOn   = false;
+      // Fixe
+      modalFixeOn   = a.fixe==='O';
       modalFixeSect = a.secteur||'';
+      document.getElementById('f-secteur-fixe').value = modalFixeSect;
+      const sw=document.getElementById('fixe-toggle-sw');
+      sw.className='toggle-switch'+(modalFixeOn?' on':'');
+      document.getElementById('fixe-toggle-label').textContent = modalFixeOn
+        ?'Activé — secteur fixe pour tout le cycle':'Désactivé — rotation automatique';
+      document.getElementById('sect-fix-btns').style.display = modalFixeOn?'flex':'none';
+      buildSectFixeBtns();
       modalRotation = [...a.rot];
     }
     if (fixeMode) {
@@ -3425,6 +3555,10 @@ function openModal(mode, poste, fixeMode) {
     modalJoursOff=[]; document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
     modalExclu='none'; selectExclu('none');
     modalFixeOn=false; modalFixeSect='';
+    document.getElementById('fixe-toggle-sw').className='toggle-switch';
+    document.getElementById('fixe-toggle-label').textContent='Désactivé — rotation automatique';
+    document.getElementById('sect-fix-btns').style.display='none';
+    buildSectFixeBtns();
     modalRotation=['GENERAL','CANTOU','ALZHEIMER'];
     modalEditPoste='';
   }
@@ -3446,10 +3580,10 @@ function saveAgent() {
   if (!nom)   { errEl.textContent='Le nom est obligatoire.';   errEl.style.display='block'; return; }
   if (!original && agents.find(a=>a.poste===poste)) { errEl.textContent=`Le poste "${poste}" existe déjà.`; errEl.style.display='block'; return; }
   const fixe    = modalFixeOn?'O':'N';
-  const secteur = modalRotation[0]||'GENERAL';
+  const secteur = modalFixeOn ? (document.getElementById('f-secteur-fixe').value||'GENERAL') : (modalRotation[0]||'GENERAL');
   const updated = {
-    poste, nom, spec, grp, sg, taux, statut, secteur, fixe:'N',
-    rot: modalRotation,
+    poste, nom, spec, grp, sg, taux, statut, secteur, fixe,
+    rot: modalFixeOn?[secteur]:modalRotation,
     rotOffset:0, joursOff:[...modalJoursOff], horaireExclu:modalExclu, actif:true,
   };
   if (original) { const idx=agents.findIndex(a=>a.poste===original); if(idx!==-1) agents[idx]=updated; }
@@ -3460,10 +3594,110 @@ function saveAgent() {
 }
 
 function deactivateAgent() {
-  if (!confirm(`Marquer cet agent comme "ne travaille plus" ?`)) return;
+  if (!confirm('Marquer cet agent comme inactif ? Il n\'apparaîtra plus dans le planning mais restera accessible dans l\'onglet Inactifs.')) return;
   const a = agents.find(x=>x.poste===modalEditPoste);
-  if (a) { a.actif=false; }
-  closeModalDirect(); refresh();
+  if (a) { a.actif = false; }
+  closeModalDirect();
+  refresh();
+  updateInactifsBadge();
+}
+
+function toggleUserMenu() {
+  const d = document.getElementById('user-menu-dropdown');
+  if (!d) return;
+  d.style.display = d.style.display === 'none' ? 'block' : 'none';
+  // Fermer si clic ailleurs
+  if (d.style.display === 'block') {
+    setTimeout(() => {
+      function close(e) {
+        if (!document.getElementById('user-bar').contains(e.target)) {
+          d.style.display = 'none';
+          document.removeEventListener('mousedown', close);
+        }
+      }
+      document.addEventListener('mousedown', close);
+    }, 100);
+  }
+}
+
+function reactivateAgent(poste) {
+  const a = agents.find(x => x.poste === poste);
+  if (!a) return;
+  a.actif = true;
+  buildAgentsInactifs();
+  updateInactifsBadge();
+  refresh();
+}
+
+function updateInactifsBadge() {
+  const nb = agents.filter(a => a.actif === false).length;
+  const badge = document.getElementById('inactifs-badge');
+  if (!badge) return;
+  if (nb > 0) {
+    badge.style.display = 'inline';
+    badge.textContent   = nb;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function buildAgentsInactifs() {
+  const grid = document.getElementById('inactifs-grid');
+  if (!grid) return;
+  const searchVal = (document.getElementById('inactifs-search')?.value || '').toLowerCase();
+  const inactifs = agents.filter(a => {
+    if (a.actif !== false) return false;
+    if (searchVal && !a.nom.toLowerCase().includes(searchVal) && !a.poste.toLowerCase().includes(searchVal)) return false;
+    return true;
+  }).sort((a,b) => a.nom.localeCompare(b.nom,'fr'));
+
+  if (!inactifs.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">' +
+      '<div style="font-size:36px;margin-bottom:12px;">✅</div>' +
+      '<div style="font-size:14px;font-weight:600;">Aucun agent inactif</div>' +
+      '<div style="font-size:12px;margin-top:6px;">Les agents marqués comme inactifs apparaissent ici.</div>' +
+    '</div>';
+    return;
+  }
+
+  const statLabel = {tit:'Titulaire',con:'Contractuel',sta:'Stagiaire',int:'Intérimaire'};
+  const SPEC_COLORS = {
+    AS:'background:#dbeafe;color:#1d4ed8;', IDE:'background:#ede9fe;color:#6d28d9;',
+    Nuit:'background:#1e293b;color:#7dd3fc;border:1px solid #0369a1;',
+    AUX:'background:#d1fae5;color:#065f46;', AE:'background:#fef3c7;color:#92400e;'
+  };
+
+  grid.innerHTML = inactifs.map(function(a) {
+    var specStyle = SPEC_COLORS[a.spec] || 'background:#f1f5f9;color:#64748b;';
+    var tauxPct = Math.round((a.taux||1)*100);
+    var stLbl = statLabel[a.statut] || a.statut;
+    return '<div style="background:var(--card-bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);opacity:.8;position:relative;">' +
+      '<div style="position:absolute;top:10px;right:10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:2px 8px;font-size:9.5px;font-weight:700;">INACTIF</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-right:64px;">' +
+        '<span style="font-size:13.5px;font-weight:700;color:var(--text);">' + a.nom + '</span>' +
+        '<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;' + specStyle + '">' + a.spec + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;background:#f1f5f9;color:var(--text-muted);">' + a.poste + '</span>' +
+        '<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;background:#f1f5f9;color:var(--text-muted);">' + stLbl + '</span>' +
+        '<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;background:#f1f5f9;color:var(--text-muted);">' + tauxPct + '%</span>' +
+        '<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;background:#f1f5f9;color:var(--text-muted);">Grp ' + a.grp + a.sg + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button onclick="reactivateAgent(\'' + a.poste + '\')" style="flex:1;background:#065f46;border:none;color:#6ee7b7;border-radius:7px;padding:7px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">✅ Réactiver</button>' +
+        '<button onclick="openModal(\'' + a.poste + '\')" style="background:var(--card-bg);border:1.5px solid var(--border);color:var(--text-muted);border-radius:7px;padding:7px 10px;font-size:11.5px;font-weight:600;cursor:pointer;" title="Voir la fiche">👁</button>' +
+        '<button onclick="deleteAgentFromInactifs(\'' + a.poste + '\')" style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;border-radius:7px;padding:7px 10px;font-size:11.5px;font-weight:600;cursor:pointer;" title="Supprimer définitivement">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deleteAgentFromInactifs(poste) {
+  if (!confirm('Supprimer définitivement cet agent ? Cette action est irréversible.')) return;
+  const idx = agents.findIndex(x => x.poste === poste);
+  if (idx !== -1) agents.splice(idx, 1);
+  buildAgentsInactifs();
+  updateInactifsBadge();
 }
 
 function deleteAgent() {
@@ -4139,143 +4373,490 @@ function buildTauxConges() {
 
 // ── EXCEL IMPORT / EXPORT ─────────────────────────────────
 
+// ══════════════════════════════════════════════════════════
+// EXPORT MODÈLE EXCEL (.xlsx) — format import_horizon_planning
+// ══════════════════════════════════════════════════════════
 function downloadExcelTemplate() {
-  // Génère un CSV lisible par Excel avec toutes les colonnes attendues
-  const sep = ';';
-  const nl = '\r\n';
+  if (typeof XLSX === 'undefined') {
+    alert('La bibliothèque XLSX n\'est pas encore chargée. Veuillez réessayer dans quelques secondes.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
 
-  // Feuille 1 : AGENTS
-  let csv = 'FEUILLE: AGENTS' + nl;
-  csv += ['poste','nom','spec','grp','sg','taux','statut','secteur','fixe','joursOff','horaireExclu'].join(sep) + nl;
-  agents.forEach(a => {
-    csv += [
-      a.poste, a.nom, a.spec, a.grp, a.sg, a.taux, a.statut,
-      a.secteur, a.fixe, (a.joursOff||[]).join('|'), a.horaireExclu||'none'
-    ].join(sep) + nl;
+  // ── Helpers style ─────────────────────────────────────
+  function cell(v, opts) {
+    const c = { v: v, t: typeof v === 'number' ? 'n' : 's' };
+    if (opts) Object.assign(c, opts);
+    return c;
+  }
+  function styleCell(ws, addr, style) {
+    if (!ws[addr]) return;
+    ws[addr].s = style;
+  }
+  const S_TITLE   = { font:{bold:true,sz:12,color:{rgb:'1E3A5F'}}, fill:{fgColor:{rgb:'EFF6FF'}}, alignment:{horizontal:'left'} };
+  const S_SUBTTL  = { font:{sz:9,color:{rgb:'64748B'}}, fill:{fgColor:{rgb:'F8FAFD'}}, alignment:{wrapText:true} };
+  const S_HDR_OBL = { font:{bold:true,sz:9,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1D4ED8'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'}, border:{bottom:{style:'thin',color:{rgb:'93C5FD'}}} };
+  const S_HDR_OPT = { font:{bold:true,sz:9,color:{rgb:'64748B'}}, fill:{fgColor:{rgb:'F1F5F9'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'}, border:{bottom:{style:'thin',color:{rgb:'CBD5E1'}}} };
+  const S_EXAMPLE = { font:{sz:10,color:{rgb:'94A3B8'},italic:true}, fill:{fgColor:{rgb:'F8FAFD'}}, alignment:{horizontal:'left'} };
+  const S_DATA    = { font:{sz:10}, alignment:{horizontal:'left'} };
+  const S_SECTION = { font:{bold:true,sz:9,color:{rgb:'64748B'}}, fill:{fgColor:{rgb:'F1F5F9'}}, alignment:{horizontal:'left'} };
+  const S_VAL_KEY = { font:{bold:true,sz:9,color:{rgb:'1E3A5F'}}, fill:{fgColor:{rgb:'F8FAFD'}} };
+  const S_VAL_TXT = { font:{sz:9,color:{rgb:'475569'}}, fill:{fgColor:{rgb:'FFFFFF'}} };
+
+  // ── Onglet 1 : Agents ──────────────────────────────────
+  const sectActifs = sectors.filter(s=>s.active);
+  const sectCodes  = sectActifs.map(s=>s.code).join('  |  ');
+  const sectLabels = sectActifs.map(s=>s.label||s.code).join('  |  ');
+
+  // Données agentes : soit les vrais agents, soit 3 lignes d'exemple en grisé
+  const hasRealAgents = agents.filter(a => a.actif !== false).length > 0;
+  const agentRows = hasRealAgents
+    ? agents.filter(a => a.actif !== false).map(a => [
+        a.poste, a.nom, a.spec, a.statut,
+        Math.round((a.taux||1)*100), a.grp, a.sg,
+        a.fixe==='O' ? a.secteur : '',
+        (a.joursOff||[]).join(','), a.horaireExclu||'none',
+        a.rotOffset||0, 'oui', ''
+      ])
+    : [
+        ['AS001', 'DUPONT Jean',   'AS',  'tit', 100, 1, 'A', sectActifs[0]?.code||'', '',    'none', 0, 'oui', 'Exemple — à remplacer'],
+        ['IDE001','MARTIN Sophie', 'IDE', 'tit', 100, 1, 'A', '',                       '',    'none', 0, 'oui', 'Exemple — à remplacer'],
+        ['AS002', 'BERNARD Luc',   'AS',  'con', 80,  1, 'B', '',                       'mer', 'none', 1, 'oui', '80% - mercredi fixe off'],
+      ];
+
+  const wsAData = [
+    ['HORIZON PLANNING — Import des agents'],
+    ['★ Obligatoire  |  ○ Optionnel  |  Supprimer les lignes d\'exemple avant import  |  Ne pas modifier les noms de colonnes'],
+    ['Colonnes bleues foncées = champs obligatoires   |   Colonnes grises = champs optionnels'],
+    [
+      'N° POSTE\n★ obligatoire', 'NOM COMPLET\n★ obligatoire', 'SPÉCIALITÉ\n★ obligatoire',
+      'STATUT\n★ obligatoire', 'TAUX (%)\n★ obligatoire', 'GROUPE ROT.\n★ obligatoire',
+      'SOUS-GROUPE\n★ obligatoire', 'SECTEUR FIXE\n○ optionnel', 'JOURS OFF\n○ optionnel',
+      'HORAIRE EXCLU\n○ optionnel', 'ROT. OFFSET\n○ optionnel', 'ACTIF\n○ optionnel', 'NOTES\n○ optionnel'
+    ],
+    ...agentRows,
+    [],
+    ['VALEURS AUTORISÉES'],
+    ['SPÉCIALITÉ','','AS  |  IDE  |  Nuit  |  AUX  |  AE'],
+    ['STATUT','','tit (Titulaire)  |  con (Contractuel)  |  sta (Stagiaire)  |  int (Intérim)'],
+    ['TAUX (%)','','100  |  90  |  80  |  50  (ou toute valeur entre 10 et 100)'],
+    ['GROUPE ROT.','','1  |  2'],
+    ['SOUS-GROUPE','','A  |  B  |  C'],
+    ['SECTEUR FIXE','', sectCodes + '  — ou laisser vide pour rotation auto'],
+    ['JOURS OFF','','lun  |  mar  |  mer  |  jeu  |  ven  |  sam  |  dim  — séparés par virgule si plusieurs'],
+    ['HORAIRE EXCLU','','none  |  M (Matin)  |  S (Soir)  |  J (Journée)'],
+    ['ACTIF','','oui  |  non'],
+  ];
+  const wsA = XLSX.utils.aoa_to_sheet(wsAData);
+  wsA['!cols'] = [{wch:16},{wch:22},{wch:11},{wch:11},{wch:9},{wch:12},{wch:12},{wch:14},{wch:11},{wch:14},{wch:12},{wch:7},{wch:30}];
+  wsA['!rows'] = [{hpt:20},{hpt:14},{hpt:14},{hpt:30}];
+  // Style titre + en-têtes
+  styleCell(wsA,'A1',S_TITLE);
+  styleCell(wsA,'A2',S_SUBTTL); styleCell(wsA,'A3',S_SUBTTL);
+  const oblCols = ['A','B','C','D','E','F','G'];
+  const optCols = ['H','I','J','K','L','M'];
+  oblCols.forEach(c => styleCell(wsA, c+'4', S_HDR_OBL));
+  optCols.forEach(c => styleCell(wsA, c+'4', S_HDR_OPT));
+  // Style lignes d'exemple (grisé si pas de vrais agents)
+  if (!hasRealAgents) {
+    for (let row = 5; row <= 7; row++) {
+      'ABCDEFGHIJKLM'.split('').forEach(c => styleCell(wsA, c+row, S_EXAMPLE));
+    }
+  } else {
+    for (let row = 5; row <= 4 + agentRows.length; row++) {
+      'ABCDEFGHIJKLM'.split('').forEach(c => styleCell(wsA, c+row, S_DATA));
+    }
+  }
+  // Sections valeurs autorisées
+  const valStart = 4 + agentRows.length + 2;
+  styleCell(wsA, 'A'+(valStart), S_SECTION);
+  for (let i = valStart+1; i <= valStart+9; i++) {
+    styleCell(wsA,'A'+i, S_VAL_KEY);
+    styleCell(wsA,'C'+i, S_VAL_TXT);
+  }
+  XLSX.utils.book_append_sheet(wb, wsA, '📋 Agents');
+
+  // ── Onglet 2 : Secteurs ────────────────────────────────
+  const wsSData = [
+    ['HORIZON PLANNING — Configuration des secteurs'],
+    ['Maximum 6 secteurs  |  Le code doit être unique et sans espace'],
+    ['CODE\n★ obligatoire','LABEL\n★ obligatoire','COULEUR BG\n○ optionnel','COULEUR TEXTE\n○ optionnel','ORDRE\n○ optionnel'],
+    ...sectActifs.map((s,i) => [s.code, s.label||s.code, '', s.color?(s.color.replace('#','')):'', i+1]),
+    [],
+    ['COULEURS PRÉDÉFINIES'],
+    ['Bleu Nord',     'BG: eff6ff', 'Texte: 1a56b0'],
+    ['Orange CANTOU', 'BG: fff7ed', 'Texte: c2570a'],
+    ['Vert Sud',      'BG: f0fdf4', 'Texte: 166534'],
+    ['Violet',        'BG: ede9fe', 'Texte: 6d28d9'],
+    ['Rose',          'BG: fce7f3', 'Texte: be185d'],
+  ];
+  const wsS = XLSX.utils.aoa_to_sheet(wsSData);
+  wsS['!cols'] = [{wch:16},{wch:20},{wch:16},{wch:16},{wch:7}];
+  wsS['!rows'] = [{hpt:20},{hpt:14},{hpt:30}];
+  styleCell(wsS,'A1',S_TITLE); styleCell(wsS,'A2',S_SUBTTL);
+  ['A','B'].forEach(c=>styleCell(wsS,c+'3',S_HDR_OBL));
+  ['C','D','E'].forEach(c=>styleCell(wsS,c+'3',S_HDR_OPT));
+  for(let i=4;i<=3+sectActifs.length;i++) 'ABCDE'.split('').forEach(c=>styleCell(wsS,c+i,S_DATA));
+  XLSX.utils.book_append_sheet(wb, wsS, '🏢 Secteurs');
+
+  // ── Onglet 3 : Règles spécialités ─────────────────────
+  const specEntries = Object.entries(RULES.specRules);
+  const wsRData = [
+    ['HORIZON PLANNING — Règles par spécialité'],
+    ['Une ligne par spécialité  |  Les horaires peuvent varier par spécialité'],
+    [
+      'SPÉCIALITÉ\n★ obligatoire','HORAIRE M\n★ obligatoire','HORAIRE S\n★ obligatoire',
+      'HORAIRE J\n★ obligatoire','HORAIRE N\n○ optionnel',
+      'DURÉE M (h)\n★ obligatoire','DURÉE S (h)\n★ obligatoire','DURÉE J (h)\n★ obligatoire','DURÉE N (h)\n○ optionnel',
+      'SEUIL MIN M\n○ optionnel','SEUIL MAX M\n○ optionnel','SEUIL MIN S\n○ optionnel','SEUIL MAX S\n○ optionnel',
+      'PAUSE (h)\n○ optionnel','HAS SECTEURS\n○ optionnel'
+    ],
+    ...specEntries.map(([sp,r]) => [
+      sp, r.horaires.M, r.horaires.S, r.horaires.J, '—',
+      r.durations.M, r.durations.S, r.durations.J, r.durations.NU||0,
+      r.seuils.M.min, r.seuils.M.max, r.seuils.S.min, r.seuils.S.max,
+      r.durations.pause||0, r.hasSecteurs ? 'oui' : 'non'
+    ]),
+    [],
+    ['💡  SEUIL MIN/MAX = nb min/max d\'agents de cet horaire par jour  |  PAUSE = durée de pause déduite du temps de travail  |  HAS SECTEURS = oui si rotation entre secteurs'],
+  ];
+  const wsR = XLSX.utils.aoa_to_sheet(wsRData);
+  wsR['!cols'] = [{wch:13},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:11},{wch:11},{wch:11},{wch:11},{wch:11},{wch:14}];
+  wsR['!rows'] = [{hpt:20},{hpt:14},{hpt:30}];
+  styleCell(wsR,'A1',S_TITLE); styleCell(wsR,'A2',S_SUBTTL);
+  ['A','B','C','D','F','G','H'].forEach(c=>styleCell(wsR,c+'3',S_HDR_OBL));
+  ['E','I','J','K','L','M','N','O'].forEach(c=>styleCell(wsR,c+'3',S_HDR_OPT));
+  for(let i=4;i<=3+specEntries.length;i++) 'ABCDEFGHIJKLMNO'.split('').forEach(c=>styleCell(wsR,c+i,S_DATA));
+  XLSX.utils.book_append_sheet(wb, wsR, '⚙ Règles spécialités');
+
+  // ── Onglet 4 : Règles générales ───────────────────────
+  const rr = RULES;
+  const dr0 = Object.values(rr.droitsSpec)[0] || {};
+  const MOIS_FR2 = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const wsGData = [
+    ['HORIZON PLANNING — Règles générales & Congés FPT'],
+    ['Paramètres globaux applicables à tous les agents'],
+    [],
+    ['▸  CALCUL DES HEURES'],
+    ['Heures annuelles FPT', rr.annualHours, 'Base légale FPT — modifiable selon accord d\'établissement'],
+    ['Durée référence CA/CF (h)', rr.durations.ref||10, 'Heures comptées pour une journée de congé ou d\'absence'],
+    [],
+    ['▸  CONGÉS FPT'],
+    ['CA annuels (jours)', dr0.caTotal||17.5, 'Pour tous les agents, proratisés selon le taux de travail'],
+    ['Seuil fractionnement 1 (jours hors période)', dr0.frac1||5, '+1 jour CF si ≥ 5j de CA pris hors mai–octobre'],
+    ['Seuil fractionnement 2 (jours hors période)', dr0.frac2||8, '+2 jours CF si ≥ 8j de CA pris hors mai–octobre'],
+    ['Période principale (début)', MOIS_FR2[rr.periodeDebut]||'mai', 'Début de la période principale de référence'],
+    ['Période principale (fin)', MOIS_FR2[rr.periodeFin]||'octobre', 'Fin de la période principale de référence'],
+    [],
+    ['▸  DIMANCHES & FÉRIÉS'],
+    ['Seuil dim+fériés (agents M/S/J)', dr0.reposDimFerie||14, 'Nombre de dim+fériés travaillés ouvrant droit au repos sup.'],
+    ['Repos supplémentaire M/S/J (h)', 14, 'Heures de repos accordées au-delà du seuil'],
+    ['Repos supplémentaire Nuit (h)',  30, 'Heures de repos nuit accordées au-delà du seuil'],
+  ];
+  const wsG = XLSX.utils.aoa_to_sheet(wsGData);
+  wsG['!cols'] = [{wch:40},{wch:12},{wch:55}];
+  styleCell(wsG,'A1',S_TITLE); styleCell(wsG,'A2',S_SUBTTL);
+  [4,8,15].forEach(row => styleCell(wsG,'A'+row,S_SECTION));
+  [5,6,9,10,11,12,13,16,17,18].forEach(row => {
+    styleCell(wsG,'A'+row,S_VAL_KEY);
+    styleCell(wsG,'B'+row,S_DATA);
+    styleCell(wsG,'C'+row,S_VAL_TXT);
   });
+  XLSX.utils.book_append_sheet(wb, wsG, '📐 Règles générales');
 
-  csv += nl + 'FEUILLE: REGLES_SPEC' + nl;
-  csv += ['spec','horaire_M','horaire_S','horaire_J','duree_M','duree_S','duree_J','duree_NU','pause','duree_ref','seuilMin_M','seuilMax_M','seuilMin_S','seuilMax_S','seuilMin_J','seuilMax_J','caTotal','frac1','frac2','hasSecteurs'].join(sep) + nl;
-  Object.entries(RULES.specRules).forEach(([sp, r]) => {
-    const dr = RULES.droitsSpec[sp];
-    csv += [
-      sp,
-      r.horaires.M, r.horaires.S, r.horaires.J,
-      r.durations.M, r.durations.S, r.durations.J, r.durations.NU||0, r.durations.pause||0, r.durations.ref||10,
-      r.seuils.M.min, r.seuils.M.max, r.seuils.S.min, r.seuils.S.max, r.seuils.J.min, r.seuils.J.max,
-      dr.caTotal, dr.frac1, dr.frac2, r.hasSecteurs?1:0
-    ].join(sep) + nl;
-  });
+  // ── Onglet 5 : Guide import ───────────────────────────
+  const wsGuideData = [
+    ['GUIDE D\'IMPORT — Horizon Planning'],
+    [],
+    ['ÉTAPE 1  —  Remplissez l\'onglet 📋 Agents'],
+    ['    Saisissez vos agents ligne par ligne. Supprimez les 3 lignes d\'exemple (surlignées en grisé). Les colonnes bleues sont obligatoires.'],
+    [],
+    ['ÉTAPE 2  —  Configurez les secteurs (onglet 🏢 Secteurs)'],
+    ['    Modifiez les secteurs existants ou ajoutez-en. Maximum 6. Le code doit être identique à celui utilisé dans la colonne SECTEUR FIXE des agents.'],
+    [],
+    ['ÉTAPE 3  —  Ajustez les règles spécialités (onglet ⚙ Règles spécialités)'],
+    ['    Modifiez les horaires et durées par spécialité si nécessaire. Ne changez pas les codes de spécialité (AS, IDE, Nuit, AUX, AE).'],
+    [],
+    ['ÉTAPE 4  —  Vérifiez les règles générales (onglet 📐 Règles générales)'],
+    ['    Adaptez les heures annuelles, les droits à congés FPT et les seuils si votre établissement a des règles spécifiques.'],
+    [],
+    ['ÉTAPE 5  —  Importez dans l\'application'],
+    ['    Dans l\'onglet Règles & Temps → cliquez sur 📤 Importer Excel → sélectionnez ce fichier.'],
+  ];
+  const wsGuide = XLSX.utils.aoa_to_sheet(wsGuideData);
+  wsGuide['!cols'] = [{wch:90}];
+  styleCell(wsGuide,'A1',S_TITLE);
+  [3,6,9,12,15].forEach(r => styleCell(wsGuide,'A'+r,{font:{bold:true,sz:10,color:{rgb:'1D4ED8'}}}));
+  [4,7,10,13,16].forEach(r => styleCell(wsGuide,'A'+r,{font:{sz:9,color:{rgb:'475569'}},alignment:{wrapText:true}}));
+  XLSX.utils.book_append_sheet(wb, wsGuide, '📖 Guide import');
 
-  csv += nl + 'FEUILLE: PLANNING_OVERRIDES' + nl;
-  csv += ['poste','date_YYYY-MM-DD','code','secteur','mod'].join(sep) + nl;
-  Object.entries(cellOverrides).forEach(([key, v]) => {
-    const parts = key.split('-');
-    const poste = parts[0];
-    const date = parts.slice(1).join('-');
-    csv += [poste, date, v.code||'', v.secteur||'', v.mod||''].join(sep) + nl;
-  });
-
-  const bom = '\uFEFF'; // BOM UTF-8 pour Excel FR
-  const blob = new Blob([bom + csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `planning_modele_${MONTHS_FR[currentMonth]}_${currentYear}.csv`;
-  a.click(); URL.revokeObjectURL(url);
+  // ── Export ────────────────────────────────────────────
+  XLSX.writeFile(wb, 'import_horizon_planning.xlsx');
 }
 
+// ══════════════════════════════════════════════════════════
+// IMPORT EXCEL (.xlsx) — lit les 4 onglets du modèle
+// Lecture par position de colonne (robuste aux sauts de ligne dans les en-têtes)
+// ══════════════════════════════════════════════════════════
 function importExcel(input) {
   const file = input.files[0];
   if (!file) return;
+
+  // Helper : trouve la ligne d'en-tête dans un tableau de lignes brutes
+  // en cherchant la première ligne dont la 1ère cellule contient le mot-clé
+  function findHeaderRow(rows, keyword) {
+    for (let i = 0; i < rows.length; i++) {
+      const cell = String(rows[i][0] || '').replace(/\n/g,' ').trim().toUpperCase();
+      if (cell.includes(keyword.toUpperCase())) return i;
+    }
+    return -1;
+  }
+
+  // Helper : nettoie une valeur (trim, gère null/undefined)
+  function clean(v) { return v !== null && v !== undefined ? String(v).replace(/\n/g,' ').trim() : ''; }
+
+  if (typeof XLSX !== 'undefined' && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        let importedAgents = [], importedRules = [], importedSectors = [];
+        let importedRulesGeneral = null;
+
+        // ── Feuille Agents ──────────────────────────────
+        // Colonnes (index 0-based): 0=poste 1=nom 2=spec 3=statut 4=taux 5=grp 6=sg 7=sectFixe 8=joursOff 9=horExclu 10=rotOffset 11=actif
+        const sheetA = wb.Sheets['📋 Agents'] || wb.Sheets['Agents'] || wb.Sheets[wb.SheetNames[0]];
+        if (sheetA) {
+          const allRows = XLSX.utils.sheet_to_json(sheetA, { header:1, defval:'' });
+          // Trouver la ligne d'en-tête : celle qui contient "POSTE" dans la 1ère cellule
+          const hdrIdx = findHeaderRow(allRows, 'POSTE');
+          // Les données commencent à hdrIdx+1
+          const dataStart = hdrIdx >= 0 ? hdrIdx + 1 : 4; // fallback ligne 5 (index 4)
+          for (let i = dataStart; i < allRows.length; i++) {
+            const r = allRows[i];
+            const poste    = clean(r[0]);
+            const nom      = clean(r[1]);
+            if (!poste || !nom) continue;
+            // Ignorer les lignes de remarques/valeurs autorisées
+            if (poste.startsWith('★') || poste.startsWith('VALEURS') || poste.startsWith('SPÉC') || poste.startsWith('Colonnes')) continue;
+            const spec      = clean(r[2]) || 'AS';
+            const statut    = clean(r[3]) || 'tit';
+            const tauxRaw   = clean(r[4]) || '100';
+            const grp       = clean(r[5]) || '1';
+            const sg        = clean(r[6]) || 'A';
+            const sectFixe  = clean(r[7]);
+            const joursOff  = clean(r[8]);
+            const horExclu  = clean(r[9]) || 'none';
+            const rotOffset = clean(r[10]) || '0';
+            const actifVal  = clean(r[11]) || 'oui';
+
+            const tauxNum = parseFloat(tauxRaw);
+            const tauxDecimal = tauxNum > 1 ? tauxNum / 100 : tauxNum || 1;
+            const joursOffArr = joursOff ? joursOff.split(/[,|;]/).map(s=>s.trim()).filter(Boolean) : [];
+            const sectActifs  = sectors.filter(s=>s.active).map(s=>s.code);
+            const secteurCode = sectFixe && sectActifs.includes(sectFixe) ? sectFixe : (sectActifs[0] || 'GENERAL');
+            const isFixe      = (sectFixe && sectActifs.includes(sectFixe)) ? 'O' : 'N';
+
+            importedAgents.push({
+              poste: poste, nom: nom,
+              spec: spec, grp: parseInt(grp)||1, sg: sg,
+              taux: tauxDecimal, statut: statut,
+              secteur: secteurCode, fixe: isFixe,
+              joursOff: joursOffArr, horaireExclu: horExclu || 'none',
+              rot: sectActifs.length ? sectActifs : ['GENERAL','CANTOU','ALZHEIMER'],
+              rotOffset: parseInt(rotOffset)||0,
+              actif: actifVal.toLowerCase() !== 'non'
+            });
+          }
+        }
+
+        // ── Feuille Secteurs ────────────────────────────
+        // Colonnes: 0=code 1=label 2=colorBG 3=colorTxt 4=ordre
+        const sheetS = wb.Sheets['🏢 Secteurs'] || wb.Sheets['Secteurs'];
+        if (sheetS) {
+          const allRows = XLSX.utils.sheet_to_json(sheetS, { header:1, defval:'' });
+          const hdrIdx = findHeaderRow(allRows, 'CODE');
+          const dataStart = hdrIdx >= 0 ? hdrIdx + 1 : 3;
+          for (let i = dataStart; i < allRows.length; i++) {
+            const r = allRows[i];
+            const code  = clean(r[0]);
+            const label = clean(r[1]);
+            if (!code || !label) continue;
+            if (code.startsWith('CODE') || code.startsWith('COULEURS') || code.startsWith('Bleu') || code.startsWith('Orange') || code.startsWith('Vert') || code.startsWith('Violet') || code.startsWith('Rose')) continue;
+            const colorTxt = clean(r[3]);
+            importedSectors.push({
+              code: code,
+              label: label,
+              color: colorTxt ? '#' + colorTxt.replace('#','') : ''
+            });
+          }
+        }
+
+        // ── Feuille Règles spécialités ──────────────────
+        // Colonnes: 0=spec 1=horM 2=horS 3=horJ 4=horN 5=dureeM 6=dureeS 7=dureeJ 8=dureeN 9=seuilMinM 10=seuilMaxM 11=seuilMinS 12=seuilMaxS 13=pause 14=hasSecteurs
+        const sheetR = wb.Sheets['⚙ Règles spécialités'] || wb.Sheets['Règles spécialités'] || wb.Sheets['Regles'];
+        if (sheetR) {
+          const allRows = XLSX.utils.sheet_to_json(sheetR, { header:1, defval:'' });
+          const hdrIdx = findHeaderRow(allRows, 'SPÉC');
+          const dataStart = hdrIdx >= 0 ? hdrIdx + 1 : 3;
+          for (let i = dataStart; i < allRows.length; i++) {
+            const r = allRows[i];
+            const sp = clean(r[0]);
+            if (!sp || sp.startsWith('💡') || sp.startsWith('SPÉC') || sp.startsWith('Une')) continue;
+            importedRules.push({
+              spec:       sp,
+              horaire_M:  clean(r[1]),
+              horaire_S:  clean(r[2]),
+              horaire_J:  clean(r[3]),
+              duree_M:    clean(r[5]) || '10',
+              duree_S:    clean(r[6]) || '10',
+              duree_J:    clean(r[7]) || '10',
+              duree_NU:   clean(r[8]) || '0',
+              seuilMin_M: clean(r[9])  || '1',
+              seuilMax_M: clean(r[10]) || '4',
+              seuilMin_S: clean(r[11]) || '1',
+              seuilMax_S: clean(r[12]) || '4',
+              pause:      clean(r[13]) || '0',
+              hasSecteurs: clean(r[14]).toLowerCase() === 'oui',
+            });
+          }
+        }
+
+        // ── Feuille Règles générales ────────────────────
+        const sheetG = wb.Sheets['📐 Règles générales'] || wb.Sheets['Règles générales'];
+        if (sheetG) {
+          const allRows = XLSX.utils.sheet_to_json(sheetG, { header:1, defval:'' });
+          const general = {};
+          allRows.forEach(r => {
+            if (!r[0] || !r[1]) return;
+            const k = String(r[0]).replace(/\n/g,' ').trim().toLowerCase();
+            const v = r[1];
+            if (k.includes('heures annuelles'))       general.annualHours = parseInt(v)  || 1607;
+            if (k.includes('durée référence'))         general.dureeRef    = parseFloat(v)|| 10;
+            if (k.includes('ca annuels'))              general.caTotal     = parseFloat(v)|| 17.5;
+            if (k.includes('fractionnement 1'))        general.frac1       = parseFloat(v)|| 5;
+            if (k.includes('fractionnement 2'))        general.frac2       = parseFloat(v)|| 8;
+          });
+          if (Object.keys(general).length) importedRulesGeneral = general;
+        }
+
+        // ── Application ─────────────────────────────────
+        if (importedSectors.length) {
+          importedSectors.forEach(is => {
+            const existing = sectors.find(s => s.code === is.code);
+            if (existing) {
+              existing.label = is.label;
+              if (is.color) existing.color = is.color;
+              existing.active = true;
+            }
+          });
+          updateSectorCSSVars();
+        }
+
+        if (importedAgents.length) {
+          agents.length = 0;
+          importedAgents.forEach(a => agents.push(a));
+        }
+
+        importedRules.forEach(r => {
+          const sp = r.spec;
+          if (!RULES.specRules[sp]) RULES.specRules[sp] = defaultSpecRules({});
+          if (!RULES.droitsSpec[sp]) RULES.droitsSpec[sp] = { caTotal:17.5, hasCF:true, frac1:5, frac2:8, reposDimFerie:14, reposNuit:false };
+          const sr = RULES.specRules[sp];
+          if (r.horaire_M) sr.horaires.M = String(r.horaire_M);
+          if (r.horaire_S) sr.horaires.S = String(r.horaire_S);
+          if (r.horaire_J) sr.horaires.J = String(r.horaire_J);
+          sr.durations.M   = parseFloat(r.duree_M)||sr.durations.M;
+          sr.durations.S   = parseFloat(r.duree_S)||sr.durations.S;
+          sr.durations.J   = parseFloat(r.duree_J)||sr.durations.J;
+          sr.durations.NU  = parseFloat(r.duree_NU)||sr.durations.NU||0;
+          sr.durations.pause = parseFloat(r.pause)||sr.durations.pause||0;
+          sr.seuils.M = { min: parseInt(r.seuilMin_M)||0, max: parseInt(r.seuilMax_M)||4 };
+          sr.seuils.S = { min: parseInt(r.seuilMin_S)||0, max: parseInt(r.seuilMax_S)||4 };
+          sr.hasSecteurs = r.hasSecteurs;
+        });
+
+        if (importedRulesGeneral) {
+          if (importedRulesGeneral.annualHours) RULES.annualHours = importedRulesGeneral.annualHours;
+          if (importedRulesGeneral.dureeRef)    RULES.durations.ref = importedRulesGeneral.dureeRef;
+          Object.keys(RULES.droitsSpec).forEach(sp => {
+            if (importedRulesGeneral.caTotal) RULES.droitsSpec[sp].caTotal = importedRulesGeneral.caTotal;
+            if (importedRulesGeneral.frac1)   RULES.droitsSpec[sp].frac1   = importedRulesGeneral.frac1;
+            if (importedRulesGeneral.frac2)   RULES.droitsSpec[sp].frac2   = importedRulesGeneral.frac2;
+          });
+        }
+
+        syncGlobalRules();
+        clearAffCache();
+        buildPlanning();
+        if (document.getElementById('view-regles').classList.contains('active')) buildRegles();
+
+        alert(`✅ Import réussi !\n• ${importedAgents.length} agent(s)\n• ${importedSectors.length} secteur(s) mis à jour\n• ${importedRules.length} règle(s) spécialité\n• Règles générales : ${importedRulesGeneral ? 'chargées' : 'non trouvées'}`);
+      } catch(err) {
+        alert('❌ Erreur lors de l\'import : ' + err.message);
+      }
+      input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  // ── Fallback CSV (ancien format) ────────────────────────
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const text = e.target.result;
       const lines = text.split(/\r?\n/);
-      let section = null;
-      let headers = null;
+      let section = null, headers = null;
       let importedAgents = [], importedRules = [], importedOverrides = [];
-
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        if (line.startsWith('FEUILLE:')) {
-          section = line.replace('FEUILLE:','').trim();
-          headers = null;
-          continue;
-        }
+        if (line.startsWith('FEUILLE:')) { section = line.replace('FEUILLE:','').trim(); headers = null; continue; }
         const cols = line.split(';').map(s=>s.trim());
         if (!headers) { headers = cols; continue; }
         const row = {};
         headers.forEach((h,idx) => row[h] = cols[idx]||'');
-
         if (section === 'AGENTS') {
           if (!row.poste||!row.nom) continue;
           importedAgents.push({
-            poste: row.poste, nom: row.nom, spec: row.spec||'AS',
-            grp: parseInt(row.grp)||1, sg: row.sg||'A',
-            taux: parseFloat(row.taux)||1, statut: row.statut||'tit',
-            secteur: row.secteur||'GENERAL', fixe: row.fixe||'N',
-            joursOff: row.joursOff ? row.joursOff.split('|').filter(Boolean) : [],
-            horaireExclu: row.horaireExclu||'none',
-            rot: ['GENERAL','CANTOU','ALZHEIMER'], rotOffset: 0, actif: true
+            poste:row.poste, nom:row.nom, spec:row.spec||'AS',
+            grp:parseInt(row.grp)||1, sg:row.sg||'A',
+            taux:parseFloat(row.taux)||1, statut:row.statut||'tit',
+            secteur:row.secteur||'GENERAL', fixe:row.fixe||'N',
+            joursOff:row.joursOff?row.joursOff.split('|').filter(Boolean):[],
+            horaireExclu:row.horaireExclu||'none',
+            rot:['GENERAL','CANTOU','ALZHEIMER'], rotOffset:0, actif:true
           });
-        }
-        else if (section === 'REGLES_SPEC') {
+        } else if (section === 'REGLES_SPEC') {
           importedRules.push(row);
-        }
-        else if (section === 'PLANNING_OVERRIDES') {
+        } else if (section === 'PLANNING_OVERRIDES') {
           if (!row.poste||!row['date_YYYY-MM-DD']||!row.code) continue;
           importedOverrides.push(row);
         }
       }
-
-      // Appliquer agents — fusion intelligente par spécialité
-      if (importedAgents.length) {
-        // Récupère les spécialités présentes dans le fichier importé
-        const specsImportees = [...new Set(importedAgents.map(a => a.spec))];
-        // Supprime uniquement les agents des spécialités concernées
-        specsImportees.forEach(spec => {
-          for (let i = agents.length - 1; i >= 0; i--) {
-            if (agents[i].spec === spec) agents.splice(i, 1);
-          }
-        });
-        // Ajoute les nouveaux agents
-        importedAgents.forEach(a => agents.push(a));
-        console.log(`Import : ${importedAgents.length} agents ajoutés (spécialités : ${specsImportees.join(', ')})`);
-      }
-
-      // Appliquer règles par spec
+      if (importedAgents.length) { agents.length=0; importedAgents.forEach(a=>agents.push(a)); }
       importedRules.forEach(r => {
-        const sp = r.spec;
-        if (!RULES.specRules[sp]) RULES.specRules[sp] = defaultSpecRules({});
-        if (!RULES.droitsSpec[sp]) RULES.droitsSpec[sp] = { caTotal:17.5, hasCF:true, frac1:5, frac2:8, reposDimFerie:14, reposNuit:false };
-        const sr = RULES.specRules[sp];
-        sr.horaires = { M:r.horaire_M||sr.horaires.M, S:r.horaire_S||sr.horaires.S, J:r.horaire_J||sr.horaires.J };
-        sr.durations = { M:+r.duree_M||sr.durations.M, S:+r.duree_S||sr.durations.S, J:+r.duree_J||sr.durations.J, NU:+r.duree_NU||sr.durations.NU, pause:+r.pause||sr.durations.pause, ref:+r.duree_ref||sr.durations.ref };
-        sr.seuils = { M:{min:+r.seuilMin_M||0,max:+r.seuilMax_M||4}, S:{min:+r.seuilMin_S||0,max:+r.seuilMax_S||4}, J:{min:+r.seuilMin_J||0,max:+r.seuilMax_J||4} };
-        sr.hasSecteurs = r.hasSecteurs === '1';
-        RULES.droitsSpec[sp].caTotal = +r.caTotal||17.5;
-        RULES.droitsSpec[sp].frac1 = +r.frac1||5;
-        RULES.droitsSpec[sp].frac2 = +r.frac2||8;
+        const sp=r.spec;
+        if (!RULES.specRules[sp]) RULES.specRules[sp]=defaultSpecRules({});
+        if (!RULES.droitsSpec[sp]) RULES.droitsSpec[sp]={caTotal:17.5,hasCF:true,frac1:5,frac2:8,reposDimFerie:14,reposNuit:false};
+        const sr=RULES.specRules[sp];
+        sr.horaires={M:r.horaire_M||sr.horaires.M, S:r.horaire_S||sr.horaires.S, J:r.horaire_J||sr.horaires.J};
+        sr.durations={M:+r.duree_M||sr.durations.M, S:+r.duree_S||sr.durations.S, J:+r.duree_J||sr.durations.J, NU:+r.duree_NU||sr.durations.NU, pause:+r.pause||sr.durations.pause, ref:+r.duree_ref||sr.durations.ref};
+        sr.seuils={M:{min:+r.seuilMin_M||0,max:+r.seuilMax_M||4}, S:{min:+r.seuilMin_S||0,max:+r.seuilMax_S||4}, J:{min:+r.seuilMin_J||0,max:+r.seuilMax_J||4}};
+        sr.hasSecteurs=r.hasSecteurs==='1';
+        RULES.droitsSpec[sp].caTotal=+r.caTotal||17.5;
+        RULES.droitsSpec[sp].frac1=+r.frac1||5;
+        RULES.droitsSpec[sp].frac2=+r.frac2||8;
       });
-
-      // Appliquer overrides
       importedOverrides.forEach(o => {
-        const key = `${o.poste}-${o['date_YYYY-MM-DD']}`;
-        cellOverrides[key] = { code:o.code, secteur:o.secteur||'', mod:o.mod||'none' };
+        const key=`${o.poste}-${o['date_YYYY-MM-DD']}`;
+        cellOverrides[key]={code:o.code, secteur:o.secteur||'', mod:o.mod||'none'};
       });
-
-      syncGlobalRules();
-      clearAffCache();
-      buildPlanning();
+      syncGlobalRules(); clearAffCache(); buildPlanning();
       if (document.getElementById('view-regles').classList.contains('active')) buildRegles();
-
-      const msg = `✅ Import réussi !\n• ${importedAgents.length} agent(s)\n• ${importedRules.length} règle(s) spécialité\n• ${importedOverrides.length} override(s) de planning`;
-      alert(msg);
-    } catch(err) {
-      alert('❌ Erreur lors de l\'import : ' + err.message);
-    }
+      alert(`✅ Import CSV réussi !\n• ${importedAgents.length} agent(s)\n• ${importedRules.length} règle(s)\n• ${importedOverrides.length} override(s)`);
+    } catch(err) { alert('❌ Erreur : ' + err.message); }
     input.value = '';
   };
   reader.readAsText(file, 'UTF-8');
@@ -4294,6 +4875,13 @@ function printPlanning() {
   if (printDate)  printDate.textContent  = new Date().toLocaleDateString('fr-FR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   if (printView)  printView.textContent  = viewMode === 'secteur' ? 'Vue par secteur' : 'Vue par agent';
   if (printGen)   printGen.textContent   = new Date().toLocaleDateString('fr-FR');
+
+  // Nom établissement dans l'impression
+  const etabNom = currentEtab ? (currentEtab.nom || '') : '';
+  const elPrintEtab   = document.getElementById('print-etab-label');
+  const elPrintFooter = document.getElementById('print-etab-footer');
+  if (elPrintEtab)   elPrintEtab.textContent  = etabNom;
+  if (elPrintFooter) elPrintFooter.textContent = etabNom;
 
   window.print();
 }
@@ -4414,13 +5002,21 @@ async function doLogin() {
   document.getElementById('user-bar-role').textContent  = ROLE_LABELS[data.role] || data.role;
   document.getElementById('user-bar-role').style.cssText = 'padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;' + (ROLE_COLORS[data.role]||'');
 
+  // Nom établissement
+  const etabNom = etab ? (etab.nom || '') : '';
+  const elEtabLabel  = document.getElementById('etab-name-label');
+  const elEtabSub    = document.getElementById('etab-name-sub');
+  if (elEtabLabel) elEtabLabel.textContent = etabNom;
+  if (elEtabSub && etabNom) elEtabSub.style.display = 'none'; // masquer "Établissement" si nom rempli
+
   // Show admin button only for ADMIN
   if (data.role === 'ADMIN') {
-    document.getElementById('btn-admin-users').style.display = 'block';
+    const mab = document.getElementById('menu-admin-btn'); if(mab) mab.style.display='flex';
   }
 
   buildPlanning();
   updateSectorCSSVars();
+  updateInactifsBadge();
   checkDispoNotif();
   setInterval(checkDispoNotif, 60000); // check every minute
 }
@@ -4539,8 +5135,45 @@ async function openHistorique() {
   const overlay = document.createElement('div');
   overlay.id = 'hist-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,10,20,.8);z-index:700;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML = `<div style="background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:560px;max-width:96vw;max-height:80vh;overflow-y:auto;">${html}<div style="padding:0 20px 20px;"><button onclick="document.getElementById('hist-overlay').remove()" style="width:100%;background:#162035;border:1px solid #1e3050;color:#60a5fa;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;font-weight:600;">Fermer</button></div></div>`;
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Fermer';
+  closeBtn.style.cssText = 'width:100%;background:#162035;border:1px solid #1e3050;color:#60a5fa;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;font-weight:600;font-family:\'DM Sans\',sans-serif;';
+  closeBtn.onclick = () => overlay.remove();
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:560px;max-width:96vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;';
+
+  // Header sticky
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #1e3050;flex-shrink:0;';
+  hdr.innerHTML = '<span style="font-size:13px;font-weight:700;color:#38bdf8;">📋 Historique des sauvegardes</span>';
+  const xBtn = document.createElement('button');
+  xBtn.textContent = '×';
+  xBtn.style.cssText = 'background:none;border:none;color:#64748b;font-size:22px;cursor:pointer;line-height:1;padding:0;';
+  xBtn.onclick = () => overlay.remove();
+  hdr.appendChild(xBtn);
+
+  // Corps scrollable
+  const body = document.createElement('div');
+  body.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px;';
+  body.innerHTML = html;
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.style.cssText = 'padding:12px 20px;border-top:1px solid #1e3050;flex-shrink:0;';
+  footer.appendChild(closeBtn);
+
+  panel.appendChild(hdr);
+  panel.appendChild(body);
+  panel.appendChild(footer);
+  overlay.appendChild(panel);
   document.body.appendChild(overlay);
+
+  // Fermer avec Échap
+  function onKey(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } }
+  document.addEventListener('keydown', onKey);
 }
 
 async function restoreVersion(histId) {
@@ -4855,12 +5488,11 @@ var _origRoBuild = null;
 // ── NOTIFICATION CADRES : badge dispo ──────────────────
 async function checkDispoNotif() {
   if (!currentUser || !currentEtab) return;
-  // Nouvelles dispos depuis les 24h
-  var since = new Date(Date.now() - 86400000).toISOString();
+  var today = new Date().toISOString().slice(0,10);
   var { count } = await SB.from('agent_dispos')
     .select('*', { count:'exact', head:true })
     .eq('etablissement_id', currentEtab.id)
-    .gte('created_at', since);
+    .gte('date', today);
   var btn = document.getElementById('btn-dispo-notif');
   if (!btn) return;
   if (count && count > 0) {
@@ -4976,7 +5608,10 @@ async function openDispoPanel() {
     '<div style="background:#0f1827;border:1px solid #1e3050;border-radius:14px;width:560px;max-width:96vw;max-height:85vh;overflow-y:auto;">' +
       '<div style="background:#0a1020;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3050;position:sticky;top:0;z-index:2;">' +
         '<span style="color:#38bdf8;font-size:13px;font-weight:700;">🟢 Disponibilités à venir</span>' +
-        '<button onclick="closePanelOverlay()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">×</button>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          (data.length > 0 ? '<button onclick="deleteAllDispos()" style="background:#7f1d1d;border:1px solid #991b1b;color:#fca5a5;border-radius:6px;padding:5px 10px;font-size:10.5px;font-weight:700;cursor:pointer;">🗑 Tout effacer</button>' : '') +
+          '<button onclick="closePanelOverlay()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">×</button>' +
+        '</div>' +
       '</div>' +
       '<div style="padding:16px;">' + rowsHtml + '</div>' +
     '</div>';
@@ -4989,6 +5624,13 @@ async function deleteDispoAdmin(id) {
   await SB.from('agent_dispos').delete().eq('id', id);
   document.getElementById('dispo-panel-overlay')?.remove();
   openDispoPanel();
+  checkDispoNotif();
+}
+
+async function deleteAllDispos() {
+  if (!confirm('Supprimer toutes les disponibilités déclarées pour cet établissement ?')) return;
+  await SB.from('agent_dispos').delete().eq('etablissement_id', currentEtab.id);
+  document.getElementById('dispo-panel-overlay')?.remove();
   checkDispoNotif();
 }
 
@@ -5038,8 +5680,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.getElementById('user-bar-name').textContent  = currentUser.prenom + ' ' + currentUser.nom;
           document.getElementById('user-bar-role').textContent  = ROLE_LABELS[currentUser.role] || currentUser.role;
           document.getElementById('user-bar-role').style.cssText = 'padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;' + (ROLE_COLORS[currentUser.role]||'');
+          // Nom établissement
+          const etabNomR = currentEtab ? (currentEtab.nom || '') : '';
+          const elR = document.getElementById('etab-name-label');
+          const elRS = document.getElementById('etab-name-sub');
+          if (elR) elR.textContent = etabNomR;
+          if (elRS && etabNomR) elRS.style.display = 'none';
           if (currentUser.role === 'ADMIN') {
-            document.getElementById('btn-admin-users').style.display = 'block';
+            const mab2 = document.getElementById('menu-admin-btn'); if(mab2) mab2.style.display='flex';
           }
           buildPlanning();
           updateSectorCSSVars();
