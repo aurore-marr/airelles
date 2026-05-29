@@ -2082,18 +2082,74 @@ function computeAffectations(grp, month) {
   const fixedAgents = agents.filter(a => a.grp === grp && a.fixe === 'O' && a.actif !== false);
   fixedAgents.forEach(a => { affMap[a.poste] = a.secteur; });
 
+  // Compter combien de fixes il y a déjà par secteur et par horaire
+  // pour savoir combien de tournants sont encore nécessaires
+  const fixesBySect = {}; // { CANTOU: { M:1, S:1, J:0 }, ... }
+  sectors.filter(s=>s.active).forEach(s => {
+    fixesBySect[s.code] = {M:0, S:0, J:0};
+  });
+  fixedAgents.forEach(a => {
+    const hor = getHoraire(a.grp, a.sg);
+    if (fixesBySect[a.secteur] && ['M','S','J'].includes(hor)) {
+      fixesBySect[a.secteur][hor] = (fixesBySect[a.secteur][hor]||0) + 1;
+    }
+  });
+
+  // Construire la liste des besoins résiduels par secteur/horaire (cible - fixes déjà là)
+  // Un agent tournant sera orienté vers un secteur qui manque encore de son horaire
+  function getSecteurManquant(hor, excludeSects) {
+    const active = sectors.filter(s => s.active && !excludeSects.includes(s.code));
+    // Chercher un secteur où cible[hor] > fixesBySect[sect][hor] + tournants déjà affectés
+    const countTournants = {};
+    active.forEach(s => { countTournants[s.code] = 0; });
+    Object.values(affMap).forEach(sect => { if (countTournants[sect] !== undefined) countTournants[sect]++; });
+    // Trouver le secteur le plus en besoin pour cet horaire
+    let best = null, bestDeficit = -Infinity;
+    active.forEach(s => {
+      const cible = (s.cible && s.cible[hor]) || 1;
+      const deja  = (fixesBySect[s.code] && fixesBySect[s.code][hor]) || 0;
+      const tournantsDeja = Object.entries(affMap).filter(([p, sc]) => {
+        const ag = agents.find(x => x.poste===p && x.fixe!=='O');
+        return sc===s.code && ag && getHoraire(ag.grp, ag.sg)===hor;
+      }).length;
+      const deficit = cible - deja - tournantsDeja;
+      if (deficit > bestDeficit) { bestDeficit = deficit; best = s.code; }
+    });
+    return best;
+  }
+
   // 2. Agents en rotation : on répartit équitablement par sous-groupe (A/B/C)
+  // en tenant compte des besoins résiduels des secteurs
   ['A','B','C'].forEach(sg => {
     const pool = agents.filter(a =>
       a.grp === grp && a.sg === sg && a.fixe !== 'O' && a.actif !== false
     );
     if (!pool.length) return;
-    // On décale la liste selon le mois pour que chaque mois la répartition tourne
     pool.forEach((agent, i) => {
-      // Chaque agent tourne sur ses secteurs : son offset personnel + le mois courant
+      const hor = getHoraire(agent.grp, agent.sg);
       const rotList = (agent.rot && agent.rot.length) ? agent.rot : SECT_ACTIVE;
-      const idx = ((month + (agent.rotOffset || 0) + i) % rotList.length + rotList.length) % rotList.length;
-      affMap[agent.poste] = rotList[idx];
+      // Secteur par rotation normale
+      const idxNormal = ((month + (agent.rotOffset || 0) + i) % rotList.length + rotList.length) % rotList.length;
+      const sectNormal = rotList[idxNormal];
+      // Vérifier si un secteur de sa liste de rotation manque de son horaire
+      const sectManquant = getSecteurManquant(hor, []);
+      // Si le secteur manquant est dans sa liste de rotation et différent du secteur normal, le diriger là
+      if (sectManquant && rotList.includes(sectManquant) && sectManquant !== sectNormal) {
+        // Calculer le déficit du secteur normal
+        const cibleNormal = (sectors.find(s=>s.code===sectNormal)?.cible?.[hor]) || 1;
+        const dejaFixeNormal = (fixesBySect[sectNormal]?.[hor]) || 0;
+        const tournantsNormal = Object.entries(affMap).filter(([p, sc]) => {
+          const ag = agents.find(x => x.poste===p && x.fixe!=='O');
+          return sc===sectNormal && ag && getHoraire(ag.grp, ag.sg)===hor;
+        }).length;
+        const deficitNormal = cibleNormal - dejaFixeNormal - tournantsNormal;
+        // N'orienter vers le secteur manquant que si le secteur normal est déjà couvert
+        if (deficitNormal <= 0) {
+          affMap[agent.poste] = sectManquant;
+          return;
+        }
+      }
+      affMap[agent.poste] = sectNormal;
     });
   });
 
@@ -3229,11 +3285,30 @@ function validateCell() {
       const ds = new Date(startVal + 'T00:00:00');
       const de = new Date(endVal   + 'T00:00:00');
       if (de >= ds) {
+        const UTC_REF_CA = Date.UTC(2020, 10, 23);
+        const JOUR_TO_DOW_CA = {lun:0,mar:1,mer:2,jeu:3,ven:4,sam:5,dim:6};
         let d = new Date(ds);
         while (d <= de) {
           const y=d.getFullYear(), m=d.getMonth(), day=d.getDate();
           const dk = agentPoste+'-'+y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-          cellOverrides[dk] = {code: currentCode, secteur, mod};
+          // Ne poser le code que sur les jours normalement travaillés (pas R)
+          const existingOv = cellOverrides[dk];
+          const pat = agent ? getPattern(agent.grp, agent.sg) : null;
+          const dowCA = d.getDay()===0?6:d.getDay()-1;
+          const isJourOffCA = agent && agent.taux<1 && agent.joursOff && agent.joursOff.some(j=>JOUR_TO_DOW_CA[j]===dowCA);
+          let baseCode = 'R';
+          if (existingOv) {
+            baseCode = existingOv.code;
+          } else if (pat) {
+            const doy = Math.round((Date.UTC(y,m,day)-UTC_REF_CA)/86400000);
+            const pi = ((doy%42)+42)%42;
+            baseCode = (pat[pi]||'R').trim()||'R';
+          }
+          if (isJourOffCA) baseCode = 'R';
+          // Poser le congé uniquement si le jour est travaillé (M, S ou J)
+          if (['M','S','J'].includes(baseCode) || existingOv) {
+            cellOverrides[dk] = {code: currentCode, secteur, mod};
+          }
           d.setDate(d.getDate()+1);
         }
         closeCellModal();
@@ -4752,7 +4827,7 @@ function getCellHours(code, agent, override) {
   else if (code==='HS_S') base = dur.S||r.durations.S;
   else if (code==='HS_J') base = dur.J||r.durations.J;
   else if (code==='R' || code==='RC' || code==='MO') base = 0;
-  else if (code==='CA' || code==='CF') base = 0;
+  else if (code==='CA' || code==='CF') base = dur.ref||r.durations.ref||0;
   else if (code==='GR') base = r.impacts?.GR||0;
   else if (code==='AT' || code==='FE') base = dur.ref||r.durations.ref||0;
   else if (code==='FO') base = r.impacts?.FO||0;
@@ -6573,6 +6648,9 @@ function roBuild() {
   var replId = isRepl ? val.replace('repl_', '') : null;
   var repl   = isRepl ? replacants.find(function(r){ return r.id===replId; }) : null;
   var agent  = !isRepl ? agents.find(function(a){ return a.poste === poste; }) : null;
+  var card    = document.getElementById('ro-card');
+  var tblWrap = document.getElementById('ro-table-wrap');
+  var empty   = document.getElementById('ro-empty');
 
   // Pour un vacataire sans planning, afficher une carte simplifiée
   if (isRepl && repl) {
@@ -6606,10 +6684,6 @@ function roBuild() {
     roUpdateLabel();
     return;
   }
-
-  var card    = document.getElementById('ro-card');
-  var tblWrap = document.getElementById('ro-table-wrap');
-  var empty   = document.getElementById('ro-empty');
 
   if (!agent) {
     card.style.display    = 'none';
