@@ -4230,10 +4230,19 @@ function importExcel(input) {
         }
       }
 
-      // Appliquer agents
+      // Appliquer agents — fusion intelligente par spécialité
       if (importedAgents.length) {
-        agents.length = 0;
+        // Récupère les spécialités présentes dans le fichier importé
+        const specsImportees = [...new Set(importedAgents.map(a => a.spec))];
+        // Supprime uniquement les agents des spécialités concernées
+        specsImportees.forEach(spec => {
+          for (let i = agents.length - 1; i >= 0; i--) {
+            if (agents[i].spec === spec) agents.splice(i, 1);
+          }
+        });
+        // Ajoute les nouveaux agents
         importedAgents.forEach(a => agents.push(a));
+        console.log(`Import : ${importedAgents.length} agents ajoutés (spécialités : ${specsImportees.join(', ')})`);
       }
 
       // Appliquer règles par spec
