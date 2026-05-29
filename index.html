@@ -4798,6 +4798,7 @@ function buildTauxConges() {
   // Heures théoriques mensuelles = 1607h / 12 * taux (FPT)
 
   // Calcul annuel : parcourt tous les mois de l'année jusqu'au mois courant
+  const JOUR_TO_DOW_AC = {lun:0,mar:1,mer:2,jeu:3,ven:4,sam:5,dim:6};
   function getAnnualCount(agent, codeTarget) {
     let total=0;
     for(let m=0;m<=currentMonth;m++){
@@ -4808,7 +4809,12 @@ function buildTauxConges() {
         const pattern=getPattern(agent.grp,agent.sg);
         const dayOfYear=Math.round((Date.UTC(currentYear,m,d)-UTC_REF)/86400000);
         const patIdx=((dayOfYear%42)+42)%42;
-        const code=override?override.code:((pattern[patIdx]||'R').trim()||'R');
+        const rawCode=override?override.code:((pattern[patIdx]||'R').trim()||'R');
+        // Appliquer la règle joursOff (temps partiel)
+        const dayDate=new Date(currentYear,m,d);
+        const dow=dayDate.getDay()===0?6:dayDate.getDay()-1;
+        const isJourOff = !override && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW_AC[j] === dow);
+        const code = isJourOff ? 'R' : rawCode;
         if(code===codeTarget) total++;
       }
     }
@@ -4826,24 +4832,30 @@ function buildTauxConges() {
     const caTotal=droits.caTotal*agent.taux;
     let hTravaillees=0, caMonth=0, cfMonth=0, moCount=0, emCount=0, dimFerie=0, caHorsPeriode=0;
 
+    const JOUR_TO_DOW_TC = {lun:0,mar:1,mer:2,jeu:3,ven:4,sam:5,dim:6};
     for(let d=1;d<=nbDays;d++){
       const dateKey=`${agent.poste}-${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const override=cellOverrides[dateKey];
       const pattern=getPattern(agent.grp,agent.sg);
       const dayOfYear=Math.round((Date.UTC(currentYear,currentMonth,d)-UTC_REF)/86400000);
       const patIdx=((dayOfYear%42)+42)%42;
-      const code=override?override.code:((pattern[patIdx]||'R').trim()||'R');
+      const rawCode=override?override.code:((pattern[patIdx]||'R').trim()||'R');
 
-      hTravaillees+=getCellHours(code,agent);
+      // Appliquer la règle joursOff (temps partiel) comme dans buildAgentRow
+      const dayDate=new Date(currentYear,currentMonth,d);
+      const dow=dayDate.getDay()===0?6:dayDate.getDay()-1; // 0=lun…6=dim
+      const isJourOff = !override && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW_TC[j] === dow);
+      const code = isJourOff ? 'R' : rawCode;
+
+      hTravaillees+=getCellHours(code,agent,override);
       if(code==='CA'){ caMonth++; if(currentMonth<RULES.periodeDebut||currentMonth>RULES.periodeFin) caHorsPeriode++; }
       if(code==='CF') cfMonth++;
       if(code==='MO') moCount++;
       if(code==='EM') emCount++;
 
-      const dayDate=new Date(currentYear,currentMonth,d);
-      const dow=dayDate.getDay();
+      const dowNative=dayDate.getDay();
       const dKey=`${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      if((dow===0||feries.has(dKey))&&['M','S','J','NU'].includes(code)) dimFerie++;
+      if((dowNative===0||feries.has(dKey))&&['M','S','J','NU'].includes(code)) dimFerie++;
     }
 
     const hTheoriques=(RULES.annualHours/12)*agent.taux;
