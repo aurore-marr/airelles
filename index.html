@@ -1267,7 +1267,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     <!-- DROITE : actions -->
     <div style="display:flex;align-items:center;gap:6px;">
       <button onclick="openHistorique()" style="background:#f1f5f9;border:1.5px solid var(--border);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-muted);display:flex;align-items:center;gap:6px;" title="Historique des versions">📋 Historique</button>
-      <button onclick="rebalanceOffsets(1);rebalanceOffsets(2);clearAffCache();buildPlanning();var b=this;b.textContent='✓ Rééquilibré';setTimeout(()=>b.textContent='⚖️ Rééquilibrer',2000);" style="background:#1e3a5f;border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#93c5fd;display:flex;align-items:center;gap:6px;" title="Recalculer la répartition des secteurs automatiquement">⚖️ Rééquilibrer</button>
+      <button onclick="rebalanceOffsets(1);rebalanceOffsets(2);clearAffCache();buildPlanning();savePlanningToDB('Rééquilibrage auto');var b=this;b.textContent='✓ Rééquilibré';setTimeout(()=>b.textContent='⚖️ Rééquilibrer',2000);" style="background:#1e3a5f;border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#93c5fd;display:flex;align-items:center;gap:6px;" title="Recalculer la répartition des secteurs automatiquement">⚖️ Rééquilibrer</button>
       <button onclick="savePlanningToDB('Sauvegarde manuelle').then(()=>{ var b=this; b.textContent='✓ Sauvegardé'; setTimeout(()=>b.textContent='💾 Sauvegarder',2000); })" style="background:#065f46;border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:#6ee7b7;display:flex;align-items:center;gap:6px;" title="Sauvegarder le planning">💾 Sauvegarder</button>
       <button class="btn-print" onclick="printPlanning()" title="Imprimer le planning"
         style="background:#f1f5f9;border:1.5px solid var(--border);border-radius:7px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-muted);display:flex;align-items:center;gap:6px;transition:all .15s;"
@@ -2079,26 +2079,60 @@ let RULES = {
 function computeAffectations(grp, month) {
   const affMap = {};
 
-  // 1. Agents en secteur fixe
+  // 1. Agents fixes
   const fixedAgents = agents.filter(a => a.grp === grp && a.fixe === 'O' && a.actif !== false);
   fixedAgents.forEach(a => { affMap[a.poste] = a.secteur; });
 
-  // 2. Agents en rotation : on répartit équitablement par sous-groupe (A/B/C)
-  ['A','B','C'].forEach(sg => {
-    const pool = agents.filter(a =>
-      a.grp === grp && a.sg === sg && a.fixe !== 'O' && a.actif !== false
-    );
-    if (!pool.length) return;
-    pool.forEach((agent, i) => {
-      const rotList = (agent.rot && agent.rot.length) ? agent.rot : SECT_ACTIVE;
-      const idx = ((month + (agent.rotOffset || 0) + i) % rotList.length + rotList.length) % rotList.length;
-      affMap[agent.poste] = rotList[idx];
+  // 2. Agents tournants : rotation par horaire pour équilibrer chaque secteur
+  // On regroupe par horaire (M, S, J) et on tourne indépendamment
+  const tournants = agents.filter(a => a.grp === grp && a.fixe !== 'O' && a.actif !== false);
+
+  // Grouper par horaire
+  const byHor = {};
+  tournants.forEach(a => {
+    const hor = getHoraire(a.grp, a.sg);
+    if (!byHor[hor]) byHor[hor] = [];
+    byHor[hor].push(a);
+  });
+
+  // Pour chaque horaire, distribuer les agents sur les secteurs en rotation mensuelle
+  Object.keys(byHor).forEach(hor => {
+    const pool = byHor[hor].sort((a, b) => a.poste.localeCompare(b.poste));
+    const activeSects = sectors.filter(s => s.active);
+
+    // Construire la liste des secteurs qui ont besoin de cet horaire
+    const sectBesoins = [];
+    activeSects.forEach(s => {
+      const cible = (s.cible && s.cible[hor]) || 1;
+      const dejaCouvert = fixedAgents.filter(a => a.secteur === s.code && getHoraire(a.grp, a.sg) === hor).length;
+      const besoin = cible - dejaCouvert;
+      for (let n = 0; n < besoin; n++) sectBesoins.push(s.code);
+    });
+
+    if (!sectBesoins.length) {
+      // Pas de besoin particulier → rotation simple sur tous les secteurs actifs
+      pool.forEach((a, i) => {
+        const rotList = (a.rot && a.rot.length) ? a.rot : activeSects.map(s => s.code);
+        const idx = ((month + i) % rotList.length + rotList.length) % rotList.length;
+        affMap[a.poste] = rotList[idx];
+      });
+      return;
+    }
+
+    // Distribuer les agents sur les besoins en rotation mensuelle
+    pool.forEach((a, i) => {
+      const rotList = (a.rot && a.rot.length) ? a.rot : null;
+      // Filtrer les secteurs de besoin accessibles à cet agent
+      const accessible = sectBesoins.filter(s => !rotList || rotList.includes(s));
+      const list = accessible.length ? accessible : sectBesoins;
+      const idx = ((month + i) % list.length + list.length) % list.length;
+      affMap[a.poste] = list[idx];
     });
   });
 
-  // 3. Filet de sécurité pour tout agent non encore affecté
+  // 3. Filet de sécurité
   agents.filter(a => a.grp === grp && !affMap[a.poste] && a.actif !== false).forEach(a => {
-    const rotList = (a.rot && a.rot.length) ? a.rot : SECT_ACTIVE;
+    const rotList = (a.rot && a.rot.length) ? a.rot : sectors.filter(s=>s.active).map(s=>s.code);
     const idx = ((month + (a.rotOffset || 0)) % rotList.length + rotList.length) % rotList.length;
     affMap[a.poste] = rotList[idx];
   });
@@ -2136,9 +2170,20 @@ function getAgentSecteur(agent, month) {
 
 function rebalanceOffsets(grp) {
   clearAffCache();
+  // Pour chaque sous-groupe, on attribue les offsets de façon à équilibrer
+  // les secteurs : chaque secteur doit recevoir 1 agent de chaque horaire
   ['A','B','C'].forEach(sg => {
-    agents.filter(a => a.grp === grp && a.sg === sg && a.fixe !== 'O')
-          .forEach((a, i) => { a.rotOffset = i % 3; });
+    const pool = agents.filter(a => a.grp === grp && a.sg === sg && a.fixe !== 'O' && a.actif !== false);
+    if (!pool.length) return;
+    const rotList = sectors.filter(s => s.active).map(s => s.code);
+    if (!rotList.length) return;
+    // Trier par poste pour ordre stable
+    pool.sort((a, b) => a.poste.localeCompare(b.poste));
+    // Attribuer les offsets pour que ce mois-ci chaque secteur soit couvert
+    pool.forEach((a, i) => {
+      // offset tel que (currentMonth + rotOffset + i) % rotList.length donne des secteurs différents
+      a.rotOffset = i;
+    });
   });
 }
 
