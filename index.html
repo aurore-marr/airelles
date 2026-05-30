@@ -5636,7 +5636,7 @@ async function doLogout() {
 
 // ── SESSION PING ────────────────────────────────────────
 async function pingSession() {
-  if (!sessionId) return;
+  if (_isReadonlyMode || !sessionId) return;
   await SB.from('sessions_actives').update({ last_ping: new Date().toISOString() }).eq('id', sessionId);
   // Clean dead sessions (no ping for > 2 min)
   const cutoff = new Date(Date.now() - 120000).toISOString();
@@ -5644,7 +5644,7 @@ async function pingSession() {
 }
 
 async function updateConnectedCount() {
-  if (!currentEtab) return;
+  if (_isReadonlyMode || !currentEtab) return;
   const cutoff = new Date(Date.now() - 120000).toISOString();
   const { count } = await SB.from('sessions_actives')
     .select('*', { count:'exact', head:true })
@@ -6747,8 +6747,10 @@ function roBuild() {
 }
 
 // ── Auto-init si ?readonly=1 dans l'URL ──
+// En mode readonly, désactiver le ping sessions_actives
+var _isReadonlyMode = window.location.search && window.location.search.indexOf('readonly=1') !== -1;
 (function() {
-  if (window.location.search && window.location.search.indexOf('readonly=1') !== -1) {
+  if (_isReadonlyMode) {
     async function go() {
       var hdr  = document.querySelector('header');
       var nav  = document.querySelector('nav');
@@ -6777,9 +6779,11 @@ function roBuild() {
           var planResp = await SB.from('planning_data')
             .select('data')
             .eq('etablissement_id', etabId)
-            .single();
-          if (planResp.data && planResp.data.data) {
-            var snap = planResp.data.data;
+            .order('saved_at', {ascending: false})
+            .limit(1);
+          var planRow = (planResp.data && planResp.data.length) ? planResp.data[0] : null;
+          if (planRow && planRow.data) {
+            var snap = planRow.data;
             if (snap.agents)        { agents.length=0;     snap.agents.forEach(function(a){agents.push(a);}); }
             if (snap.sectors)       { sectors.length=0;    snap.sectors.forEach(function(s){sectors.push(s);}); }
             if (snap.cellOverrides) { Object.keys(snap.cellOverrides).forEach(function(k){ cellOverrides[k]=snap.cellOverrides[k]; }); }
