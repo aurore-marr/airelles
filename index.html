@@ -6642,11 +6642,11 @@ function roBuildOneMonth(agent, m, y) {
 
 function roBuild() {
   var sel   = document.getElementById('ro-agent-select');
-  var poste = sel ? sel.value : '';
-  var val    = (document.getElementById('ro-agent-select')?.value) || '';
+  var val    = (sel ? sel.value : '') || '';
   var isRepl = val.indexOf('repl_') === 0;
   var replId = isRepl ? val.replace('repl_', '') : null;
   var repl   = isRepl ? replacants.find(function(r){ return r.id===replId; }) : null;
+  var poste  = !isRepl ? val.replace('agent_', '') : '';
   var agent  = !isRepl ? agents.find(function(a){ return a.poste === poste; }) : null;
   var card    = document.getElementById('ro-card');
   var tblWrap = document.getElementById('ro-table-wrap');
