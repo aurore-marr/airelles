@@ -2575,7 +2575,12 @@ function buildPlanningByAgent(body, nbDays, firstOffset) {
       return a.grp===grp&&matchSpec&&matchSect&&matchSearch&&a.actif!==false;
     });
     if (!groupAgents.length) return;
-    groupAgents.sort((a,b) => a.poste.localeCompare(b.poste));
+    groupAgents.sort((a,b) => {
+      // Fixes en haut, puis tri par poste
+      if (a.fixe==='O' && b.fixe!=='O') return -1;
+      if (a.fixe!=='O' && b.fixe==='O') return 1;
+      return a.poste.localeCompare(b.poste);
+    });
     appendGroupHeader(body, grp, groupAgents, nbDays);
     const sepRow=document.createElement('tr'); const sepTd=document.createElement('td');
     sepTd.colSpan=3+nbDays; sepTd.style.cssText=`height:2px;background:#e2e8f4;padding:0;`;
@@ -2989,7 +2994,10 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
     // Jour non travaillé (temps partiel) → forcer R si pas d'override
     const JOUR_TO_DOW = {lun:0,mar:1,mer:2,jeu:3,ven:4,sam:5,dim:6};
     const isJourOff = !hasOverride && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW[j] === dow);
-    const displayCode = isJourOff ? 'R' : code;
+    // Horaire exclu : si le code correspond à l'horaire exclu de l'agent et pas d'override → forcer R
+    const exclu = agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
+    const isExclu = !hasOverride && exclu && code === exclu;
+    const displayCode = (isJourOff || isExclu) ? 'R' : code;
 
     // ── Détection bloc qui déborde du mois précédent ──
     let effectiveSect = override?.secteur || secteurActuel;
@@ -4920,7 +4928,9 @@ function buildTauxConges() {
       const dayDate=new Date(currentYear,currentMonth,d);
       const dow=dayDate.getDay()===0?6:dayDate.getDay()-1; // 0=lun…6=dim
       const isJourOff = !override && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW_TC[j] === dow);
-      const code = isJourOff ? 'R' : rawCode;
+      const excluTC = !override && agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
+      const isExcluTC = excluTC && rawCode === excluTC;
+      const code = (isJourOff || isExcluTC) ? 'R' : rawCode;
 
       hTravaillees+=getCellHours(code,agent,override);
       if(code==='CA'){ caMonth++; if(currentMonth<RULES.periodeDebut||currentMonth>RULES.periodeFin) caHorsPeriode++; }
