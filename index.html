@@ -6782,7 +6782,7 @@ var _isReadonlyMode = window.location.search && window.location.search.indexOf('
           var planResp = await SB.from('planning_data')
             .select('data')
             .eq('etablissement_id', etabId)
-            .order('saved_at', {ascending: false})
+            .order('id', {ascending: false})
             .limit(1);
           console.log('[RO] planning_data status:', planResp.status, 'error:', JSON.stringify(planResp.error));
           console.log('[RO] planning_data rows:', planResp.data ? planResp.data.length : 'null');
