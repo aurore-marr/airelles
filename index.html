@@ -6772,28 +6772,39 @@ var _isReadonlyMode = window.location.search && window.location.search.indexOf('
 
       // Charger les données Supabase sans login
       try {
+        console.log('[RO] Debut chargement Supabase...');
         var etabResp = await SB.from('etablissements').select('id').limit(1);
+        console.log('[RO] etablissements:', JSON.stringify(etabResp));
         var etabId = (etabResp.data && etabResp.data.length) ? etabResp.data[0].id : null;
         roCurrentEtabId = etabId;
+        console.log('[RO] etabId:', etabId);
         if (etabId) {
           var planResp = await SB.from('planning_data')
             .select('data')
             .eq('etablissement_id', etabId)
             .order('saved_at', {ascending: false})
             .limit(1);
+          console.log('[RO] planning_data status:', planResp.status, 'error:', JSON.stringify(planResp.error));
+          console.log('[RO] planning_data rows:', planResp.data ? planResp.data.length : 'null');
           var planRow = (planResp.data && planResp.data.length) ? planResp.data[0] : null;
           if (planRow && planRow.data) {
             var snap = planRow.data;
+            console.log('[RO] snap.agents:', snap.agents ? snap.agents.length : 'absent');
             if (snap.agents)        { agents.length=0;     snap.agents.forEach(function(a){agents.push(a);}); }
             if (snap.sectors)       { sectors.length=0;    snap.sectors.forEach(function(s){sectors.push(s);}); }
             if (snap.cellOverrides) { Object.keys(snap.cellOverrides).forEach(function(k){ cellOverrides[k]=snap.cellOverrides[k]; }); }
             if (snap.replacants)    { replacants.length=0; snap.replacants.forEach(function(r){replacants.push(r);}); }
             if (snap.RULES)         { Object.assign(RULES, snap.RULES); }
             clearAffCache();
+            console.log('[RO] Chargement OK —', agents.length, 'agents');
+          } else {
+            console.warn('[RO] Pas de données dans planning_data. planRow:', JSON.stringify(planRow));
           }
+        } else {
+          console.warn('[RO] Aucun etablissement trouvé');
         }
       } catch(e) {
-        console.warn('Readonly load error:', e);
+        console.error('[RO] ERREUR:', e);
       }
 
       var ld = document.getElementById('ro-loading');
