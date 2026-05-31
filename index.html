@@ -1471,6 +1471,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
       <label style="background:#1d4ed8;color:#fff;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Importer un fichier Excel">
         📤 Importer Excel <input type="file" accept=".xlsx,.xls,.csv" onchange="importExcel(this)" style="display:none;">
       </label>
+      <button onclick="savePlanningToDB('Config sauvegardée').then(()=>{var b=this;b.textContent='✓ Sauvegardé';b.style.background='#065f46';setTimeout(()=>{b.textContent='💾 Sauvegarder';b.style.background='#1e3a5f';},2000);})" style="background:#1e3a5f;color:#93c5fd;border:none;border-radius:7px;padding:6px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;" title="Sauvegarder la configuration">💾 Sauvegarder</button>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start;">
