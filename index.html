@@ -2130,27 +2130,45 @@ function computeAffectations(grp, month) {
   const activeSects = sectors.filter(s => s.active).map(s => s.code);
   const tournants = agents.filter(a => a.grp === grp && a.fixe !== 'O' && a.actif !== false);
 
-  // 2. Agents avec ligne de roulement → rotation par numéro de ligne
-  // Lignes 1,4,7 → secteur 0; Lignes 2,5,8 → secteur 1; Lignes 3,6,9 → secteur 2
-  // Et ça tourne chaque mois (+month)
-  const avecLigne = tournants.filter(a => a.ligne);
-  const sansligne = tournants.filter(a => !a.ligne);
+  // 2. Agents avec ligne de roulement
+  // Distribuer par numéro de ligne sur les secteurs qui ont encore des besoins
+  // Construire la liste des secteurs avec leur besoin total (M+S+J - fixes)
+  const sectBesoins = [];
+  activeSects.forEach(s => {
+    const sect = sectors.find(x => x.code === s);
+    const cible = sect && sect.cible ? sect.cible : {M:1,S:1,J:1};
+    const totalCible = (cible.M||0) + (cible.S||0) + (cible.J||0);
+    const totalFixes = fixedAgents.filter(a => a.secteur === s).length;
+    const besoin = Math.max(0, totalCible - totalFixes);
+    for (let n = 0; n < besoin; n++) sectBesoins.push(s);
+  });
 
-  avecLigne.forEach(a => {
+  // Si pas de besoin défini, utiliser tous les secteurs
+  const rotSects = sectBesoins.length ? sectBesoins : activeSects;
+
+  const avecLigne = tournants.filter(a => a.ligne);
+  const sansLigne = tournants.filter(a => !a.ligne);
+
+  avecLigne.sort((a, b) => {
+    const na = parseInt((a.ligne||'').replace(/[^0-9]/g,'')) || 0;
+    const nb = parseInt((b.ligne||'').replace(/[^0-9]/g,'')) || 0;
+    return na - nb;
+  });
+
+  avecLigne.forEach((a, i) => {
     const excluSects = a.secteursExclus || [];
     const ligneNum = parseInt((a.ligne||'').replace(/[^0-9]/g,'')) || 1;
-    // Groupe de ligne : 1-3 → groupe 0, 4-6 → groupe 1, 7-9 → groupe 2
-    const ligneGroupe = Math.floor((ligneNum - 1) / 3);
-    // Rotation mensuelle : décaler d'un secteur par mois
-    const sectList = activeSects.filter(s => !excluSects.includes(s));
+    // Chaque ligne a un offset fixe (L1=0, L2=1, L3=2, L4=3...)
+    // + rotation mensuelle
+    const sectList = rotSects.filter(s => !excluSects.includes(s));
     if (!sectList.length) { affMap[a.poste] = activeSects[0]; return; }
-    const idx = ((ligneGroupe + month) % sectList.length + sectList.length) % sectList.length;
+    const idx = ((ligneNum - 1 + month) % sectList.length + sectList.length) % sectList.length;
     affMap[a.poste] = sectList[idx];
   });
 
-  // 3. Agents sans ligne → rotation par sous-groupe A/B/C (rétrocompat)
+  // 3. Agents sans ligne → rotation par sous-groupe A/B/C
   ['A','B','C'].forEach(sg => {
-    const pool = sansligne.filter(a => a.sg === sg);
+    const pool = sansLigne.filter(a => a.sg === sg);
     if (!pool.length) return;
     pool.sort((a, b) => a.poste.localeCompare(b.poste));
     pool.forEach((agent, i) => {
@@ -2305,7 +2323,7 @@ function analyseEquilibre(grp, month) {
   SECT_ACTIVE.forEach(s => sects[s] = {M:[],J:[],S:[],total:0});
   agents.filter(a => a.grp === grp && a.actif !== false).forEach(agent => {
     const sect = getAgentSecteur(agent, month);
-    const hor  = getHoraire(agent.grp, agent.sg);
+    const hor  = getHoraire(agent.grp, agent.sg, agent);
     if (sects[sect]) { sects[sect][hor] = sects[sect][hor]||[]; sects[sect][hor].push(agent); sects[sect].total++; }
   });
   const alerts = [];
@@ -2314,9 +2332,10 @@ function analyseEquilibre(grp, month) {
     const sectData = sectors.find(x => x.code === sect);
     const cible = sectData?.cible || {M:1,S:1,J:1};
     ['M','J','S'].forEach(hor => {
-      const have = (s[hor]||[]).length, needed = cible[hor]||0;
+      const needed = (cible[hor] !== undefined) ? cible[hor] : 1;
+      const have = (s[hor]||[]).length;
       if (have < needed) {
-        const candidates = agents.filter(a => a.grp===grp && a.fixe!=='O' && getHoraire(a.grp,a.sg)===hor && a.actif!==false);
+        const candidates = agents.filter(a => a.grp===grp && a.fixe!=='O' && getHoraire(a.grp,a.sg,a)===hor && a.actif!==false);
         alerts.push({sect,hor,have,needed,candidates});
       }
     });
