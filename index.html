@@ -1530,7 +1530,7 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
     <!-- GAUCHE : onglets de navigation -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;" id="regles-main-tabs">
       <button class="filter-btn active" onclick="showReglesTab('spec',this)">⚙ Règles par spécialité</button>
-      <button class="filter-btn" onclick="showReglesTab('calcul',this)">Calcul des heures</button>
+<button class="filter-btn" onclick="showReglesTab('calcul',this)">Calcul des heures</button>
       <button class="filter-btn" onclick="showReglesTab('conges',this)">Congés FPT</button>
     </div>
 
@@ -1910,8 +1910,23 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
             </select>
           </div>
           <div class="form-row">
-            <label>SOUS-GROUPE</label>
+            <label>SOUS-GROUPE <span style="font-size:9px;color:#64748b;">(ou choisir une ligne)</span></label>
             <select id="f-sg"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
+          </div>
+          <div class="form-row">
+            <label>LIGNE DE ROULEMENT <span style="font-size:9px;color:#64748b;">(optionnel — prioritaire sur sous-groupe)</span></label>
+            <select id="f-ligne">
+              <option value="">Automatique (sous-groupe)</option>
+              <option value="L1">Ligne 1</option>
+              <option value="L2">Ligne 2</option>
+              <option value="L3">Ligne 3</option>
+              <option value="L4">Ligne 4</option>
+              <option value="L5">Ligne 5</option>
+              <option value="L6">Ligne 6</option>
+              <option value="L7">Ligne 7</option>
+              <option value="L8">Ligne 8</option>
+              <option value="L9">Ligne 9</option>
+            </select>
           </div>
           <div class="form-row">
             <label>TAUX DE TRAVAIL</label>
@@ -1951,16 +1966,21 @@ if (window.location.search && window.location.search.indexOf('readonly=1') !== -
             </div>
             <div class="contraintes-hint">Exemple 80% : cocher Mer = jamais de mercredi travaillé. Ou Jeu pour un autre agent. Chaque agent peut avoir son propre jour fixe.</div>
           </div>
-          <!-- Horaire exclu -->
+          <!-- Horaires autorisés -->
           <div class="form-row">
-            <label style="color:#f59e0b;">Horaire exclu <span style="font-size:9px;font-weight:400;color:#64748b;">(cet agent ne fait jamais cet horaire)</span></label>
-            <div class="tag-btn-group" style="margin-top:4px;">
-              <button class="shift-exclu-btn active-none" id="exclu-none" onclick="selectExclu('none')">AUCUNE EXCLUSION</button>
-              <button class="shift-exclu-btn" id="exclu-M" onclick="selectExclu('M')">🔵 MATIN (06h45–18h45)</button>
-              <button class="shift-exclu-btn" id="exclu-S" onclick="selectExclu('S')">🟣 SOIR (09h00–21h00)</button>
-              <button class="shift-exclu-btn" id="exclu-J" onclick="selectExclu('J')">🟢 JOURNÉE (08h30–20h30)</button>
+            <label style="color:#f59e0b;">Horaires autorisés <span style="font-size:9px;font-weight:400;color:#64748b;">(décocher = cet agent ne fait jamais cet horaire)</span></label>
+            <div class="tag-btn-group" style="margin-top:6px;gap:6px;">
+              <button class="shift-exclu-btn" id="hor-btn-M" onclick="toggleHoraire('M',this)">🔵 Matin</button>
+              <button class="shift-exclu-btn" id="hor-btn-S" onclick="toggleHoraire('S',this)">🟣 Soir</button>
+              <button class="shift-exclu-btn" id="hor-btn-J" onclick="toggleHoraire('J',this)">🟢 Journée</button>
             </div>
-            <div class="contraintes-hint">Exemple : cocher Soir = l'agent ne se verra jamais attribuer un bloc S. Les blocs S seront remplacés par M ou J dans sa rotation.</div>
+            <div class="contraintes-hint">Exemple : décocher S et J = l'agent fait uniquement le Matin. Tous cochés = pas de restriction.</div>
+          </div>
+          <!-- Secteurs exclus -->
+          <div class="form-row" style="margin-top:10px;">
+            <label style="color:#f59e0b;">Secteurs exclus <span style="font-size:9px;font-weight:400;color:#64748b;">(cet agent ne sera jamais affecté à ces secteurs)</span></label>
+            <div id="secteurs-exclus-btns" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"></div>
+            <div class="contraintes-hint">Exemple : exclure CANTOU = l'agent ne sera jamais envoyé au CANTOU lors des rotations.</div>
           </div>
         </div>
       </div>
@@ -1998,12 +2018,33 @@ const SECT_ACTIVE = ['GENERAL','CANTOU','ALZHEIMER'];
 
 // Patterns 42j — M=Matin S=Soir J=Journée R=Repos
 const PATTERNS = {
+  // Anciens patterns (rétrocompat G1A/B/C et G2A/B/C)
   'G1A': 'RSSRRJJJRRMMRRRJJRRMMMRRSSRRRMMRRSSSRRJJRR',
   'G1B': 'RMMRRSSSRRJJRRRSSRRJJJRRMMRRRJJRRMMMRRSSRR',
   'G1C': 'RJJRRMMMRRSSRRRMMRRSSSRRJJRRRSSRRJJJRRMMRR',
   'G2A': 'MRRSSRRRMMRRSSSRRJJRRRSSRRJJJRRMMRRRJJRRMM',
   'G2B': 'JRRMMRRRJJRRMMMRRSSRRRMMRRSSSRRJJRRRSSRRJJ',
   'G2C': 'SRRJJRRRSSRRJJJRRMMRRRJJRRMMMRRSSRRRMMRRSS',
+  // 9 lignes de roulement — Groupe 1 (équilibre parfait 3M+3S+3J)
+  'L1': 'RMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRR',
+  'L2': 'RJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRR',
+  'L3': 'RSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRR',
+  'L4': 'RMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRR',
+  'L5': 'RJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRR',
+  'L6': 'RSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRR',
+  'L7': 'RMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRR',
+  'L8': 'RJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRR',
+  'L9': 'RSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRR',
+  // 9 lignes de roulement — Groupe 2 (décalé)
+  'G2L1': 'SRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSS',
+  'G2L2': 'MRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMM',
+  'G2L3': 'JRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJ',
+  'G2L4': 'SRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSS',
+  'G2L5': 'MRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMM',
+  'G2L6': 'JRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJ',
+  'G2L7': 'SRRMMRRRSSRRMMMRRJJRRRMMRRJJJRRSSRRRJJRRSS',
+  'G2L8': 'MRRJJRRRMMRRJJJRRSSRRRJJRRSSSRRMMRRRSSRRMM',
+  'G2L9': 'JRRSSRRRJJRRSSSRRMMRRRSSRRMMMRRJJRRRMMRRJJ',
 };
 
 const agents = [];
@@ -2038,6 +2079,8 @@ function defaultSpecRules(overrides) {
     horaires: { M:'06h45–18h45', S:'09h00–21h00', J:'08h30–20h30' },
     durations: { M:10, S:10, J:10, NU:10, ref:10, pause:2 },
     hasSecteurs: true,
+    cycleDays: 42,           // durée du cycle en jours (42 = 6 semaines, 28 = 4 semaines)
+    cycleHoraires: ['M','S','J'], // horaires utilisés dans le cycle
     // Seuils par shift : min et max pour chaque code horaire
     seuils: { M:{min:1,max:4}, S:{min:1,max:4}, J:{min:1,max:4} },
     caTotal: 17.5, frac1: 5, frac2: 8, reposNuit: false,
@@ -2059,7 +2102,7 @@ let RULES = {
   // Règles par spécialité
   specRules: {
     AS:   defaultSpecRules({ horaires:{M:'06h45–18h45',S:'09h00–21h00',J:'08h30–20h30'}, hasSecteurs:true }),
-    IDE:  defaultSpecRules({ horaires:{M:'07h00–19h00',S:'09h00–21h00',J:'08h00–20h00'}, hasSecteurs:false, durations:{M:10,S:10,J:10,NU:10,ref:10,pause:0.5}, seuils:{M:{min:1,max:2},S:{min:1,max:2},J:{min:1,max:2}} }),
+    IDE:  defaultSpecRules({ horaires:{M:'07h00–19h00',S:'09h00–21h00',J:'08h00–20h00'}, hasSecteurs:false, cycleDays:28, cycleHoraires:['J'], durations:{M:10,S:10,J:10,NU:10,ref:10,pause:0.5}, seuils:{M:{min:1,max:2},S:{min:1,max:2},J:{min:1,max:2}} }),
     Nuit: defaultSpecRules({ horaires:{M:'20h45–06h45',S:'21h00–07h00',J:'21h00–07h00'}, hasSecteurs:false, durations:{M:10,S:10,J:10,NU:10,ref:10,pause:1}, reposNuit:true, seuils:{M:{min:1,max:3},S:{min:0,max:1},J:{min:0,max:1}} }),
     AUX:  defaultSpecRules({ horaires:{M:'07h00–14h00',S:'14h00–21h00',J:'09h00–17h00'}, hasSecteurs:false, durations:{M:7,S:7,J:7,NU:0,ref:7,pause:0.5}, seuils:{M:{min:1,max:3},S:{min:1,max:3},J:{min:0,max:2}} }),
     AE:   defaultSpecRules({ horaires:{M:'06h30–14h00',S:'14h00–21h30',J:'09h00–17h30'}, hasSecteurs:false, durations:{M:7,S:7,J:7,NU:0,ref:7,pause:0.5}, seuils:{M:{min:1,max:2},S:{min:0,max:2},J:{min:0,max:2}} }),
@@ -2083,65 +2126,129 @@ function computeAffectations(grp, month) {
   const fixedAgents = agents.filter(a => a.grp === grp && a.fixe === 'O' && a.actif !== false);
   fixedAgents.forEach(a => { affMap[a.poste] = a.secteur; });
 
-  // 2. Agents tournants : rotation par horaire pour équilibrer chaque secteur
-  // On regroupe par horaire (M, S, J) et on tourne indépendamment
+  const activeSects = sectors.filter(s => s.active).map(s => s.code);
   const tournants = agents.filter(a => a.grp === grp && a.fixe !== 'O' && a.actif !== false);
 
-  // Grouper par horaire
-  const byHor = {};
-  tournants.forEach(a => {
-    const hor = getHoraire(a.grp, a.sg);
-    if (!byHor[hor]) byHor[hor] = [];
-    byHor[hor].push(a);
+  // 2. Agents avec ligne de roulement → rotation par numéro de ligne
+  // Lignes 1,4,7 → secteur 0; Lignes 2,5,8 → secteur 1; Lignes 3,6,9 → secteur 2
+  // Et ça tourne chaque mois (+month)
+  const avecLigne = tournants.filter(a => a.ligne);
+  const sansligne = tournants.filter(a => !a.ligne);
+
+  avecLigne.forEach(a => {
+    const excluSects = a.secteursExclus || [];
+    const ligneNum = parseInt((a.ligne||'').replace(/[^0-9]/g,'')) || 1;
+    // Groupe de ligne : 1-3 → groupe 0, 4-6 → groupe 1, 7-9 → groupe 2
+    const ligneGroupe = Math.floor((ligneNum - 1) / 3);
+    // Rotation mensuelle : décaler d'un secteur par mois
+    const sectList = activeSects.filter(s => !excluSects.includes(s));
+    if (!sectList.length) { affMap[a.poste] = activeSects[0]; return; }
+    const idx = ((ligneGroupe + month) % sectList.length + sectList.length) % sectList.length;
+    affMap[a.poste] = sectList[idx];
   });
 
-  // Pour chaque horaire, distribuer les agents sur les secteurs en rotation mensuelle
-  Object.keys(byHor).forEach(hor => {
-    const pool = byHor[hor].sort((a, b) => a.poste.localeCompare(b.poste));
-    const activeSects = sectors.filter(s => s.active);
-
-    // Construire la liste des secteurs qui ont besoin de cet horaire
-    const sectBesoins = [];
-    activeSects.forEach(s => {
-      const cible = (s.cible && s.cible[hor]) || 1;
-      const dejaCouvert = fixedAgents.filter(a => a.secteur === s.code && getHoraire(a.grp, a.sg) === hor).length;
-      const besoin = cible - dejaCouvert;
-      for (let n = 0; n < besoin; n++) sectBesoins.push(s.code);
-    });
-
-    if (!sectBesoins.length) {
-      // Pas de besoin particulier → rotation simple sur tous les secteurs actifs
-      pool.forEach((a, i) => {
-        const rotList = (a.rot && a.rot.length) ? a.rot : activeSects.map(s => s.code);
-        const idx = ((month + i) % rotList.length + rotList.length) % rotList.length;
-        affMap[a.poste] = rotList[idx];
-      });
-      return;
-    }
-
-    // Distribuer les agents sur les besoins en rotation mensuelle
-    pool.forEach((a, i) => {
-      const rotList = (a.rot && a.rot.length) ? a.rot : null;
-      // Filtrer les secteurs de besoin accessibles à cet agent
-      const accessible = sectBesoins.filter(s => !rotList || rotList.includes(s));
-      const list = accessible.length ? accessible : sectBesoins;
-      const idx = ((month + i) % list.length + list.length) % list.length;
-      affMap[a.poste] = list[idx];
+  // 3. Agents sans ligne → rotation par sous-groupe A/B/C (rétrocompat)
+  ['A','B','C'].forEach(sg => {
+    const pool = sansligne.filter(a => a.sg === sg);
+    if (!pool.length) return;
+    pool.sort((a, b) => a.poste.localeCompare(b.poste));
+    pool.forEach((agent, i) => {
+      const excluSects = agent.secteursExclus || [];
+      let rotList = (agent.rot && agent.rot.length)
+        ? agent.rot.filter(s => !excluSects.includes(s))
+        : activeSects.filter(s => !excluSects.includes(s));
+      if (!rotList.length) rotList = activeSects;
+      const idx = ((month + (agent.rotOffset||0) + i) % rotList.length + rotList.length) % rotList.length;
+      affMap[agent.poste] = rotList[idx];
     });
   });
 
-  // 3. Filet de sécurité
+  // 4. Filet de sécurité
   agents.filter(a => a.grp === grp && !affMap[a.poste] && a.actif !== false).forEach(a => {
-    const rotList = (a.rot && a.rot.length) ? a.rot : sectors.filter(s=>s.active).map(s=>s.code);
-    const idx = ((month + (a.rotOffset || 0)) % rotList.length + rotList.length) % rotList.length;
-    affMap[a.poste] = rotList[idx];
+    const excluSects = a.secteursExclus || [];
+    const rotList = activeSects.filter(s => !excluSects.includes(s));
+    const idx = ((month + (a.rotOffset||0)) % rotList.length + rotList.length) % rotList.length;
+    affMap[a.poste] = rotList[idx] || activeSects[0];
   });
 
   return affMap;
 }
 
-function getPattern(grp, sg) { return (PATTERNS[`G${grp}${sg}`] || '').replace(/\s/g, ''); }
-function getHoraire(grp, sg) { const p = getPattern(grp,sg); for (const c of p) if (c !== 'R') return c; return '?'; }
+// Génère un pattern automatique selon le cycle et les horaires d'une spécialité
+function generatePattern(cycleDays, horaires, sg) {
+  // Nombre de jours travaillés par bloc selon le cycle
+  // Cycle 42j (6 sem) : 3 jours travaillés + 4 repos par semaine × pattern tournant
+  // Cycle 28j (4 sem) : 3 jours travaillés + 4 repos par semaine
+  const weeksInCycle = cycleDays / 7;
+  const workedPerWeek = 3; // standard FPT
+  const reposPerWeek = 7 - workedPerWeek;
+
+  // Construire le pattern : alterner horaires sur les jours travaillés
+  let pattern = '';
+  const nbHoraires = horaires.length;
+
+  // Décalage selon le sous-groupe pour que A/B/C commencent sur des horaires différents
+  const sgOffset = {A:0, B:1, C:2}[sg] || 0;
+
+  for (let w = 0; w < weeksInCycle; w++) {
+    // 3 jours travaillés en bloc
+    for (let d = 0; d < workedPerWeek; d++) {
+      const hIdx = ((w * workedPerWeek + d + sgOffset * Math.floor(weeksInCycle / nbHoraires)) % nbHoraires + nbHoraires) % nbHoraires;
+      pattern += horaires[hIdx];
+    }
+    // Jours de repos
+    pattern += 'R'.repeat(reposPerWeek);
+  }
+
+  // Tronquer ou padder à cycleDays
+  return pattern.slice(0, cycleDays).padEnd(cycleDays, 'R');
+}
+
+function getPattern(grp, sg, agent) {
+  // Si l'agent a une ligne assignée → utiliser directement
+  if (agent && agent.ligne) {
+    // Vérifier cycle spécialité
+    if (agent.spec && RULES.specRules[agent.spec]) {
+      const sr = RULES.specRules[agent.spec];
+      const cycleDays = sr.cycleDays || 42;
+      const cycleHoraires = sr.cycleHoraires && sr.cycleHoraires.length ? sr.cycleHoraires : ['M','S','J'];
+      if (cycleDays !== 42 || cycleHoraires.length !== 3) {
+        const agentHoraires = (agent.horairesAuto && agent.horairesAuto.length)
+          ? agent.horairesAuto.filter(h => cycleHoraires.includes(h))
+          : cycleHoraires;
+        return generatePattern(cycleDays, agentHoraires.length ? agentHoraires : cycleHoraires, agent.ligne);
+      }
+    }
+    // Groupe 2 → préfixer avec G2
+    const ligneKey = (agent.grp === 2 || agent.grp === '2')
+      ? 'G2' + agent.ligne
+      : agent.ligne;
+    return (PATTERNS[ligneKey] || PATTERNS[agent.ligne] || '').replace(/\s/g,'');
+  }
+  // Rétrocompat : chercher par grp+sg
+  const ag = agent || agents.find(a => a.grp === grp && a.sg === sg && a.actif !== false);
+  if (ag && ag.spec && RULES.specRules[ag.spec]) {
+    const sr = RULES.specRules[ag.spec];
+    const cycleDays = sr.cycleDays || 42;
+    const cycleHoraires = sr.cycleHoraires && sr.cycleHoraires.length ? sr.cycleHoraires : ['M','S','J'];
+    if (cycleDays !== 42 || cycleHoraires.length !== 3) {
+      const agentHoraires = (ag.horairesAuto && ag.horairesAuto.length)
+        ? ag.horairesAuto.filter(h => cycleHoraires.includes(h))
+        : cycleHoraires;
+      return generatePattern(cycleDays, agentHoraires.length ? agentHoraires : cycleHoraires, sg);
+    }
+  }
+  return (PATTERNS[`G${grp}${sg}`] || '').replace(/\s/g, '');
+}
+function getHoraire(grp, sg, agent) { const p = getPattern(grp,sg,agent); for (const c of p) if (c !== 'R') return c; return '?'; }
+
+function getCycleDays(grp, sg, agent) {
+  const ag = agent || agents.find(a => a.grp === grp && a.sg === sg && a.actif !== false);
+  if (ag && ag.spec && RULES.specRules[ag.spec]) {
+    return RULES.specRules[ag.spec].cycleDays || 42;
+  }
+  return 42;
+}
 
 function getSectColor(sect) {
   const s = sectors.find(x => x.code === sect);
@@ -2170,19 +2277,24 @@ function getAgentSecteur(agent, month) {
 
 function rebalanceOffsets(grp) {
   clearAffCache();
-  // Pour chaque sous-groupe, on attribue les offsets de façon à équilibrer
-  // les secteurs : chaque secteur doit recevoir 1 agent de chaque horaire
+  // Construire la liste des secteurs actifs filtrée par agent
+  const activeSects = sectors.filter(s => s.active).map(s => s.code);
+
   ['A','B','C'].forEach(sg => {
-    const pool = agents.filter(a => a.grp === grp && a.sg === sg && a.fixe !== 'O' && a.actif !== false);
+    const pool = agents.filter(a =>
+      a.grp === grp && a.sg === sg && a.fixe !== 'O' && a.actif !== false
+    );
     if (!pool.length) return;
-    const rotList = sectors.filter(s => s.active).map(s => s.code);
-    if (!rotList.length) return;
-    // Trier par poste pour ordre stable
     pool.sort((a, b) => a.poste.localeCompare(b.poste));
-    // Attribuer les offsets pour que ce mois-ci chaque secteur soit couvert
     pool.forEach((a, i) => {
-      // offset tel que (currentMonth + rotOffset + i) % rotList.length donne des secteurs différents
-      a.rotOffset = i;
+      // La liste de rotation de l'agent (filtrée par secteurs exclus)
+      const exclu = a.secteursExclus || [];
+      const rotList = (a.rot && a.rot.length)
+        ? a.rot.filter(s => !exclu.includes(s))
+        : activeSects.filter(s => !exclu.includes(s));
+      if (!rotList.length) { a.rotOffset = 0; return; }
+      // Offset tel que chaque agent du pool part d'un secteur différent
+      a.rotOffset = i % rotList.length;
     });
   });
 }
@@ -2266,7 +2378,7 @@ function buildStatsBar() {
     const dateKey = agent.poste+'-'+currentYear+'-'+String(currentMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const override = cellOverrides[dateKey];
     if (override) return override.code;
-    const pattern = getPattern(agent.grp, agent.sg);
+    const pattern = getPattern(agent.grp, agent.sg, agent);
     const dow = new Date(currentYear,currentMonth,d).getDay()===0?6:new Date(currentYear,currentMonth,d).getDay()-1;
     if (agent.taux<1 && agent.joursOff && agent.joursOff.some(j=>JOUR_TO_DOW[j]===dow)) return 'R';
     const dayOfYear = Math.round((Date.UTC(currentYear,currentMonth,d)-UTC_REF)/86400000);
@@ -2704,7 +2816,7 @@ function appendCountingTable(body, grp, nbDays, firstOffset) {
       const override=cellOverrides[dateKey];
       const isJourOff2 = !override && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j=>JOUR_TO_DOW2[j]===dow);
       if(isJourOff2) return; // ne pas compter ce jour
-      const pattern=getPattern(agent.grp,agent.sg);
+      const pattern=getPattern(agent.grp,agent.sg, agent);
       const code=override?override.code:((pattern[patIdx]||'R').trim()||'R');
       const sect=override?.secteur||getAgentSecteur(agent);
       if(['M','S','J'].includes(code)){
@@ -2891,7 +3003,7 @@ function confirmAssign(replId, dateKey){
 // ── Construit une ligne agent ──
 function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   const isFixe=agent.fixe==='O';
-  const pattern=getPattern(agent.grp, agent.sg);
+  const pattern=getPattern(agent.grp, agent.sg, agent);
   const tr=document.createElement('tr'); tr.className='agent-row';
 
   // Colonne Poste (fond temporaire, mis à jour après calcul scTr)
@@ -2967,10 +3079,11 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
   const isCurMonth = todayNow.getFullYear() === currentYear && todayNow.getMonth() === currentMonth;
   const todayDayNum = isCurMonth ? todayNow.getDate() : -1;
 
+  const _agCycleDays = getCycleDays(agent.grp, agent.sg, agent);
   for (let d=1; d<=nbDays; d++) {
     const dayDate=new Date(currentYear,currentMonth,d);
     const dayOfYear=Math.round((Date.UTC(currentYear,currentMonth,d) - UTC_REF) / 86400000);
-    const patIdx=((dayOfYear%42)+42)%42;
+    const patIdx=(((dayOfYear%_agCycleDays)+_agCycleDays)%_agCycleDays);
     const dateKey=`${agent.poste}-${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const override=cellOverrides[dateKey];
     const code=override?override.code:((pattern[patIdx]||'R').trim()||'R');
@@ -2982,9 +3095,13 @@ function buildAgentRow(agent, secteur, sc, nbDays, firstOffset, agentMode) {
     // Jour non travaillé (temps partiel) → forcer R si pas d'override
     const JOUR_TO_DOW = {lun:0,mar:1,mer:2,jeu:3,ven:4,sam:5,dim:6};
     const isJourOff = !hasOverride && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW[j] === dow);
-    // Horaire exclu : si le code correspond à l'horaire exclu de l'agent et pas d'override → forcer R
-    const exclu = agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
-    const isExclu = !hasOverride && exclu && code === exclu;
+    // Horaires autorisés (nouveau) ou exclusion simple (rétrocompat)
+    const horAuto = agent.horairesAuto && agent.horairesAuto.length ? agent.horairesAuto : null;
+    const exclu = !horAuto && agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
+    const isExclu = !hasOverride && (
+      (horAuto && ['M','S','J'].includes(code) && !horAuto.includes(code)) ||
+      (exclu && code === exclu)
+    );
     const displayCode = (isJourOff || isExclu) ? 'R' : code;
 
     // ── Détection bloc qui déborde du mois précédent ──
@@ -3220,7 +3337,7 @@ function detectBloc(agent, clickedDate, code) {
     const dateKey2=agent.poste+"-"+y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
     const override=cellOverrides[dateKey2];
     if(override) return override.code;
-    const pattern=getPattern(agent.grp,agent.sg);
+    const pattern=getPattern(agent.grp,agent.sg, agent);
     const dow=d.getDay()===0?6:d.getDay()-1;
     if(agent.taux<1 && agent.joursOff && agent.joursOff.some(j=>JOUR_TO_DOW[j]===dow)) return "R";
     const dayOfYear=Math.round((Date.UTC(y,m,day)-UTC_REF)/86400000);
@@ -3289,7 +3406,7 @@ function validateCell() {
           const dk = agentPoste+'-'+y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
           // Ne poser le code que sur les jours normalement travaillés (pas R)
           const existingOv = cellOverrides[dk];
-          const pat = agent ? getPattern(agent.grp, agent.sg) : null;
+          const pat = agent ? getPattern(agent.grp, agent.sg, agent) : null;
           const dowCA = d.getDay()===0?6:d.getDay()-1;
           const isJourOffCA = agent && agent.taux<1 && agent.joursOff && agent.joursOff.some(j=>JOUR_TO_DOW_CA[j]===dowCA);
           let baseCode = 'R';
@@ -3375,7 +3492,7 @@ function validateCell() {
       const dkn=agentPoste+"-"+yn+"-"+String(mn+1).padStart(2,"0")+"-"+String(dn).padStart(2,"0");
       const exn=cellOverrides[dkn];
       const codeNext = exn?.code || ((()=>{
-        const pattern=getPattern(agent.grp,agent.sg);
+        const pattern=getPattern(agent.grp,agent.sg, agent);
         const dayOfYear=Math.round((Date.UTC(yn,mn,dn)-UTC_REF)/86400000);
         const patIdx=((dayOfYear%42)+42)%42;
         return (pattern[patIdx]||"R").trim()||"R";
@@ -3530,15 +3647,38 @@ function buildAgents() {
 
           <div class="agent-card-body" style="padding-top:6px;">
             <span class="tag" style="font-weight:700;">${a.spec}</span>
-            <span class="tag">Secteur : ${sectCurrent}</span>
-            <span class="tag" style="background:#fef9c3;color:#854d0e;">CA : ${caAnnuels} j</span>
+            ${a.fixe==='O' ? `<span class="tag" style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">📌 ${sectCurrent}</span>` : ''}
           </div>
 
-          ${isTempPartiel ? `
-          <!-- Jours non travaillés -->
-          <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
-            <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:5px;">JOURS NON TRAVAILLÉS</div>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">${joursOffHtml}</div>
+          <!-- Contraintes : jours off + horaires autorisés -->
+          ${(isTempPartiel || (a.horairesAuto && a.horairesAuto.length < 3) || (a.secteursExclus && a.secteursExclus.length)) ? `
+          <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;display:flex;flex-direction:column;gap:6px;">
+            ${isTempPartiel ? `
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:4px;">JOURS NON TRAVAILLÉS</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">${joursOffHtml}</div>
+            </div>` : ''}
+            ${(a.horairesAuto && a.horairesAuto.length && a.horairesAuto.length < 3) ? `
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:4px;">HORAIRES AUTORISÉS</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                ${['M','S','J'].map(h => {
+                  const ok = a.horairesAuto.includes(h);
+                  const colors = {M:['#dbeafe','#1d4ed8'],S:['#ede9fe','#6d28d9'],J:['#dcfce7','#15803d']};
+                  const labels = {M:'Matin',S:'Soir',J:'Journée'};
+                  return ok
+                    ? `<span style="padding:1px 7px;border-radius:4px;background:${colors[h][0]};color:${colors[h][1]};border:1px solid ${colors[h][1]}33;font-size:10px;font-weight:700;">${labels[h]}</span>`
+                    : `<span style="padding:1px 7px;border-radius:4px;background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f4;font-size:10px;font-weight:600;text-decoration:line-through;">${labels[h]}</span>`;
+                }).join('')}
+              </div>
+            </div>` : ''}
+            ${(a.secteursExclus && a.secteursExclus.length) ? `
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:4px;">SECTEURS EXCLUS</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                ${(a.secteursExclus||[]).map(s=>`<span style="padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:10px;font-weight:700;">🚫 ${s}</span>`).join('')}
+              </div>
+            </div>` : ''}
           </div>` : ''}
 
           <div class="agent-card-footer">
@@ -3693,7 +3833,12 @@ function applyColor(idx, val) {
   }
 }
 function updateSectorLabel(idx,val) { sectors[idx].label=val; }
-function updateSectorCible(idx,hor,val) { if (!sectors[idx].cible) sectors[idx].cible={M:1,S:1,J:1}; sectors[idx].cible[hor]=parseInt(val)||0; }
+function updateSectorCible(idx,hor,val) {
+  if (!sectors[idx].cible) sectors[idx].cible={M:1,S:1,J:1};
+  sectors[idx].cible[hor]=parseInt(val)||0;
+  clearAffCache();
+  savePlanningToDB('Cible secteur');
+}
 function addSector()    { if (sectors.length>=6) return; sectors.push({code:`SECTEUR${sectors.length+1}`,label:'À définir',color:'#64748b',active:false,cible:{M:1,S:1,J:1}}); buildConfig(); }
 function removeSector(idx) { if (sectors.length<=1) return; sectors.splice(idx,1); buildConfig(); }
 function updateSectorCSSVars() {
@@ -3726,7 +3871,9 @@ let modalRotation = [];
 let modalFixeMode = false;
 let modalEditPoste = '';
 let modalJoursOff = [];
-let modalExclu    = 'none';
+let modalExclu    = 'none'; // rétrocompat
+let modalHorairesAuto = ['M','S','J'];
+let modalSecteursExclus = [];
 let modalFixeOn   = false;
 let modalFixeSect = '';
 
@@ -3767,20 +3914,53 @@ function selectStatut(val, btn) {
   btn.classList.add('active', `active-${val}`);
 }
 
+function toggleSecteurExclu(code, btn) {
+  if (modalSecteursExclus.includes(code)) {
+    modalSecteursExclus = modalSecteursExclus.filter(s => s !== code);
+    btn.style.borderColor = 'var(--border)';
+    btn.style.background = 'var(--card-bg)';
+    btn.style.color = 'var(--text-muted)';
+    btn.textContent = code;
+  } else {
+    modalSecteursExclus.push(code);
+    btn.style.borderColor = '#dc2626';
+    btn.style.background = '#fee2e2';
+    btn.style.color = '#dc2626';
+    btn.textContent = '🚫 ' + code;
+  }
+}
+
 function toggleJourOff(jour, btn) {
   const idx = modalJoursOff.indexOf(jour);
   if (idx>=0) { modalJoursOff.splice(idx,1); btn.classList.remove('active'); }
   else        { modalJoursOff.push(jour);    btn.classList.add('active'); }
 }
 
-function selectExclu(val) {
-  modalExclu = val;
-  ['none','M','S','J'].forEach(v => {
-    const el = document.getElementById(`exclu-${v==='none'?'none':v}`);
-    if (el) { el.classList.remove('active-none','active-M','active-S','active-J'); }
+function selectExclu(val) { /* rétrocompat — ne plus utiliser */ }
+
+function toggleHoraire(hor, btn) {
+  if (modalHorairesAuto.includes(hor)) {
+    // Décocher — mais garder au moins 1 horaire autorisé
+    if (modalHorairesAuto.length > 1) {
+      modalHorairesAuto = modalHorairesAuto.filter(h => h !== hor);
+      btn.classList.remove('active-M','active-S','active-J','active-none');
+    }
+  } else {
+    modalHorairesAuto.push(hor);
+    btn.classList.add(`active-${hor}`);
+  }
+  refreshHoraireBtns();
+}
+
+function refreshHoraireBtns() {
+  ['M','S','J'].forEach(h => {
+    const btn = document.getElementById(`hor-btn-${h}`);
+    if (!btn) return;
+    const active = modalHorairesAuto.includes(h);
+    btn.classList.remove('active-M','active-S','active-J','active-none');
+    if (active) btn.classList.add(`active-${h}`);
+    btn.style.opacity = active ? '1' : '0.4';
   });
-  const target = document.getElementById(`exclu-${val==='none'?'none':val}`);
-  if (target) target.classList.add(`active-${val==='none'?'none':val}`);
 }
 
 function switchToEditMode() {
@@ -3822,6 +4002,7 @@ function openModal(mode, poste, fixeMode) {
       document.getElementById('f-spec').value   = a.spec;
       document.getElementById('f-groupe').value = String(a.grp);
       document.getElementById('f-sg').value     = a.sg;
+      if (document.getElementById('f-ligne')) document.getElementById('f-ligne').value = a.ligne || '';
       document.getElementById('f-taux').value   = String(a.taux);
       document.getElementById('f-statut').value = a.statut;
       // Reset statut btns
@@ -3830,11 +4011,31 @@ function openModal(mode, poste, fixeMode) {
       if (sb) sb.classList.add('active',`active-${a.statut}`);
       // Jours off
       modalJoursOff = [...(a.joursOff||[])];
+      modalSecteursExclus = isNew ? [] : [...(a.secteursExclus||[])];
       document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
       modalJoursOff.forEach(j=>{const days=['lun','mar','mer','jeu','ven','sam','dim'];const idx=days.indexOf(j);if(idx>=0){const btns=document.querySelectorAll('.day-btn');if(btns[idx])btns[idx].classList.add('active');}});
-      // Exclu
-      modalExclu = a.horaireExclu||'none';
-      selectExclu(modalExclu);
+      // Horaires autorisés (rétrocompat avec ancien horaireExclu)
+      if (a.horairesAuto && a.horairesAuto.length) {
+        modalHorairesAuto = [...a.horairesAuto];
+      } else if (a.horaireExclu && a.horaireExclu !== 'none') {
+        modalHorairesAuto = ['M','S','J'].filter(h => h !== a.horaireExclu);
+      } else {
+        modalHorairesAuto = ['M','S','J'];
+      }
+      modalExclu = 'none';
+      refreshHoraireBtns();
+      // Secteurs exclus
+      const sectExcluWrap = document.getElementById('secteurs-exclus-btns');
+      if (sectExcluWrap) {
+        sectExcluWrap.innerHTML = sectors.filter(s=>s.active).map(s => {
+          const isExclu = modalSecteursExclus.includes(s.code);
+          return `<button onclick="toggleSecteurExclu('${s.code}',this)"
+            style="padding:5px 12px;border-radius:6px;border:1.5px solid ${isExclu?'#dc2626':'var(--border)'};
+            background:${isExclu?'#fee2e2':'var(--card-bg)'};color:${isExclu?'#dc2626':'var(--text-muted)'};
+            font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;"
+            data-code="${s.code}">${isExclu?'🚫 ':''}${s.code}</button>`;
+        }).join('');
+      }
       // Fixe
       modalFixeOn   = a.fixe==='O';
       modalFixeSect = a.secteur||'';
@@ -3859,13 +4060,25 @@ function openModal(mode, poste, fixeMode) {
     document.getElementById('f-spec').value='AS';
     document.getElementById('f-groupe').value='1';
     document.getElementById('f-sg').value='A';
+    if (document.getElementById('f-ligne')) document.getElementById('f-ligne').value='';
     document.getElementById('f-taux').value='1';
     document.getElementById('f-statut').value='tit';
     document.querySelectorAll('#statut-btns .tag-btn').forEach(b=>b.classList.remove('active','active-tit','active-con','active-sta','active-int'));
     const defBtn=document.querySelector('#statut-btns .tag-btn');
     if (defBtn){defBtn.classList.add('active','active-tit');}
     modalJoursOff=[]; document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
-    modalExclu='none'; selectExclu('none');
+    modalExclu='none'; modalHorairesAuto=['M','S','J']; refreshHoraireBtns();
+    modalSecteursExclus=[];
+    const sectExcluWrapNew = document.getElementById('secteurs-exclus-btns');
+    if (sectExcluWrapNew) {
+      sectExcluWrapNew.innerHTML = sectors.filter(s=>s.active).map(s =>
+        `<button onclick="toggleSecteurExclu('${s.code}',this)"
+          style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);
+          background:var(--card-bg);color:var(--text-muted);
+          font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;"
+          data-code="${s.code}">${s.code}</button>`
+      ).join('');
+    }
     modalFixeOn=false; modalFixeSect='';
     document.getElementById('fixe-toggle-sw').className='toggle-switch';
     document.getElementById('fixe-toggle-label').textContent='Désactivé — rotation automatique';
@@ -3896,7 +4109,12 @@ function saveAgent() {
   const updated = {
     poste, nom, spec, grp, sg, taux, statut, secteur, fixe,
     rot: modalFixeOn?[secteur]:modalRotation,
-    rotOffset:0, joursOff:[...modalJoursOff], horaireExclu:modalExclu, actif:true,
+    rotOffset:0, joursOff:[...modalJoursOff],
+    horairesAuto:[...modalHorairesAuto],
+    horaireExclu: modalHorairesAuto.length===2 ? ['M','S','J'].find(h=>!modalHorairesAuto.includes(h)) : 'none',
+    secteursExclus:[...modalSecteursExclus],
+    ligne: document.getElementById('f-ligne')?.value || '',
+    actif:true,
   };
   if (original) { const idx=agents.findIndex(a=>a.poste===original); if(idx!==-1) agents[idx]=updated; }
   else { agents.push(updated); }
@@ -4529,6 +4747,113 @@ function showReglesTab(tab, btn) {
   if (tab==='spec') buildSpecSubTabs();
 }
 
+// ── Secteurs & Rotation ────────────────────────────────────────────────────
+function buildSectRotTab() {
+  const wrap = document.getElementById('sectrot-content');
+  if (!wrap) return;
+  const activeSects = sectors.filter(s => s.active);
+  const tournants = agents.filter(a => a.fixe !== 'O' && a.actif !== false);
+
+  wrap.innerHTML = activeSects.map(sect => {
+    const rules = (RULES.sectRotation && RULES.sectRotation[sect.code]) || {M:[],S:[],J:[]};
+    const cible = sect.cible || {M:1,S:1,J:1};
+
+    const makeHorBlock = (hor) => {
+      const cibleN = cible[hor] || 1;
+      // Agents tournants qui ont cet horaire (excluant les fixe=O)
+      const candidats = tournants.filter(a => getHoraire(a.grp, a.sg) === hor);
+      // Fixes sur ce secteur qui couvrent cet horaire :
+      // - Un fixe avec horaireExclu=J couvre M ET S (il alterne selon son pattern)
+      // - Un fixe sans exclusion couvre uniquement son horaire dominant
+      const fixes = agents.filter(a => {
+        if (a.fixe !== 'O' || a.secteur !== sect.code) return false;
+        const exclu = a.horaireExclu && a.horaireExclu !== 'none' ? a.horaireExclu : null;
+        if (exclu) {
+          // Couvre tous les horaires sauf l'exclu
+          return hor !== exclu;
+        }
+        return getHoraire(a.grp, a.sg) === hor;
+      });
+      const besoin = cibleN - fixes.length;
+
+      if (besoin <= 0) {
+        return `<div style="flex:1;min-width:180px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:12px;">
+          <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px;">${hor} · ${hor==='M'?'Matin':hor==='S'?'Soir':'Journée'}</div>
+          <div style="font-size:11px;color:#15803d;">✅ Couvert par ${fixes.length} fixe(s)</div>
+        </div>`;
+      }
+
+      // Grouper par Groupe 1 / Groupe 2
+      const byGrp = {};
+      candidats.forEach(a => {
+        const k = `Groupe ${a.grp}`;
+        if (!byGrp[k]) byGrp[k] = [];
+        byGrp[k].push(a);
+      });
+      const checkboxes = Object.entries(byGrp).map(([grpLabel, agts]) => {
+        const rows = agts.map(a => {
+          const checked = (rules[hor]||[]).includes(a.poste) ? 'checked' : '';
+          return `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 2px;border-radius:4px;">
+            <input type="checkbox" ${checked} data-sect="${sect.code}" data-hor="${hor}" data-poste="${a.poste}" style="cursor:pointer;accent-color:#1d4ed8;">
+            ${a.nom}
+            <span style="color:var(--text-muted);font-size:10px;margin-left:auto;">${a.poste} · G${a.grp}${a.sg}</span>
+          </label>`;
+        }).join('');
+        return `<div style="margin-bottom:8px;">
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;padding:2px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px;">📁 ${grpLabel}</div>
+          ${rows}
+        </div>`;
+      }).join('');
+
+      const horColor = hor==='M'?'#1d4ed8':hor==='S'?'#7c3aed':'#059669';
+      const horBg = hor==='M'?'#dbeafe':hor==='S'?'#ede9fe':'#dcfce7';
+      return `<div style="flex:1;min-width:180px;background:var(--card-bg);border:1.5px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:${horColor};margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+          <span style="background:${horBg};border-radius:4px;padding:2px 7px;">${hor}</span>
+          ${hor==='M'?'Matin':hor==='S'?'Soir':'Journée'} — besoin : <b>${besoin} tournant(s)</b>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Cochez les agents prioritaires pour ce secteur (ils y passeront à tour de rôle chaque mois) :</div>
+        ${candidats.length ? checkboxes : '<span style="font-size:11px;color:var(--text-muted);">Aucun agent tournant disponible</span>'}
+      </div>`;
+    };
+
+    const sectColor = sect.color || '#64748b';
+    return `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--hdr-bg);padding:10px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hdr-border);">
+        <span style="width:12px;height:12px;border-radius:50%;background:${sectColor};display:inline-block;flex-shrink:0;"></span>
+        <span style="font-size:13px;font-weight:700;color:var(--accent);">${sect.code}</span>
+        <span style="font-size:11px;color:var(--text-muted);">Cible : ${cible.M||1}M · ${cible.S||1}S · ${cible.J||1}J</span>
+      </div>
+      <div style="padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;">
+        ${makeHorBlock('M')}${makeHorBlock('S')}${makeHorBlock('J')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveSectRotRules() {
+  if (!RULES.sectRotation) RULES.sectRotation = {};
+  // Réinitialiser
+  sectors.filter(s=>s.active).forEach(s => {
+    RULES.sectRotation[s.code] = {M:[], S:[], J:[]};
+  });
+  // Lire toutes les checkboxes
+  document.querySelectorAll('#sectrot-content input[type=checkbox]').forEach(cb => {
+    const sect = cb.dataset.sect, hor = cb.dataset.hor, poste = cb.dataset.poste;
+    if (cb.checked && RULES.sectRotation[sect]) {
+      if (!RULES.sectRotation[sect][hor]) RULES.sectRotation[sect][hor] = [];
+      RULES.sectRotation[sect][hor].push(poste);
+    }
+  });
+  // Mettre à jour computeAffectations avec les nouvelles règles
+  clearAffCache();
+  buildPlanning();
+  savePlanningToDB('Règles rotation secteurs');
+  // Feedback
+  const btn = document.querySelector('#rtab-sectrot button');
+  if (btn) { btn.textContent = '✓ Enregistré'; setTimeout(()=>btn.textContent='💾 Enregistrer les règles', 2000); }
+}
+
 function buildRegles() {
   buildDroitsTable();
   const r = RULES;
@@ -4653,6 +4978,55 @@ function buildSpecContent(sp) {
 
     <!-- Seuils & Droits -->
     <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Cycle de roulement -->
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;">
+        <div style="background:var(--hdr-bg);color:${m.color};padding:10px 18px;font-size:12px;font-weight:700;border-bottom:1px solid var(--hdr-border);display:flex;align-items:center;gap:8px;">
+          🔄 Cycle de roulement — ${sp}
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:10px;font-weight:700;color:var(--text-muted);">DURÉE DU CYCLE</label>
+              <div style="display:flex;gap:6px;">
+                ${[28,42].map(days => `
+                  <button onclick="RULES.specRules['${sp}'].cycleDays=${days};buildSpecContent('${sp}');savePlanningToDB('Cycle ${sp}');"
+                    style="padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${(r.cycleDays||42)===days?m.color:'var(--border)'};background:${(r.cycleDays||42)===days?m.bg:'var(--card-bg)'};color:${(r.cycleDays||42)===days?m.color:'var(--text-muted)'};">
+                    ${days}j (${days/7} sem.)
+                  </button>`).join('')}
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:10px;font-weight:700;color:var(--text-muted);">HORAIRES DANS LE CYCLE</label>
+              <div style="display:flex;gap:6px;">
+                ${['M','S','J'].map(h => {
+                  const active = (r.cycleHoraires||['M','S','J']).includes(h);
+                  const hColor = h==='M'?'#1d4ed8':h==='S'?'#6d28d9':'#059669';
+                  const hBg = h==='M'?'#dbeafe':h==='S'?'#ede9fe':'#dcfce7';
+                  const label = h==='M'?'Matin':h==='S'?'Soir':'Journée';
+                  return `<button onclick="
+                    const cur=RULES.specRules['${sp}'].cycleHoraires||(RULES.specRules['${sp}'].cycleHoraires=['M','S','J']);
+                    const idx=cur.indexOf('${h}');
+                    if(idx>=0&&cur.length>1){cur.splice(idx,1);}else if(idx<0){cur.push('${h}');}
+                    RULES.specRules['${sp}'].cycleHoraires=[...cur];
+                    buildSpecContent('${sp}');savePlanningToDB('Cycle horaires ${sp}');"
+                    style="padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;
+                    border:2px solid ${active?hColor:'var(--border)'};
+                    background:${active?hBg:'var(--card-bg)'};
+                    color:${active?hColor:'var(--text-muted)'};
+                    opacity:${active?1:0.5};">
+                    ${label}
+                  </button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);background:#f8fafd;border-radius:6px;padding:8px 12px;">
+            💡 Le pattern est généré automatiquement. Cycle actuel : <b>${r.cycleDays||42}j</b> · Horaires : <b>${(r.cycleHoraires||['M','S','J']).join(', ')}</b>
+          </div>
+        </div>
+      </div>
+
       <!-- Seuils -->
       <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;">
         <div style="background:var(--hdr-bg);color:${m.color};padding:10px 18px;font-size:12px;font-weight:700;border-bottom:1px solid var(--hdr-border);display:flex;align-items:center;gap:8px;">
@@ -4877,7 +5251,7 @@ function buildTauxConges() {
       for(let d=1;d<=nb;d++){
         const dateKey=`${agent.poste}-${currentYear}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const override=cellOverrides[dateKey];
-        const pattern=getPattern(agent.grp,agent.sg);
+        const pattern=getPattern(agent.grp,agent.sg, agent);
         const dayOfYear=Math.round((Date.UTC(currentYear,m,d)-UTC_REF)/86400000);
         const patIdx=((dayOfYear%42)+42)%42;
         const rawCode=override?override.code:((pattern[patIdx]||'R').trim()||'R');
@@ -4907,7 +5281,7 @@ function buildTauxConges() {
     for(let d=1;d<=nbDays;d++){
       const dateKey=`${agent.poste}-${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const override=cellOverrides[dateKey];
-      const pattern=getPattern(agent.grp,agent.sg);
+      const pattern=getPattern(agent.grp,agent.sg, agent);
       const dayOfYear=Math.round((Date.UTC(currentYear,currentMonth,d)-UTC_REF)/86400000);
       const patIdx=((dayOfYear%42)+42)%42;
       const rawCode=override?override.code:((pattern[patIdx]||'R').trim()||'R');
@@ -4916,8 +5290,10 @@ function buildTauxConges() {
       const dayDate=new Date(currentYear,currentMonth,d);
       const dow=dayDate.getDay()===0?6:dayDate.getDay()-1; // 0=lun…6=dim
       const isJourOff = !override && agent.taux < 1 && agent.joursOff && agent.joursOff.some(j => JOUR_TO_DOW_TC[j] === dow);
-      const excluTC = !override && agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
-      const isExcluTC = excluTC && rawCode === excluTC;
+      const horAutoTC = !override && agent.horairesAuto && agent.horairesAuto.length ? agent.horairesAuto : null;
+      const excluTC = !horAutoTC && !override && agent.horaireExclu && agent.horaireExclu !== 'none' ? agent.horaireExclu : null;
+      const isExcluTC = (horAutoTC && ['M','S','J'].includes(rawCode) && !horAutoTC.includes(rawCode)) ||
+                        (excluTC && rawCode === excluTC);
       const code = (isJourOff || isExcluTC) ? 'R' : rawCode;
 
       hTravaillees+=getCellHours(code,agent,override);
@@ -5243,7 +5619,13 @@ function importExcel(input) {
             const statut    = clean(r[3]) || 'tit';
             const tauxRaw   = clean(r[4]) || '100';
             const grp       = clean(r[5]) || '1';
-            const sg        = clean(r[6]) || 'A';
+            const sgOrLigne = clean(r[6]) || '';
+            // Détecter si c'est une ligne (L1-L9) ou un sous-groupe (A/B/C)
+            // Accepter L1-L9 ou 1-9
+            const isLigne   = /^[Ll]?[1-9]$/.test(sgOrLigne);
+            const sg        = isLigne ? 'A' : (sgOrLigne || 'A');
+            const ligneRaw  = isLigne ? sgOrLigne.replace(/^[Ll]?/, 'L') : '';
+            const ligne     = ligneRaw.toUpperCase();
             const sectFixe  = clean(r[7]);
             const joursOff  = clean(r[8]);
             const horExclu  = clean(r[9]) || 'none';
@@ -5259,7 +5641,7 @@ function importExcel(input) {
 
             importedAgents.push({
               poste: poste, nom: nom,
-              spec: spec, grp: parseInt(grp)||1, sg: sg,
+              spec: spec, grp: parseInt(grp)||1, sg: sg, ligne: ligne,
               taux: tauxDecimal, statut: statut,
               secteur: secteurCode, fixe: isFixe,
               joursOff: joursOffArr, horaireExclu: horExclu || 'none',
@@ -6544,7 +6926,7 @@ function roBuildOneMonth(agent, m, y) {
     var isOff = !ov&&agent.taux<1&&agent.joursOff&&agent.joursOff.some(function(j){return JTDOW[j]===dow;});
     var dofy  = Math.round((Date.UTC(y,m,d)-UTC_REF)/86400000);
     var pi    = ((dofy%42)+42)%42;
-    var pat   = getPattern(agent.grp,agent.sg);
+    var pat   = getPattern(agent.grp,agent.sg, agent);
     var code  = isOff?'R':(ov?ov.code:((pat[pi]||'R').trim()||'R'));
     if(code==='M')cntM++; else if(code==='S')cntS++; else if(code==='J')cntJ++;
     else if(code==='R')cntR++; else if(code==='CA')cntCA++; else cntOther++;
@@ -6593,7 +6975,7 @@ function roBuildOneMonth(agent, m, y) {
     var ov=cellOverrides[dKey];
     var isOff=!ov&&agent.taux<1&&agent.joursOff&&agent.joursOff.some(function(j){return JTDOW[j]===((firstOffset+d-1)%7);});
     var dofy=Math.round((Date.UTC(y,m,d)-UTC_REF)/86400000);
-    var pi=((dofy%42)+42)%42, pat=getPattern(agent.grp,agent.sg);
+    var _cd=getCycleDays(agent.grp,agent.sg,agent),pi=((dofy%_cd)+_cd)%_cd, pat=getPattern(agent.grp,agent.sg, agent);
     var code=isOff?'R':(ov?ov.code:((pat[pi]||'R').trim()||'R'));
     var st=CS[code]||'background:#f1f5f9;color:#64748b;';
     h += '<td style="padding:2px 1px;text-align:center;' +
@@ -6713,7 +7095,7 @@ function roBuild() {
     var ov=cellOverrides[dKey];
     var isOff=!ov&&agent.taux<1&&agent.joursOff&&agent.joursOff.some(function(j){return JTDOW[j]===dow;});
     var dofy=Math.round((Date.UTC(roYear,roMonth,d)-UTC_REF)/86400000);
-    var pi=((dofy%42)+42)%42, pat=getPattern(agent.grp,agent.sg);
+    var _cd=getCycleDays(agent.grp,agent.sg,agent),pi=((dofy%_cd)+_cd)%_cd, pat=getPattern(agent.grp,agent.sg, agent);
     var code=isOff?'R':(ov?ov.code:((pat[pi]||'R').trim()||'R'));
     if(code==='M')cntM++; else if(code==='S')cntS++; else if(code==='J')cntJ++;
     else if(code==='R')cntR++; else if(code==='CA')cntCA++; else cntOther++;
