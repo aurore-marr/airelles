@@ -1212,11 +1212,12 @@ table input:focus { border-color: var(--accent); }
               <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">
                 🔒 Secteurs fixes (ne tournent jamais)
               </div>
-              <p class="text-xs text-muted mb-2">Ces secteurs ont leurs propres agents permanents.</p>
-              <input type="text" id="cfg-secteurs-fixes-rot" placeholder="ex: CANTOU"
+              <p class="text-xs text-muted mb-2">Ces secteurs ont leurs propres agents permanents et ne participent jamais à la rotation.</p>
+              <input type="text" id="cfg-secteurs-fixes-rot" placeholder="ex: CANTOU ou CANTOU, ALZHEIMER"
                 style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-family:inherit;font-size:13px"
                 onchange="saveSectFixesRotation(this.value)">
-              <p class="text-xs text-muted mt-1">Séparer par virgule si plusieurs</p>
+              <p class="text-xs text-muted mt-1">Séparer par virgule si plusieurs secteurs fixes</p>
+              <div id="fixes-agents-list" style="margin-top:8px"></div>
             </div>
             <!-- Ordre de rotation -->
             <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
@@ -2278,8 +2279,14 @@ function renderPlanning() {
       const sectColor = sectObj ? secteurCouleurCSS(sectObj) : '#5a6480';
       // Fond de ligne = couleur BG du secteur
       // sectObj.couleur est déjà normalisé avec # par le parser
+      // Pour le fond : utiliser la couleurTexte (ex: #1a56b0) qui est plus visible
+      // En mode sombre : fond = couleurTexte avec opacité forte
+      // En mode clair : fond = couleurBg avec opacité forte
       const rawBg = sectObj ? sectObj.couleur : null;
-      const rowBgColor = rawBg || '#cccccc';
+      const rawTxt = sectObj ? (sectObj.couleurTexte || sectObj.couleur) : null;
+      const rowBgColor = rawBg || '#888';
+      // Couleur de fond de ligne = couleur texte du secteur (plus sombre, plus visible)
+      const rowColorSombre = rawTxt ? (rawTxt.startsWith('#') ? rawTxt : '#'+rawTxt) : (rawBg ? (rawBg.startsWith('#') ? rawBg : '#'+rawBg) : '#888');
 
       const isFixe = !!agent.secteurFixe;
       const rowStyle = 'background:' + rowBgColor + '28;border-left:3px solid ' + sectColor;
@@ -2302,6 +2309,15 @@ function renderPlanning() {
           '</span>' +
         '</td>';
 
+      // Calculer quand le bloc de l'agent change dans ce mois
+      // Pour la couleur de fond : suivre le bloc courant jour par jour
+      const _refDateCycle = new Date(etab.config.refDate || '2020-11-23');
+      const _cycleLen = etab.config.cycleLen || 42;
+      const _agOff = agent.rotOffset || 0;
+      const _fixesList2 = (etab.config.secteursFixesListe||['CANTOU']).map(s=>s.toUpperCase());
+      const _ordre2 = (etab.config.ordreRotation||etab.secteurs.map(s=>s.id))
+        .filter(id=>!_fixesList2.includes(id.toUpperCase()));
+
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYear, currentMonth, d);
         const dow = date.getDay();
@@ -2312,6 +2328,33 @@ function renderPlanning() {
         const shift = agPlan[d] || '';
         const hor = etab.horaires.find(h => h.code === shift);
         const horColor = hor ? hor.couleur : '';
+
+        // Secteur du JOUR (pour la couleur) — suit les blocs réels
+        let _sectJour = secteurMois; // par défaut secteur du mois
+        if (!agent.secteurFixe && _ordre2.length > 0) {
+          const _dtUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+          const _refUTC = Date.UTC(_refDateCycle.getFullYear(),_refDateCycle.getMonth(),_refDateCycle.getDate());
+          const _diff = Math.floor((_dtUTC - _refUTC) / 86400000) + _agOff;
+          const _bloc = Math.floor(_diff / _cycleLen);
+          // Secteur de départ
+          const _sd = agent.secteurDepart || _ordre2[0];
+          const _si = _ordre2.indexOf(_sd) >= 0 ? _ordre2.indexOf(_sd) : 0;
+          // Blocs depuis le départ agent
+          const _moisDep = agent.moisDepart || (new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
+          const _ry = parseInt(_moisDep.split('-')[0]);
+          const _rm = parseInt(_moisDep.split('-')[1])-1;
+          const _depUTC = Date.UTC(_ry,_rm,1);
+          const _diffDep = Math.floor((_dtUTC - _depUTC) / 86400000) + _agOff;
+          const _posDepCycle = ((Math.floor((_depUTC - _refUTC)/86400000 + _agOff) % _cycleLen) + _cycleLen) % _cycleLen;
+          const _jrPremierBloc = (_cycleLen - _posDepCycle) % _cycleLen;
+          const _blocsAg = _diffDep <= _jrPremierBloc ? 0 : 1 + Math.floor((_diffDep - _jrPremierBloc) / _cycleLen);
+          const _idxJ = ((_si + _blocsAg) % _ordre2.length + _ordre2.length) % _ordre2.length;
+          _sectJour = _ordre2[_idxJ];
+        }
+        const _sectObjJ = etab.secteurs.find(s => s.id === _sectJour);
+        const _sectColorJ = _sectObjJ ? secteurCouleurCSS(_sectObjJ) : sectColor;
+        const _rawBgJ = _sectObjJ ? (_sectObjJ.couleur ? (_sectObjJ.couleur.startsWith('#')?_sectObjJ.couleur:'#'+_sectObjJ.couleur) : rawBg) : rawBg;
+        const _rawTxtJ = _sectObjJ ? (_sectObjJ.couleurTexte ? (_sectObjJ.couleurTexte.startsWith('#')?_sectObjJ.couleurTexte:'#'+_sectObjJ.couleurTexte) : _rawBgJ) : _rawBgJ;
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
         const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP'].includes(shift);
 
@@ -2321,14 +2364,17 @@ function renderPlanning() {
                            : isAbsence ? badgeColor + '20'
                            : 'transparent';
 
-        const shiftStyle = shift && shift !== 'R' && shift !== 'RC'
-          ? 'style="background:' + badgeBgColor + ';color:' + badgeColor + ';font-weight:800;border:1px solid ' + badgeColor + '50"'
-          : 'style="color:var(--text3);opacity:0.4"';
+        // Badge : fond blanc/sombre semi-transparent pour contraste max
+        const shiftStyle = isTravail
+          ? 'style="background:rgba(255,255,255,0.18);color:' + badgeColor + ';font-weight:900;border:1px solid ' + badgeColor + '80;text-shadow:0 1px 2px rgba(0,0,0,0.3)"'
+          : isAbsence
+            ? 'style="background:' + badgeColor + '25;color:' + badgeColor + ';font-weight:800;border:1px solid ' + badgeColor + '50"'
+            : 'style="color:rgba(255,255,255,0.2)"';
 
-        // Fond cellule = teinte secteur pour jours travaillés
+        // Fond cellule = couleur secteur DU JOUR (change au bon moment)
         const cellBg = isTravail
-          ? (rawBg ? (rawBg.startsWith('#') ? rawBg : '#'+rawBg) + '22' : 'transparent')
-          : isWE ? 'rgba(0,0,0,0.03)' : 'transparent';
+          ? _rawTxtJ + '40'
+          : isWE ? _rawTxtJ + '12' : _rawTxtJ + '08';
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + '"' +
@@ -3569,6 +3615,32 @@ function renderRotationConfig() {
   const sfEl = document.getElementById('cfg-secteurs-fixes-rot');
   if (sfEl) sfEl.value = (etab.config.secteursFixesListe || ['CANTOU']).join(', ');
 
+  // Afficher les agents par secteur fixe
+  const fixesEl = document.getElementById('fixes-agents-list');
+  if (fixesEl) {
+    const fixesList = etab.config.secteursFixesListe || ['CANTOU'];
+    let fHtml = '';
+    fixesList.forEach(function(sectId) {
+      const sect = etab.secteurs.find(function(s){ return s.id === sectId; });
+      const color = sect ? secteurCouleurCSS(sect) : '#888';
+      const agentsFixes = etab.agents.filter(function(a){
+        return a.actif && (a.secteurFixe || '').toUpperCase() === sectId.toUpperCase();
+      });
+      fHtml += '<div style="margin-top:6px;padding:6px 8px;background:var(--bg);border-radius:6px;border-left:3px solid '+color+'">';
+      fHtml += '<span style="font-size:10px;font-weight:700;color:'+color+'">'+sectId+'</span>';
+      fHtml += '<span style="font-size:10px;color:var(--text2);margin-left:6px">'+agentsFixes.length+' agent(s) fixe(s)</span>';
+      if (agentsFixes.length > 0) {
+        fHtml += '<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">';
+        agentsFixes.forEach(function(a){
+          fHtml += '<span style="font-size:9px;background:'+color+'20;color:'+color+';padding:1px 6px;border-radius:3px">'+a.nom+'</span>';
+        });
+        fHtml += '</div>';
+      }
+      fHtml += '</div>';
+    });
+    fixesEl.innerHTML = fHtml;
+  }
+
   // Liste drag & drop de l'ordre (secteurs de rotation uniquement)
   const listEl = document.getElementById('rotation-ordre-list');
   listEl.innerHTML = etab.config.ordreRotation.map((sid, i) => {
@@ -4272,10 +4344,17 @@ function handleImportFile(file) {
         if (secteurs.length > 0) {
           // Préserver les reglesHoraires et agentsRequisJour configurées manuellement
           secteurs.forEach(function(ns) {
-            const existing = etab.secteurs.find(function(s){ return s.id === ns.id; });
+            // Comparer en uppercase pour robustesse
+            const existing = etab.secteurs.find(function(s){
+              return s.id.toUpperCase() === ns.id.toUpperCase() ||
+                     s.nom.toUpperCase() === ns.nom.toUpperCase();
+            });
             if (existing) {
-              ns.reglesHoraires = existing.reglesHoraires || {};
-              if (existing.agentsRequisJour && !ns.agentsRequisJour) ns.agentsRequisJour = existing.agentsRequisJour;
+              ns.reglesHoraires   = existing.reglesHoraires   || {};
+              ns.agentsRequisJour = existing.agentsRequisJour || ns.agentsRequisJour || 3;
+              // Garder la couleur configurée si elle existe
+              if (existing.couleur) ns.couleur = existing.couleur;
+              if (existing.couleurTexte) ns.couleurTexte = existing.couleurTexte;
             }
           });
           etab.secteurs = secteurs;
@@ -5048,22 +5127,20 @@ function getSecteurDuMois(agent, year, month, etab) {
   // Agents fixes → toujours leur secteur
   if (agent.secteurFixe) return agent.secteurFixe;
 
-  // Liste des secteurs considérés comme "fixes" (ne doivent pas apparaître en rotation)
   const fixesList = (etab.config.secteursFixesListe || ['CANTOU']).map(s => s.toUpperCase());
+  if (agent.secteurDepart && fixesList.includes((agent.secteurDepart||'').toUpperCase())) {
+    return agent.secteurDepart;
+  }
 
-  // Ordre de rotation = secteurs déclarés MOINS les secteurs fixes
   const ordreBase = etab.config.ordreRotation ||
     etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG')).map(s => s.id);
   const ordreRotation = ordreBase.filter(id => !fixesList.includes(id.toUpperCase()));
-
   if (!ordreRotation || ordreRotation.length === 0) return null;
 
-  // Secteur de départ de l'agent (doit aussi être un secteur de rotation, pas un fixe)
   let secteurDepart = agent.secteurDepart;
   if (!secteurDepart || fixesList.includes((secteurDepart||'').toUpperCase())) {
-    secteurDepart = ordreRotation[0]; // fallback sur le premier secteur de rotation
+    secteurDepart = ordreRotation[0];
   }
-
   const idxDepart = ordreRotation.indexOf(secteurDepart);
   const startIdx  = idxDepart >= 0 ? idxDepart : 0;
 
@@ -5073,9 +5150,48 @@ function getSecteurDuMois(agent, year, month, etab) {
   const refY = parseInt(moisDepart.split('-')[0]);
   const refM = parseInt(moisDepart.split('-')[1]) - 1;
 
-  const moisEcoules = (year - refY) * 12 + (month - refM);
+  // ════ RÈGLE BLOC CHEVAL SUR 2 MOIS ════
+  // Le secteur change seulement quand un NOUVEAU bloc de 42j COMPLET commence
+  // Si le 1er du mois tombe au milieu d'un bloc → on reste sur le secteur du bloc précédent
+  const refDateCycle = new Date(etab.config.refDate || '2020-11-23');
+  const cycleLen     = etab.config.cycleLen || 42;
+  const firstOfMonth = new Date(Date.UTC(year, month, 1));
+  const diffDays = Math.floor((
+    firstOfMonth -
+    Date.UTC(refDateCycle.getFullYear(), refDateCycle.getMonth(), refDateCycle.getDate())
+  ) / 86400000);
+
+  // Offset de l'agent dans le cycle (pour que les blocs soient alignés sur son roulement)
+  const agOffset = agent.rotOffset || 0;
+  const diffAvecOffset = diffDays + agOffset;
+
+  // Position dans le cycle au 1er du mois
+  const posInCycle = ((diffAvecOffset % cycleLen) + cycleLen) % cycleLen;
+
+  // Nombre de blocs COMPLETS écoulés depuis le début du cycle de référence
+  // (en reculant au dernier début de bloc si on est au milieu)
+  const blocsComplets = Math.floor((diffAvecOffset) / cycleLen);
+
+  // Le secteur est basé sur le nombre de blocs complets
+  // MAIS on doit aussi tenir compte du mois de départ de l'agent
+  // → calculer combien de blocs ont changé depuis le moisDepart de l'agent
+
+  // Date du début de la rotation de l'agent (moisDepart = YYYY-MM)
+  const moisDepartDate = new Date(Date.UTC(refY, refM, 1));
+  const diffDepuisDepart = Math.floor((firstOfMonth - moisDepartDate) / 86400000);
+
+  // Blocs complets depuis le départ de l'agent (en tenant compte du posInCycle au départ)
+  // → on attend que le cycle se termine pour changer de secteur
+  const posDepart = ((Math.floor((moisDepartDate - Date.UTC(refDateCycle.getFullYear(),refDateCycle.getMonth(),refDateCycle.getDate())) / 86400000 + agOffset) % cycleLen) + cycleLen) % cycleLen;
+  // Jours restants dans le premier bloc au moment du départ
+  const joursRestantsPremierBloc = (cycleLen - posDepart) % cycleLen;
+  // Blocs complets après le premier bloc partiel
+  const blocsDepuisDepart = diffDepuisDepart <= joursRestantsPremierBloc
+    ? 0  // encore dans le premier bloc
+    : 1 + Math.floor((diffDepuisDepart - joursRestantsPremierBloc) / cycleLen);
+
   const nbSecteurs  = ordreRotation.length;
-  const idxSecteur  = ((startIdx + moisEcoules) % nbSecteurs + nbSecteurs) % nbSecteurs;
+  const idxSecteur  = ((startIdx + blocsDepuisDepart) % nbSecteurs + nbSecteurs) % nbSecteurs;
 
   return ordreRotation[idxSecteur];
 }
