@@ -1348,31 +1348,47 @@ table input:focus { border-color: var(--accent); }
 </div>
 
 <!-- =========== QR VIEW AGENT =========== -->
-<div id="qr-view" style="display:none;background:#f4f6fb;min-height:100vh;font-family:'DM Sans',sans-serif">
+<div id="qr-view" style="display:none;min-height:100vh;font-family:'DM Sans',sans-serif;background:#f0f4f8">
 
-  <!-- ÉCRAN 1 : Sélection / PIN -->
-  <div id="qr-screen-select" style="min-height:100vh;display:flex;flex-direction:column">
-    <!-- Header -->
-    <div style="background:#0f1827;padding:16px 20px;display:flex;align-items:center;gap:12px">
-      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff">P</div>
-      <div>
-        <div style="font-size:15px;font-weight:800;color:#38bdf8;letter-spacing:0.02em"><span style="color:#fff">PLAN</span>SOINS</div>
-        <div id="qr-sel-etab-name" style="font-size:11px;color:#94a3b8">Les Airelles</div>
+  <!-- ÉCRAN 1 : PIN + Sélection -->
+  <div id="qr-screen-select" style="min-height:100vh;display:flex;flex-direction:column;max-width:440px;margin:0 auto">
+
+    <!-- Header gradient -->
+    <div style="background:linear-gradient(135deg,#0f1827 0%,#1d3a6e 100%);padding:28px 24px 32px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(56,189,248,0.08)"></div>
+      <div style="position:absolute;bottom:-30px;left:40px;width:80px;height:80px;border-radius:50%;background:rgba(29,78,216,0.12)"></div>
+      <div style="display:flex;align-items:center;gap:12px;position:relative">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;box-shadow:0 4px 16px rgba(56,189,248,0.3)">P</div>
+        <div>
+          <div style="font-size:18px;font-weight:800;letter-spacing:0.02em"><span style="color:#fff">PLAN</span><span style="color:#38bdf8">SOINS</span></div>
+          <div id="qr-sel-etab-name" style="font-size:12px;color:#94a3b8;margin-top:1px">Les Airelles</div>
+        </div>
+      </div>
+      <div style="margin-top:20px;position:relative">
+        <div style="font-size:22px;font-weight:800;color:#fff">Mon planning</div>
+        <div style="font-size:13px;color:#7dd3fc;margin-top:3px">Entrez votre code PIN pour accéder</div>
       </div>
     </div>
 
-    <div style="padding:20px;flex:1">
-      <!-- Code PIN -->
-      <div id="qr-pin-section" style="background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-        <div style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">🔒 MON CODE PIN</div>
-        <div style="display:flex;gap:10px;margin-bottom:14px" id="qr-pin-dots">
-          <div class="pin-dot" style="width:48px;height:48px;border-radius:12px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#1a2540"></div>
-          <div class="pin-dot" style="width:48px;height:48px;border-radius:12px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#1a2540"></div>
-          <div class="pin-dot" style="width:48px;height:48px;border-radius:12px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#1a2540"></div>
-          <div class="pin-dot" style="width:48px;height:48px;border-radius:12px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#1a2540"></div>
+    <div style="padding:20px;flex:1;display:flex;flex-direction:column;gap:16px">
+
+      <!-- Card PIN -->
+      <div id="qr-pin-section" style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,0.07)">
+        <div style="font-size:12px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;display:flex;align-items:center;gap:6px">
+          <span style="width:24px;height:24px;background:#eff6ff;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px">🔒</span>
+          Code PIN
         </div>
+
+        <!-- Indicateurs PIN -->
+        <div style="display:flex;gap:12px;margin-bottom:20px;justify-content:center" id="qr-pin-dots">
+          <div class="pin-dot" style="width:52px;height:52px;border-radius:14px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#1a2540;transition:all 0.15s"></div>
+          <div class="pin-dot" style="width:52px;height:52px;border-radius:14px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#1a2540;transition:all 0.15s"></div>
+          <div class="pin-dot" style="width:52px;height:52px;border-radius:14px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#1a2540;transition:all 0.15s"></div>
+          <div class="pin-dot" style="width:52px;height:52px;border-radius:14px;border:2px solid #e2e8f4;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#1a2540;transition:all 0.15s"></div>
+        </div>
+
         <!-- Pavé numérique -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:260px;margin:0 auto">
           <button onclick="qrPinPress('1')" class="pin-key">1</button>
           <button onclick="qrPinPress('2')" class="pin-key">2</button>
           <button onclick="qrPinPress('3')" class="pin-key">3</button>
@@ -1382,39 +1398,53 @@ table input:focus { border-color: var(--accent); }
           <button onclick="qrPinPress('7')" class="pin-key">7</button>
           <button onclick="qrPinPress('8')" class="pin-key">8</button>
           <button onclick="qrPinPress('9')" class="pin-key">9</button>
-          <button onclick="qrPinPress('C')" class="pin-key" style="color:#f76f6f">✕</button>
+          <button onclick="qrPinPress('C')" class="pin-key" style="color:#ef4444;font-size:14px">✕ Effacer</button>
           <button onclick="qrPinPress('0')" class="pin-key">0</button>
-          <button onclick="qrPinPress('⌫')" class="pin-key" style="color:#6b7fa8">⌫</button>
+          <button onclick="qrPinPress('⌫')" class="pin-key" style="font-size:18px">⌫</button>
         </div>
-        <div id="qr-pin-error" style="color:#f76f6f;font-size:12px;margin-top:8px;display:none">Code PIN incorrect — votre PIN = chiffres de votre numéro de poste</div>
-        <div id="qr-pin-new-info" style="color:#38bdf8;font-size:11px;margin-top:8px;display:none">Connexion réussie ✓</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:10px">💡 Agents : PIN = numéro de votre poste (ex: AS<strong>282</strong> → <strong>282</strong>)<br>Vacataires : PIN défini par le cadre</div>
+
+        <!-- Messages -->
+        <div id="qr-pin-error" style="display:none;margin-top:14px;padding:10px 14px;background:#fef2f2;border-radius:10px;border-left:3px solid #ef4444">
+          <div style="color:#ef4444;font-size:12px;font-weight:600">❌ Code PIN incorrect</div>
+          <div style="color:#6b7fa8;font-size:11px;margin-top:3px">PIN = numéro de poste sur 4 chiffres<br>Ex: AS282 → <strong>0282</strong> · AS55 → <strong>0055</strong></div>
+        </div>
+        <div id="qr-pin-new-info" style="display:none;margin-top:14px;padding:10px 14px;background:#f0fdf4;border-radius:10px;border-left:3px solid #22c55e">
+          <div style="color:#16a34a;font-size:12px;font-weight:600">✅ Connexion réussie</div>
+        </div>
+
+        <!-- Aide discrète -->
+        <div style="margin-top:16px;padding:10px 12px;background:#f8fafc;border-radius:10px;font-size:11px;color:#94a3b8;line-height:1.5">
+          💡 <strong>Agents</strong> : PIN = chiffres du numéro de poste sur 4 digits<br>
+          💡 <strong>Vacataires</strong> : PIN défini par le cadre de santé
+        </div>
       </div>
 
-      <!-- Sélection nom (visible après PIN OK) -->
-      <div id="qr-name-section" style="display:none;background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-        <div style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">👤 MON NOM</div>
-        <!-- Filtres spécialité -->
-        <div id="qr-spec-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-        <!-- Dropdown nom -->
-        <select id="qr-agent-select" onchange="qrSelectAgent(this.value)" style="width:100%;padding:14px 16px;border-radius:12px;border:1.5px solid #e2e8f4;background:#f8fafc;font-family:'DM Sans',sans-serif;font-size:15px;color:#1a2540;outline:none;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22><path fill=%22%236b7fa8%22 d=%22M7 10l5 5 5-5z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center">
-          <option value="">— Sélectionner mon nom —</option>
-        </select>
+      <!-- Card sélection nom (apparaît après PIN OK) -->
+      <div id="qr-name-section" style="display:none;background:#fff;border-radius:20px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,0.07)">
+        <div style="font-size:12px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:6px">
+          <span style="width:24px;height:24px;background:#eff6ff;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px">👤</span>
+          Sélectionner mon nom
+        </div>
+        <!-- Filtres spécialité — générés dynamiquement -->
+        <div id="qr-spec-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+        <!-- Liste agents cliquables -->
+        <div id="qr-agents-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto"></div>
       </div>
+
     </div>
   </div>
 
   <!-- ÉCRAN 2 : Planning agent -->
-  <div id="qr-screen-planning" style="display:none;min-height:100vh;background:#0f1117">
+  <div id="qr-screen-planning" style="display:none;min-height:100vh;background:#0f1117;max-width:440px;margin:0 auto">
+
     <!-- Header -->
-    <div style="background:#0f1827;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e3050">
-      <button onclick="qrBack()" style="background:#162035;border:1px solid #1e3050;color:#94a3b8;border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">◀</button>
-      <div style="flex:1">
-        <div id="qr-plan-name" style="font-size:16px;font-weight:800;color:#e8ecf4"></div>
-        <div id="qr-plan-info" style="font-size:11px;color:#8892aa"></div>
+    <div style="background:linear-gradient(135deg,#0f1827,#1d3a6e);padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e3050">
+      <button onclick="qrBack()" style="background:#1e2d4a;border:1px solid #1e3050;color:#7dd3fc;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">◀</button>
+      <div style="flex:1;min-width:0">
+        <div id="qr-plan-name" style="font-size:16px;font-weight:800;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="qr-plan-info" style="font-size:11px;color:#7dd3fc;margin-top:1px"></div>
       </div>
-      <!-- Horizon selector -->
-      <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#162035;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none">
+      <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;flex-shrink:0">
         <option value="1">1 mois</option>
         <option value="2">2 mois</option>
         <option value="3" selected>3 mois</option>
@@ -1423,51 +1453,66 @@ table input:focus { border-color: var(--accent); }
       </select>
     </div>
 
-    <!-- Compteurs globaux -->
-    <div id="qr-counters" style="display:flex;gap:0;border-bottom:1px solid #1e3050"></div>
+    <!-- Compteurs -->
+    <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
 
-    <!-- Navigation semaines -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
-      <button onclick="qrNavWeek(-1)" style="background:#162035;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer">◀</button>
+    <!-- Navigation semaine -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
+      <button onclick="qrNavWeek(-1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">◀</button>
       <div style="text-align:center">
-        <div id="qr-week-label" style="font-size:14px;font-weight:700;color:#38bdf8"></div>
-        <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8"></div>
+        <div id="qr-week-label" style="font-size:15px;font-weight:800;color:#38bdf8"></div>
+        <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8;margin-top:1px"></div>
       </div>
-      <button onclick="qrNavWeek(1)" style="background:#162035;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;width:36px;height:36px;font-size:16px;cursor:pointer">▶</button>
+      <button onclick="qrNavWeek(1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
     </div>
 
-    <!-- Semaines planning -->
-    <div id="qr-weeks-container" style="padding:12px 16px;overflow-y:auto"></div>
+    <!-- Contenu semaine -->
+    <div id="qr-weeks-container" style="padding:12px 16px;padding-bottom:80px;overflow-y:auto"></div>
 
     <!-- Onglets bas -->
-    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex">
-      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:12px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8">📅 Planning</button>
-      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:12px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent">✅ Dispos</button>
+    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex;z-index:100">
+      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:13px 8px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:16px">📅</span>Planning
+      </button>
+      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:13px 8px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:16px">✅</span>Dispos
+      </button>
     </div>
 
     <!-- TAB DISPOS -->
     <div id="qr-tab-dispos-content" style="display:none;padding:12px 16px 80px">
-      <div style="font-size:11px;color:#6b7fa8;margin-bottom:12px">Indique tes disponibilités pour les 14 prochains jours</div>
+      <div style="font-size:12px;color:#6b7fa8;margin-bottom:14px;padding:10px 14px;background:#161b27;border-radius:10px">
+        Appuie sur un créneau pour indiquer ta disponibilité sur les 14 prochains jours
+      </div>
       <div id="qr-dispo-form"></div>
-      <button onclick="saveQRDispos()" style="width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">✓ Confirmer mes disponibilités</button>
-      <div id="qr-save-status" style="margin-top:10px;text-align:center;font-size:12px;color:#38d9a9;display:none">✅ Enregistré !</div>
+      <button onclick="saveQRDispos()" style="width:100%;margin-top:16px;padding:16px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(56,189,248,0.3)">
+        ✓ Confirmer mes disponibilités
+      </button>
+      <div id="qr-save-status" style="margin-top:12px;text-align:center;font-size:13px;color:#38d9a9;display:none;font-weight:600">✅ Disponibilités enregistrées !</div>
     </div>
   </div>
 </div>
 
 <style>
 .pin-key {
-  padding:12px;border-radius:10px;border:1.5px solid #e2e8f4;background:#f8fafc;
-  font-size:18px;font-weight:700;color:#1a2540;cursor:pointer;font-family:'DM Sans',sans-serif;
-  transition:all 0.1s;-webkit-tap-highlight-color:transparent;
+  padding:14px 8px;border-radius:12px;border:1.5px solid #e2e8f4;background:#f8fafc;
+  font-size:20px;font-weight:700;color:#1a2540;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.1s;-webkit-tap-highlight-color:transparent;text-align:center;
 }
-.pin-key:active { background:#dbeafe;border-color:#93c5fd; }
+.pin-key:active { background:#dbeafe;border-color:#93c5fd;transform:scale(0.95); }
 .qr-spec-btn {
-  padding:6px 14px;border-radius:20px;border:1.5px solid #e2e8f4;background:#f8fafc;
+  padding:7px 16px;border-radius:20px;border:1.5px solid #e2e8f4;background:#f8fafc;
   font-size:12px;font-weight:600;color:#6b7fa8;cursor:pointer;font-family:'DM Sans',sans-serif;
-  transition:all 0.15s;
+  transition:all 0.15s;-webkit-tap-highlight-color:transparent;
 }
 .qr-spec-btn.active { background:#1d4ed8;color:#fff;border-color:#1d4ed8; }
+.qr-agent-btn {
+  display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;
+  border:1.5px solid #f1f5f9;background:#f8fafc;cursor:pointer;
+  font-family:'DM Sans',sans-serif;text-align:left;width:100%;
+  transition:all 0.15s;-webkit-tap-highlight-color:transparent;
+}
+.qr-agent-btn:active { background:#eff6ff;border-color:#93c5fd;transform:scale(0.98); }
 </style>
 
 <!-- ========== MODALS ========== -->
@@ -4205,19 +4250,52 @@ function qrPopulateAgentSelect(etab, specFilter) {
     });
   }
 
-  var sel = document.getElementById('qr-agent-select');
-  if (!sel) return;
+  // Liste agents cliquables
+  var listEl = document.getElementById('qr-agents-list');
+  if (!listEl) return;
   var agents = etab.agents.filter(function(a) { return a.actif; });
   if (specFilter) agents = agents.filter(function(a) { return a.spec === specFilter; });
   agents.sort(function(a, b) { return a.nom.localeCompare(b.nom, 'fr'); });
-  sel.innerHTML = '<option value="">— Selectionner mon nom —</option>';
+
+  listEl.innerHTML = '';
   agents.forEach(function(a) {
-    var opt = document.createElement('option');
-    opt.value = a.id;
-    opt.textContent = a.nom + ' ' + (a.prenom || '');
-    if (a.id === _qrAgentId) opt.selected = true;
-    sel.appendChild(opt);
+    var btn = document.createElement('button');
+    btn.className = 'qr-agent-btn';
+    var specColors = { AS:'#1d4ed8', IDE:'#059669', AMP:'#d97706', ASH:'#7c3aed' };
+    var col = specColors[a.spec] || '#6b7fa8';
+    var initials = ((a.prenom||'')[0]||'') + ((a.nom||'')[0]||'');
+    btn.innerHTML =
+      '<div style="width:40px;height:40px;border-radius:10px;background:' + col + '20;color:' + col + ';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">' + initials + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:14px;font-weight:700;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (a.prenom||'') + ' ' + a.nom + '</div>' +
+        '<div style="font-size:11px;color:#6b7fa8;margin-top:1px">' + a.spec + ' · ' + a.taux + '%' + (a.ligneRoulement ? ' · ' + a.ligneRoulement : '') + '</div>' +
+      '</div>' +
+      '<div style="color:#94a3b8;font-size:18px">›</div>';
+    (function(agId) { btn.onclick = function() { qrSelectAgent(agId); }; })(a.id);
+    listEl.appendChild(btn);
   });
+
+  // Ajouter vacataires si pas de filtre spec ou si pertinent
+  if (!specFilter) {
+    var vacs = (etab.vacataires || []).filter(function(v) { return v.pin; });
+    if (vacs.length > 0) {
+      var sep = document.createElement('div');
+      sep.style.cssText = 'font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-top:8px;margin-bottom:6px;padding:0 4px';
+      sep.textContent = 'Vacataires';
+      listEl.appendChild(sep);
+      vacs.forEach(function(v) {
+        var btn = document.createElement('button');
+        btn.className = 'qr-agent-btn';
+        btn.innerHTML =
+          '<div style="width:40px;height:40px;border-radius:10px;background:#f59e0b20;color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">' + ((v.prenom||'')[0]||'') + ((v.nom||'')[0]||'') + '</div>' +
+          '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#1a2540">' + (v.prenom||'') + ' ' + v.nom + '</div>' +
+          '<div style="font-size:11px;color:#6b7fa8">' + (v.spec||'Vacataire') + '</div></div>' +
+          '<div style="color:#94a3b8;font-size:18px">›</div>';
+        (function(vId) { btn.onclick = function() { qrSelectAgent(vId); }; })(v.id);
+        listEl.appendChild(btn);
+      });
+    }
+  }
 }
 
 function qrFilterSpec(spec) {
@@ -4258,22 +4336,21 @@ function validateQrPin(etab) {
   var errEl = document.getElementById('qr-pin-error');
   var newInfo = document.getElementById('qr-pin-new-info');
 
-  // PIN = numéro de poste de l'agent (ex: AS282 → "282" ou "AS282")
-  // Chercher d'abord parmi les agents, puis les vacataires
+  // PIN = numéro de poste padé à 4 chiffres (ex: AS282 → "0282", AS55 → "0055")
   var matchAgent = null;
   var matchType = null;
 
-  // Chercher agent dont le numéro de poste correspond
   etab.agents.filter(function(a){ return a.actif; }).forEach(function(a) {
-    var posteNum = (a.id || '').replace(/[^0-9]/g, ''); // ex: AS282 → "282"
-    if (_qrPinBuffer === posteNum || _qrPinBuffer === a.id) {
+    var posteNum = (a.id || '').replace(/[^0-9]/g, '');
+    var pin4 = posteNum.padStart(4, '0');
+    if (_qrPinBuffer === pin4 || _qrPinBuffer === posteNum) {
       matchAgent = a; matchType = 'agent';
     }
   });
 
   // Chercher vacataire avec PIN défini
   (etab.vacataires || []).forEach(function(v) {
-    if (v.pin && _qrPinBuffer === v.pin) {
+    if (v.pin && (_qrPinBuffer === v.pin || _qrPinBuffer === v.pin.padStart(4,'0'))) {
       matchAgent = v; matchType = 'vacataire';
     }
   });
