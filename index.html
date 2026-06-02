@@ -2474,19 +2474,18 @@ function renderPlanning() {
       const rowColorSombre = rawTxt ? (rawTxt.startsWith('#') ? rawTxt : '#'+rawTxt) : (rawBg ? (rawBg.startsWith('#') ? rawBg : '#'+rawBg) : '#888');
 
       const isFixe = !!agent.secteurFixe;
-      // Couleur secteur pour fond de ligne (comme la référence)
-      const _rgb = (() => { try { const h=sectColor.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; } catch(e){return[100,116,128];} })();
-      const rowBgLine = `rgba(${_rgb[0]},${_rgb[1]},${_rgb[2]},0.10)`;
-      const cellStyle = 'background:' + rowBgLine + ';border-left:3px solid ' + sectColor + ';border-right:1px solid var(--border)';
+      const isLight = document.body.classList.contains('light') || document.documentElement.classList.contains('light');
+      const rowStyle = isLight ? '' : '';
+      const cellStyle = 'background:var(--bg2);border-left:3px solid ' + sectColor + ';border-right:1px solid var(--border)';
 
-      html += '<tr style="background:' + rowBgLine + '">' +
+      html += '<tr>' +
         // Colonne Poste
         '<td class="agent-cell" style="' + cellStyle + ';text-align:center;vertical-align:middle">' +
           (isFixe ? '<span class="agent-fixe-badge" title="Poste fixe">★</span><br>' : '') +
           '<span style="font-size:10px;font-weight:700;color:var(--text2)">' + (agent.id||'') + '</span>' +
         '</td>' +
         // Colonne Nom+Info
-        '<td class="agent-cell-poste" style="background:' + rowBgLine + ';border-right:1px solid var(--border)">' +
+        '<td class="agent-cell-poste" style="background:var(--bg2);border-right:1px solid var(--border)">' +
           '<div style="font-weight:700;font-size:12px;color:var(--text)">' + (agent.prenom||'') + ' ' + agent.nom + '</div>' +
           '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + agent.spec + ' · ' + agent.taux + '%' +
             (agent.posteNomme ? ' · <span style="color:var(--accent2)">' + agent.posteNomme + '</span>' : '') +
@@ -2508,35 +2507,39 @@ function renderPlanning() {
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
         const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'].includes(shift);
 
-        // Couleur secteur du jour (comme la référence)
-        const scColor = sectColor; // couleur hex du secteur
-        const hexToRgb = (hex) => {
-          const h = hex.replace('#','');
-          return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+        // Couleurs fixes par code horaire (style référence — fond pastel fort, texte foncé)
+        const horPalette = {
+          'M':  { cell: '#dbeafe', badge: '#1d4ed8', border: '#93c5fd' },
+          'S':  { cell: '#ede9fe', badge: '#6d28d9', border: '#c4b5fd' },
+          'J':  { cell: '#d1fae5', badge: '#065f46', border: '#6ee7b7' },
+          'NU': { cell: '#1e293b', badge: '#7dd3fc', border: '#0369a1' },
+          'N':  { cell: '#1e293b', badge: '#7dd3fc', border: '#0369a1' },
         };
-        let rgb;
-        try { rgb = hexToRgb(scColor); } catch(e) { rgb = [100,116,128]; }
-        const rowBg   = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.13)`;
-        const fixeBg  = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
-        const sectBorder = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.45)`;
+        const isLight = document.body.classList.contains('light') || document.documentElement.classList.contains('light');
 
         let cellBg, badgeStyle;
 
-        if (isTravail) {
-          cellBg = isFixe ? fixeBg : rowBg;
-          badgeStyle = `background:transparent;color:${scColor};font-weight:800;border:1px solid ${sectBorder}`;
+        if (isTravail && horPalette[shift]) {
+          const pal = horPalette[shift];
+          if (isLight) {
+            cellBg = pal.cell;
+            badgeStyle = 'background:' + pal.cell + ';color:' + pal.badge + ';font-weight:800;border:1.5px solid ' + pal.border;
+          } else {
+            // Mode sombre : fond coloré semi-transparent, texte vif
+            const horColor = hor ? hor.couleur : pal.badge;
+            cellBg = horColor + '30';
+            badgeStyle = 'background:' + horColor + '20;color:' + horColor + ';font-weight:900;border:1px solid ' + horColor + '80';
+          }
         } else if (isAbsence) {
           const horColor = hor ? hor.couleur : '#f76f6f';
-          cellBg = isWE ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.06)` : rowBg;
-          badgeStyle = `background:${horColor}22;color:${horColor};font-weight:800;border:1px solid ${horColor}50`;
+          cellBg = isLight ? horColor + '15' : horColor + '18';
+          badgeStyle = 'background:' + horColor + '22;color:' + horColor + ';font-weight:800;border:1px solid ' + horColor + '50';
         } else {
           // Repos / vide
-          cellBg = isWE ? '#eef0f5' : '#f4f6fb';
-          const isLight = document.body.classList.contains('light') || document.documentElement.classList.contains('light');
-          if (!isLight) {
-            cellBg = isWE ? 'rgba(247,169,79,0.04)' : 'transparent';
-          }
-          badgeStyle = 'background:transparent;border-color:transparent;color:#c0c8da';
+          cellBg = isWE
+            ? (isLight ? '#f1f5f9' : 'rgba(247,169,79,0.04)')
+            : (isLight ? '#f8fafc' : 'transparent');
+          badgeStyle = isLight ? 'color:#94a3b8;font-weight:600' : 'color:rgba(255,255,255,0.2)';
         }
 
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
