@@ -2408,18 +2408,19 @@ function renderPlanning() {
       const rowColorSombre = rawTxt ? (rawTxt.startsWith('#') ? rawTxt : '#'+rawTxt) : (rawBg ? (rawBg.startsWith('#') ? rawBg : '#'+rawBg) : '#888');
 
       const isFixe = !!agent.secteurFixe;
-      const rowStyle = 'background:' + rowBgColor + '28;border-left:3px solid ' + sectColor;
-      const cellStyle = 'background:' + rowBgColor + '35;border-left:3px solid ' + sectColor + ';border-right:1px solid var(--border)';
+      const isLight = document.body.classList.contains('light') || document.documentElement.classList.contains('light');
+      const rowStyle = isLight ? '' : '';
+      const cellStyle = 'background:var(--bg2);border-left:3px solid ' + sectColor + ';border-right:1px solid var(--border)';
 
-      html += '<tr style="' + rowStyle + '">' +
-        // Colonne Poste (N° + icône fixe si applicable)
+      html += '<tr>' +
+        // Colonne Poste
         '<td class="agent-cell" style="' + cellStyle + ';text-align:center;vertical-align:middle">' +
           (isFixe ? '<span class="agent-fixe-badge" title="Poste fixe">★</span><br>' : '') +
           '<span style="font-size:10px;font-weight:700;color:var(--text2)">' + (agent.id||'') + '</span>' +
         '</td>' +
         // Colonne Nom+Info
-        '<td class="agent-cell-poste" style="background:' + rowBgColor + '28;border-right:1px solid var(--border)">' +
-          '<div style="font-weight:700;font-size:12px;color:var(--text)">' + agent.nom + ' ' + (agent.prenom||'') + '</div>' +
+        '<td class="agent-cell-poste" style="background:var(--bg2);border-right:1px solid var(--border)">' +
+          '<div style="font-weight:700;font-size:12px;color:var(--text)">' + (agent.prenom||'') + ' ' + agent.nom + '</div>' +
           '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + agent.spec + ' · ' + agent.taux + '%' +
             (agent.posteNomme ? ' · <span style="color:var(--accent2)">' + agent.posteNomme + '</span>' : '') +
           '</div>' +
@@ -2437,36 +2438,44 @@ function renderPlanning() {
                         date.getFullYear() === new Date().getFullYear();
         const shift = agPlan[d] || '';
         const hor = etab.horaires.find(h => h.code === shift);
-        const horColor = hor ? hor.couleur : '';
-
-        // Couleur du jour : suit le bloc (peut différer du secteur du mois en début de mois)
-        const _sectIdJ  = getSecteurDuJour(agent, currentYear, currentMonth, d, etab);
-        const _sectObjJ = etab.secteurs.find(s => s.id === _sectIdJ) || sectObj;
-        const _rawTxtJ2 = _sectObjJ ? (_sectObjJ.couleurTexte
-          ? (_sectObjJ.couleurTexte.startsWith('#')?_sectObjJ.couleurTexte:'#'+_sectObjJ.couleurTexte)
-          : (_sectObjJ.couleur ? (_sectObjJ.couleur.startsWith('#')?_sectObjJ.couleur:'#'+_sectObjJ.couleur) : '#888'))
-          : rowColorSombre;
-        const _rawTxtJ = _rawTxtJ2;
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
-        const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP'].includes(shift);
+        const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'].includes(shift);
 
-        // Couleur du badge = couleur de l'HORAIRE (M=bleu, S=orange, J=vert)
-        const badgeColor   = horColor || (isTravail ? sectColor : isAbsence ? '#f76f6f' : 'var(--text3)');
-        const badgeBgColor = isTravail ? badgeColor + '25'
-                           : isAbsence ? badgeColor + '20'
-                           : 'transparent';
+        // Couleurs fixes par code horaire (style référence — fond pastel fort, texte foncé)
+        const horPalette = {
+          'M':  { cell: '#dbeafe', badge: '#1d4ed8', border: '#93c5fd' },
+          'S':  { cell: '#ede9fe', badge: '#6d28d9', border: '#c4b5fd' },
+          'J':  { cell: '#d1fae5', badge: '#065f46', border: '#6ee7b7' },
+          'NU': { cell: '#1e293b', badge: '#7dd3fc', border: '#0369a1' },
+          'N':  { cell: '#1e293b', badge: '#7dd3fc', border: '#0369a1' },
+        };
+        const isLight = document.body.classList.contains('light') || document.documentElement.classList.contains('light');
 
-        // Badge : fond blanc/sombre semi-transparent pour contraste max
-        const shiftStyle = isTravail
-          ? 'style="background:rgba(255,255,255,0.18);color:' + badgeColor + ';font-weight:900;border:1px solid ' + badgeColor + '80;text-shadow:0 1px 2px rgba(0,0,0,0.3)"'
-          : isAbsence
-            ? 'style="background:' + badgeColor + '25;color:' + badgeColor + ';font-weight:800;border:1px solid ' + badgeColor + '50"'
-            : 'style="color:rgba(255,255,255,0.2)"';
+        let cellBg, badgeStyle;
 
-        // Fond cellule = couleur secteur DU JOUR (change au bon moment)
-        const cellBg = isTravail
-          ? _rawTxtJ + '40'
-          : isWE ? _rawTxtJ + '12' : _rawTxtJ + '08';
+        if (isTravail && horPalette[shift]) {
+          const pal = horPalette[shift];
+          if (isLight) {
+            cellBg = pal.cell;
+            badgeStyle = 'background:' + pal.cell + ';color:' + pal.badge + ';font-weight:800;border:1.5px solid ' + pal.border;
+          } else {
+            // Mode sombre : fond coloré semi-transparent, texte vif
+            const horColor = hor ? hor.couleur : pal.badge;
+            cellBg = horColor + '30';
+            badgeStyle = 'background:' + horColor + '20;color:' + horColor + ';font-weight:900;border:1px solid ' + horColor + '80';
+          }
+        } else if (isAbsence) {
+          const horColor = hor ? hor.couleur : '#f76f6f';
+          cellBg = isLight ? horColor + '15' : horColor + '18';
+          badgeStyle = 'background:' + horColor + '22;color:' + horColor + ';font-weight:800;border:1px solid ' + horColor + '50';
+        } else {
+          // Repos / vide
+          cellBg = isWE
+            ? (isLight ? '#f1f5f9' : 'rgba(247,169,79,0.04)')
+            : (isLight ? '#f8fafc' : 'transparent');
+          badgeStyle = isLight ? 'color:#94a3b8;font-weight:600' : 'color:rgba(255,255,255,0.2)';
+        }
+
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + '"' +
@@ -2474,8 +2483,8 @@ function renderPlanning() {
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift
-            ? '<span class="shift-badge" ' + shiftStyle + '>' + shift + '</span>'
-            : '<span style="color:var(--text3);font-size:10px;opacity:0.2">·</span>') +
+            ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>'
+            : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>') +
           '</td>';
       }
       html += '</tr>';
@@ -2774,7 +2783,9 @@ function openShiftPicker(agentId, day) {
   }
 
   // === HORAIRES DE TRAVAIL ===
-  const travailCodes = etab.horaires.filter(h => h.comptage === 'travail' && !h.code.startsWith('HS'));
+  const travailCodes = etab.horaires.filter(h => 
+    h.comptage === 'travail' || ['M','S','J','NU','N'].includes(h.code)
+  ).filter(h => !h.code.startsWith('HS'));
   const travailBtns = document.getElementById('shift-travail-btns');
   travailBtns.innerHTML = travailCodes.map(h => {
     const isActive = currentShift === h.code;
@@ -2817,9 +2828,8 @@ function openShiftPicker(agentId, day) {
 
   // === ABSENCES ===
   const absenceCodes = etab.horaires.filter(h =>
-    ['absent','repos'].includes(h.comptage) && !h.isConge && h.code !== 'R' ||
-    ['MO','EM','AT','FO','GR','R','RC'].includes(h.code)
-  );
+    ['absent','repos'].includes(h.comptage) || ['MO','EM','AT','FO','GR','R','RC'].includes(h.code)
+  ).filter(h => !h.isConge && !['CA','CF'].includes(h.code));
   const absenceBtns = document.getElementById('shift-absence-btns');
   absenceBtns.innerHTML = absenceCodes.map(h => {
     const isActive = currentShift === h.code;
