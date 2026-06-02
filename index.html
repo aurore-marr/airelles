@@ -2151,6 +2151,9 @@ function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
 
+  // Auto-générer si mois vide
+  autoFillIfEmpty();
+
   document.getElementById('month-label').textContent = getMonthLabel();
   document.getElementById('month-label-2').textContent = getMonthLabel();
 
@@ -2492,8 +2495,63 @@ function changeMonth(delta) {
   currentMonth += delta;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  // Auto-générer le mois s'il est vide et qu'on a un roulement
+  autoFillIfEmpty();
   renderPlanning();
   renderComptage();
+}
+
+function autoFillIfEmpty() {
+  const etab = getEtab();
+  if (!etab || !etab.roulement || Object.keys(etab.roulement).length === 0) return;
+
+  // Vérifier si le mois courant a des données
+  const planMonth = ((etab.planning||{})[currentYear]||{})[currentMonth] || {};
+  const hasData = etab.agents.filter(a=>a.actif).some(a =>
+    Object.keys(planMonth[a.id]||{}).length > 0
+  );
+  if (hasData) return; // déjà rempli
+
+  // Générer silencieusement
+  if (!etab.planning) etab.planning = {};
+  if (!etab.planning[currentYear]) etab.planning[currentYear] = {};
+  if (!etab.planning[currentYear][currentMonth]) etab.planning[currentYear][currentMonth] = {};
+  if (!etab.rotationSectorielle) etab.rotationSectorielle = {};
+  if (!etab.rotationSectorielle[currentYear]) etab.rotationSectorielle[currentYear] = {};
+  if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
+
+  const planM   = etab.planning[currentYear][currentMonth];
+  const refDate = new Date(etab.config.refDate || '2020-11-23');
+  const cycleLen = etab.config.cycleLen || 42;
+  const daysInM  = new Date(currentYear, currentMonth+1, 0).getDate();
+
+  initOrdreRotation(etab);
+
+  etab.agents.filter(a => a.actif).forEach(function(agent) {
+    const res  = getRoulementEffectif(agent, currentYear, currentMonth, etab);
+    const roul = res.roulement;
+    etab.rotationSectorielle[currentYear][currentMonth][agent.id] = res.secteur;
+    if (!roul) return;
+    if (!planM[agent.id]) planM[agent.id] = {};
+    const off = agent.rotOffset || 0;
+    for (let d = 1; d <= daysInM; d++) {
+      const dt   = new Date(currentYear, currentMonth, d);
+      const diff = Math.floor((
+        Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()) -
+        Date.UTC(refDate.getFullYear(), refDate.getMonth(), refDate.getDate())
+      ) / 86400000);
+      const pos = (((diff + off) % cycleLen) + cycleLen) % cycleLen;
+      let sh = roul[pos] || 'R';
+      const dow = (dt.getDay() + 6) % 7;
+      if ((agent.joursOff||[]).includes(dow)) sh = 'R';
+      if ((agent.exclusHoraires||[]).includes(sh)) {
+        const alts = ['M','S','J','NU'].filter(c=>!(agent.exclusHoraires||[]).includes(c));
+        sh = alts[0] || 'R';
+      }
+      planM[agent.id][d] = sh;
+    }
+  });
+  saveToStorage();
 }
 
 function getMonthLabel() {
