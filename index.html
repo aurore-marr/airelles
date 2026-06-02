@@ -2309,15 +2309,6 @@ function renderPlanning() {
           '</span>' +
         '</td>';
 
-      // Calculer quand le bloc de l'agent change dans ce mois
-      // Pour la couleur de fond : suivre le bloc courant jour par jour
-      const _refDateCycle = new Date(etab.config.refDate || '2020-11-23');
-      const _cycleLen = etab.config.cycleLen || 42;
-      const _agOff = agent.rotOffset || 0;
-      const _fixesList2 = (etab.config.secteursFixesListe||['CANTOU']).map(s=>s.toUpperCase());
-      const _ordre2 = (etab.config.ordreRotation||etab.secteurs.map(s=>s.id))
-        .filter(id=>!_fixesList2.includes(id.toUpperCase()));
-
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYear, currentMonth, d);
         const dow = date.getDay();
@@ -2329,32 +2320,14 @@ function renderPlanning() {
         const hor = etab.horaires.find(h => h.code === shift);
         const horColor = hor ? hor.couleur : '';
 
-        // Secteur du JOUR (pour la couleur) — suit les blocs réels
-        let _sectJour = secteurMois; // par défaut secteur du mois
-        if (!agent.secteurFixe && _ordre2.length > 0) {
-          const _dtUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-          const _refUTC = Date.UTC(_refDateCycle.getFullYear(),_refDateCycle.getMonth(),_refDateCycle.getDate());
-          const _diff = Math.floor((_dtUTC - _refUTC) / 86400000) + _agOff;
-          const _bloc = Math.floor(_diff / _cycleLen);
-          // Secteur de départ
-          const _sd = agent.secteurDepart || _ordre2[0];
-          const _si = _ordre2.indexOf(_sd) >= 0 ? _ordre2.indexOf(_sd) : 0;
-          // Blocs depuis le départ agent
-          const _moisDep = agent.moisDepart || (new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0'));
-          const _ry = parseInt(_moisDep.split('-')[0]);
-          const _rm = parseInt(_moisDep.split('-')[1])-1;
-          const _depUTC = Date.UTC(_ry,_rm,1);
-          const _diffDep = Math.floor((_dtUTC - _depUTC) / 86400000) + _agOff;
-          const _posDepCycle = ((Math.floor((_depUTC - _refUTC)/86400000 + _agOff) % _cycleLen) + _cycleLen) % _cycleLen;
-          const _jrPremierBloc = (_cycleLen - _posDepCycle) % _cycleLen;
-          const _blocsAg = _diffDep <= _jrPremierBloc ? 0 : 1 + Math.floor((_diffDep - _jrPremierBloc) / _cycleLen);
-          const _idxJ = ((_si + _blocsAg) % _ordre2.length + _ordre2.length) % _ordre2.length;
-          _sectJour = _ordre2[_idxJ];
-        }
-        const _sectObjJ = etab.secteurs.find(s => s.id === _sectJour);
-        const _sectColorJ = _sectObjJ ? secteurCouleurCSS(_sectObjJ) : sectColor;
-        const _rawBgJ = _sectObjJ ? (_sectObjJ.couleur ? (_sectObjJ.couleur.startsWith('#')?_sectObjJ.couleur:'#'+_sectObjJ.couleur) : rawBg) : rawBg;
-        const _rawTxtJ = _sectObjJ ? (_sectObjJ.couleurTexte ? (_sectObjJ.couleurTexte.startsWith('#')?_sectObjJ.couleurTexte:'#'+_sectObjJ.couleurTexte) : _rawBgJ) : _rawBgJ;
+        // Couleur du jour : suit le bloc (peut différer du secteur du mois en début de mois)
+        const _sectIdJ  = getSecteurDuJour(agent, currentYear, currentMonth, d, etab);
+        const _sectObjJ = etab.secteurs.find(s => s.id === _sectIdJ) || sectObj;
+        const _rawTxtJ2 = _sectObjJ ? (_sectObjJ.couleurTexte
+          ? (_sectObjJ.couleurTexte.startsWith('#')?_sectObjJ.couleurTexte:'#'+_sectObjJ.couleurTexte)
+          : (_sectObjJ.couleur ? (_sectObjJ.couleur.startsWith('#')?_sectObjJ.couleur:'#'+_sectObjJ.couleur) : '#888'))
+          : rowColorSombre;
+        const _rawTxtJ = _rawTxtJ2;
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
         const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP'].includes(shift);
 
@@ -5124,77 +5097,100 @@ function calcDroitsConges(agent, planMonth, etab, year, month) {
 //   - Si le bloc 42j se termine un 1er d'un nouveau mois, le secteur
 //     ne change qu'au bloc SUIVANT (continuité de bloc)
 function getSecteurDuMois(agent, year, month, etab) {
-  // Agents fixes → toujours leur secteur
   if (agent.secteurFixe) return agent.secteurFixe;
 
   const fixesList = (etab.config.secteursFixesListe || ['CANTOU']).map(s => s.toUpperCase());
-  if (agent.secteurDepart && fixesList.includes((agent.secteurDepart||'').toUpperCase())) {
-    return agent.secteurDepart;
-  }
+  if (fixesList.includes((agent.secteurDepart||'').toUpperCase())) return agent.secteurDepart;
 
   const ordreBase = etab.config.ordreRotation ||
     etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG')).map(s => s.id);
-  const ordreRotation = ordreBase.filter(id => !fixesList.includes(id.toUpperCase()));
-  if (!ordreRotation || ordreRotation.length === 0) return null;
+  const ordre = ordreBase.filter(id => !fixesList.includes(id.toUpperCase()));
+  if (!ordre || ordre.length === 0) return null;
 
-  let secteurDepart = agent.secteurDepart;
-  if (!secteurDepart || fixesList.includes((secteurDepart||'').toUpperCase())) {
-    secteurDepart = ordreRotation[0];
-  }
-  const idxDepart = ordreRotation.indexOf(secteurDepart);
-  const startIdx  = idxDepart >= 0 ? idxDepart : 0;
+  const sd = agent.secteurDepart || ordre[0];
+  const si = ordre.indexOf(sd) >= 0 ? ordre.indexOf(sd) : 0;
 
-  // Mois de départ
-  const moisDepart = agent.moisDepart ||
+  const moisDep = agent.moisDepart ||
     (new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0'));
-  const refY = parseInt(moisDepart.split('-')[0]);
-  const refM = parseInt(moisDepart.split('-')[1]) - 1;
+  const refY = parseInt(moisDep.split('-')[0]);
+  const refM = parseInt(moisDep.split('-')[1]) - 1;
 
-  // ════ RÈGLE BLOC CHEVAL SUR 2 MOIS ════
-  // Le secteur change seulement quand un NOUVEAU bloc de 42j COMPLET commence
-  // Si le 1er du mois tombe au milieu d'un bloc → on reste sur le secteur du bloc précédent
+  // Rotation mensuelle simple : 1 mois = 1 secteur
+  const moisEcoules = (year - refY) * 12 + (month - refM);
+  const idx = ((si + moisEcoules) % ordre.length + ordre.length) % ordre.length;
+  return ordre[Math.max(0, idx)];
+}
+
+// Retourne le secteur d'un agent pour un JOUR précis
+// Règle : si le jour est encore dans le bloc du mois précédent → secteur du mois précédent
+// Retourne le secteur d'un agent pour un JOUR précis
+// Règle : si ce jour fait partie d'un bloc de shifts qui a COMMENCÉ le mois précédent
+// → on garde la couleur du secteur du mois précédent
+// Le bloc est détecté en remontant dans le cycle 42j
+function getSecteurDuJour(agent, year, month, day, etab) {
+  if (agent.secteurFixe) return agent.secteurFixe;
+
   const refDateCycle = new Date(etab.config.refDate || '2020-11-23');
   const cycleLen     = etab.config.cycleLen || 42;
-  const firstOfMonth = new Date(Date.UTC(year, month, 1));
-  const diffDays = Math.floor((
-    firstOfMonth -
-    Date.UTC(refDateCycle.getFullYear(), refDateCycle.getMonth(), refDateCycle.getDate())
-  ) / 86400000);
+  const agOff        = agent.rotOffset || 0;
+  const roulement    = etab.roulement[agent.id];
+  const codesW       = ['M','S','J','NU','N'];
 
-  // Offset de l'agent dans le cycle (pour que les blocs soient alignés sur son roulement)
-  const agOffset = agent.rotOffset || 0;
-  const diffAvecOffset = diffDays + agOffset;
+  // Position dans le cycle pour ce jour
+  const dtUTC  = Date.UTC(year, month, day);
+  const refUTC = Date.UTC(refDateCycle.getFullYear(), refDateCycle.getMonth(), refDateCycle.getDate());
+  const posJour = ((Math.floor((dtUTC - refUTC) / 86400000) + agOff) % cycleLen + cycleLen) % cycleLen;
 
-  // Position dans le cycle au 1er du mois
-  const posInCycle = ((diffAvecOffset % cycleLen) + cycleLen) % cycleLen;
+  // Shift de ce jour
+  const shiftJour = roulement ? (roulement[posJour] || 'R') : 'R';
 
-  // Nombre de blocs COMPLETS écoulés depuis le début du cycle de référence
-  // (en reculant au dernier début de bloc si on est au milieu)
-  const blocsComplets = Math.floor((diffAvecOffset) / cycleLen);
+  // Si ce jour n'est pas travaillé : secteur du mois courant
+  if (!codesW.includes(shiftJour)) {
+    return getSecteurDuMois(agent, year, month, etab);
+  }
 
-  // Le secteur est basé sur le nombre de blocs complets
-  // MAIS on doit aussi tenir compte du mois de départ de l'agent
-  // → calculer combien de blocs ont changé depuis le moisDepart de l'agent
+  // Compter combien de jours CONSÉCUTIFS avec le MÊME shift précèdent ce jour dans le cycle
+  let joursAvant = 0;
+  for (let i = 1; i < cycleLen; i++) {
+    const prevPos = (posJour - i + cycleLen) % cycleLen;
+    if (roulement && roulement[prevPos] === shiftJour) {
+      joursAvant++;
+    } else {
+      break;
+    }
+  }
 
-  // Date du début de la rotation de l'agent (moisDepart = YYYY-MM)
-  const moisDepartDate = new Date(Date.UTC(refY, refM, 1));
-  const diffDepuisDepart = Math.floor((firstOfMonth - moisDepartDate) / 86400000);
+  // Position au 1er du mois courant
+  const first1UTC = Date.UTC(year, month, 1);
+  const posAu1er  = ((Math.floor((first1UTC - refUTC) / 86400000) + agOff) % cycleLen + cycleLen) % cycleLen;
 
-  // Blocs complets depuis le départ de l'agent (en tenant compte du posInCycle au départ)
-  // → on attend que le cycle se termine pour changer de secteur
-  const posDepart = ((Math.floor((moisDepartDate - Date.UTC(refDateCycle.getFullYear(),refDateCycle.getMonth(),refDateCycle.getDate())) / 86400000 + agOffset) % cycleLen) + cycleLen) % cycleLen;
-  // Jours restants dans le premier bloc au moment du départ
-  const joursRestantsPremierBloc = (cycleLen - posDepart) % cycleLen;
-  // Blocs complets après le premier bloc partiel
-  const blocsDepuisDepart = diffDepuisDepart <= joursRestantsPremierBloc
-    ? 0  // encore dans le premier bloc
-    : 1 + Math.floor((diffDepuisDepart - joursRestantsPremierBloc) / cycleLen);
+  // Est-ce que le bloc en cours a commencé AVANT le 1er du mois ?
+  // = la position de début du bloc est après posAu1er dans le cycle (car le cycle a bouclé)
+  // OU posJour < joursAvant (le bloc commence avant le 1er calendaire)
+  const posDebutBloc = (posJour - joursAvant + cycleLen) % cycleLen;
 
-  const nbSecteurs  = ordreRotation.length;
-  const idxSecteur  = ((startIdx + blocsDepuisDepart) % nbSecteurs + nbSecteurs) % nbSecteurs;
+  // Le bloc a commencé avant le 1er du mois si :
+  // posAu1er est ENTRE posDebutBloc et posJour (dans le sens cyclique)
+  // Mais plus simplement : le jour J dans le mois - 1 = jour J "absolu"
+  // Si joursAvant >= day → le bloc a commencé le mois précédent
+  const jourDansMois = day; // 1-based
+  const blocCommenceAvant = joursAvant >= jourDansMois;
 
-  return ordreRotation[idxSecteur];
+  if (blocCommenceAvant) {
+    // Retourner le secteur du mois précédent
+    let prevMonth = month - 1, prevYear = year;
+    if (prevMonth < 0) { prevMonth = 11; prevYear--; }
+    return getSecteurDuMois(agent, prevYear, prevMonth, etab);
+  }
+
+  return getSecteurDuMois(agent, year, month, etab);
 }
+
+
+
+
+
+
 
 
 // Chaque agent garde sa propre ligne de roulement quel que soit le secteur
