@@ -74,11 +74,14 @@
 .light .toggle::after { background: #94a3b8; }
 .light .toggle.on { background: #2563eb; border-color: #2563eb; }
 .light .toggle.on::after { background: #ffffff; }
-.light .shift-M { background: rgba(37,99,235,0.15); color: #1d4ed8; }
-.light .shift-S { background: rgba(217,119,6,0.15); color: #b45309; }
-.light .shift-J { background: rgba(5,150,105,0.15); color: #047857; }
-.light .shift-N { background: rgba(124,58,237,0.15); color: #6d28d9; }
-.light .shift-R { background: rgba(148,163,184,0.15); color: #64748b; }
+/* ========== COULEURS PLANNING MODE CLAIR ========== */
+.light .shift-cell { background: transparent; }
+/* En mode clair, les cellules travaillées ont un fond coloré fort */
+.light .shift-badge-travail-M { background: rgba(37,99,235,0.18) !important; color: #1d4ed8 !important; border: 1px solid rgba(37,99,235,0.4) !important; }
+.light .shift-badge-travail-S { background: rgba(217,119,6,0.18) !important; color: #b45309 !important; border: 1px solid rgba(217,119,6,0.4) !important; }
+.light .shift-badge-travail-J { background: rgba(5,150,105,0.18) !important; color: #047857 !important; border: 1px solid rgba(5,150,105,0.4) !important; }
+.light .shift-badge-travail-NU { background: rgba(124,58,237,0.18) !important; color: #6d28d9 !important; border: 1px solid rgba(124,58,237,0.4) !important; }
+
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 *, *::before, *::after { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease; }
@@ -796,6 +799,7 @@ table input:focus { border-color: var(--accent); }
       <div class="nav-item" onclick="toggleTheme()" id="theme-toggle-btn">
         <span class="icon" id="theme-icon">☀️</span><span id="theme-label">Mode clair</span>
       </div>
+      <div id="session-timer" style="font-size:11px;color:var(--text3);padding:4px 12px;text-align:center;font-family:'DM Mono',monospace">🕐 8h00</div>
       <div class="nav-item" onclick="doLogout()">
         <span class="icon">🚪</span><span>Déconnexion</span>
       </div>
@@ -1366,16 +1370,81 @@ table input:focus { border-color: var(--accent); }
 
 <!-- Shift picker -->
 <div class="modal-backdrop" id="modal-shift">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="shift-modal-title">Modifier le poste</span>
-      <button class="modal-close" onclick="closeModal('modal-shift')">✕</button>
+  <div class="modal" style="max-width:520px;background:#0f1117;color:#e8ecf4;border:1px solid #2a3350">
+    <div class="modal-header" style="border-bottom:1px solid #2a3350">
+      <span class="modal-title" id="shift-modal-title" style="color:#e8ecf4">Modifier le poste</span>
+      <button class="modal-close" onclick="closeModal('modal-shift')" style="color:#8892aa">✕</button>
     </div>
-    <p class="text-muted text-sm mb-3" id="shift-modal-info"></p>
-    <div class="shift-picker" id="shift-picker-grid"></div>
+    <p style="color:#8892aa;font-size:12px;margin-bottom:12px" id="shift-modal-info"></p>
+
+    <!-- SECTEUR CE JOUR -->
+    <div id="shift-secteur-section" style="margin-bottom:16px;display:none">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Secteur ce jour</div>
+      <div id="shift-secteur-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- HORAIRES DE TRAVAIL -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🕐 Horaires de travail</div>
+      <div id="shift-travail-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- JOUR DE REPOS TRAVAILLÉ (HS) -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚡ Jour de repos travaillé (HS)</div>
+      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">L'agent vient travailler sur son jour de repos.</div>
+      <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- MODIFICATEUR HORAIRE -->
+    <div style="margin-bottom:16px" id="shift-modificateur-section">
+      <div style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚡ Modificateur horaire</div>
+      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">Sur un jour travaillé normal — ajuste les heures comptées.</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div id="shift-mod-hs-wrap">
+          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:left;padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
+            <span>⚡</span> HEURES SUP
+          </button>
+          <div id="hs-hours-input" style="display:none;margin-top:6px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+            <div style="font-size:11px;color:#8892aa;margin-bottom:6px">Dans quel horaire ?</div>
+            <div id="hs-horaire-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:12px;color:#8892aa">Heures sup :</span>
+              <input type="number" id="hs-nb-heures" min="0.5" max="12" step="0.5" value="1"
+                style="width:70px;background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+              <span style="font-size:12px;color:#8892aa">heure(s) en plus</span>
+            </div>
+          </div>
+        </div>
+        <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+          <span>🏃</span> Départ anticipé
+        </button>
+        <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+          <span>⏰</span> Retard
+        </button>
+        <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">
+          ✓ AUCUN MODIFICATEUR
+        </button>
+      </div>
+    </div>
+
+    <!-- CONGÉS & DROITS -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Droits</div>
+      <div id="shift-conge-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- ABSENCES -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏥 Absences</div>
+      <div id="shift-absence-btns" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+
     <div class="flex gap-2 mt-4">
-      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-shift')">Annuler</button>
-      <button class="btn btn-primary" style="flex:1" onclick="applyShift()">Appliquer</button>
+      <button class="btn btn-danger btn-sm" onclick="clearShiftDay()" style="background:#1e2538;color:#f76f6f;border:1px solid #f76f6f44">— Effacer ce jour —</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary" onclick="closeModal('modal-shift')" style="background:#1e2538;border-color:#2a3350;color:#8892aa">✕ Fermer</button>
+      <button class="btn btn-primary" onclick="applyShift()" style="background:linear-gradient(135deg,#4f8ef7,#38d9a9);color:#fff;border:none;font-weight:700">✓ Valider</button>
     </div>
   </div>
 </div>
@@ -1849,7 +1918,57 @@ function doLogin() {
   document.getElementById('sb-etab-name').textContent = etab.nom;
   document.getElementById('sb-user-name').textContent = login.nom;
 
+  startSessionTimer();
   initApp();
+}
+
+// ============================================================
+// SESSION TIMEOUT — 8 heures
+// ============================================================
+let _sessionTimer = null;
+const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8h en ms
+let _sessionStart = null;
+let _sessionWarningShown = false;
+
+function startSessionTimer() {
+  clearTimeout(_sessionTimer);
+  _sessionStart = Date.now();
+  _sessionWarningShown = false;
+  // Vérifier toutes les minutes
+  _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
+}
+
+function checkSessionTimeout() {
+  if (!DB.currentUser) { clearInterval(_sessionTimer); return; }
+  const elapsed = Date.now() - _sessionStart;
+  const remaining = SESSION_DURATION - elapsed;
+
+  if (remaining <= 0) {
+    clearInterval(_sessionTimer);
+    showToast('Session expirée — déconnexion automatique', 'warning');
+    setTimeout(() => doLogout(), 2000);
+    return;
+  }
+  // Avertissement 15 min avant
+  if (remaining <= 15 * 60 * 1000 && !_sessionWarningShown) {
+    _sessionWarningShown = true;
+    showToast('⏳ Session expirée dans 15 minutes', 'info');
+  }
+  // Afficher le compteur dans la sidebar
+  const mins = Math.floor(remaining / 60000);
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const timerEl = document.getElementById('session-timer');
+  if (timerEl) {
+    timerEl.textContent = `🕐 ${h}h${String(m).padStart(2,'0')}`;
+    timerEl.style.color = remaining <= 15*60*1000 ? 'var(--accent3)' : 'var(--text3)';
+  }
+}
+
+function resetSessionTimer() {
+  if (_sessionStart) {
+    _sessionStart = Date.now();
+    _sessionWarningShown = false;
+  }
 }
 
 function doLogout() {
@@ -2401,8 +2520,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   const codesWork = ['M','S','J','NU','N'];
   const secteurs  = etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG'));
 
-  // Calculer pour chaque secteur, chaque jour, le nb par code horaire
-  // Structure : counts[sectId][day][code] = nb
+  // Calcul counts[sectId][day][code] = nb
   const counts = {};
   secteurs.forEach(s => { counts[s.id] = {}; });
 
@@ -2419,55 +2537,57 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     }
   });
 
-  // Récupérer les codes horaires travail présents
+  // Codes horaires présents (travail uniquement)
   const codesPrésents = etab.horaires.filter(h => codesWork.includes(h.code));
 
   let html = '<div style="overflow-x:auto;margin-top:2px">';
   html += '<table style="border-collapse:collapse;width:100%;font-size:10px">';
 
-  // En-têtes jours (partagés avec le planning — on les répète en compact)
+  // En-têtes jours
   html += '<thead><tr>';
-  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg2);padding:3px 8px;text-align:left;min-width:200px;font-size:10px;color:var(--text2);border-right:1px solid var(--border)">SECTEUR</th>';
+  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg2);padding:3px 8px;text-align:left;min-width:160px;font-size:10px;color:var(--text2);border-right:1px solid var(--border)">LIGNE</th>';
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
     const isWE = dow === 0 || dow === 6;
-    html += '<th style="text-align:center;min-width:38px;padding:2px;color:' + (isWE?'var(--accent3)':'var(--text3)') + ';font-size:9px;border-left:' + (dow===1?'2px solid var(--border)':'1px solid var(--border)11') + '">' + d + '</th>';
+    const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
+    const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
+    const isMon = dow === 1;
+    html += '<th style="text-align:center;padding:2px;min-width:30px;font-size:9px;color:'
+      + (isToday ? 'var(--accent)' : isWE ? 'var(--accent3)' : 'var(--text3)')
+      + ';background:var(--bg2);border-bottom:1px solid var(--border);border-left:'
+      + (isMon ? '2px solid var(--border)' : '1px solid var(--border)11') + '">'
+      + dowStr + '<br><strong>' + d + '</strong></th>';
   }
   html += '</tr></thead><tbody>';
 
   secteurs.forEach(sect => {
     const sectColor = secteurCouleurCSS(sect);
-    const rawBg = sect.couleur ? (sect.couleur.startsWith('#') ? sect.couleur : '#'+sect.couleur) : '#888';
-    const regles = sect.reglesHoraires || {};
+    const rawBg = sect.couleur || '#888';
 
-    // Ligne par code horaire
-    codesPrésents.forEach(hor => {
-      const reqCode = regles[hor.code] !== undefined ? regles[hor.code] : 1;
-      html += '<tr>';
-      html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '18;padding:2px 8px;border-right:1px solid var(--border);white-space:nowrap">';
-      html += '<span style="display:inline-flex;align-items:center;gap:5px">';
-      html += '<span style="width:8px;height:8px;border-radius:2px;background:' + hor.couleur + ';display:inline-block;flex-shrink:0"></span>';
-      html += '<span style="color:' + hor.couleur + ';font-weight:700;font-family:monospace">' + hor.code + '</span>';
-      html += '<span style="color:' + sectColor + ';font-weight:600;font-size:9px">× ' + sect.nom + '</span>';
-      if (reqCode > 0) html += '<span style="color:var(--text3);font-size:8px">min ' + reqCode + '</span>';
-      html += '</span></td>';
+    // Une ligne par code horaire (M, S, J, NU...)
+    codesPrésents.forEach(h => {
+      const rowData = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        rowData.push((counts[sect.id][d] || {})[h.code] || 0);
+      }
+      const hasData = rowData.some(v => v > 0);
+
+      html += '<tr style="border-bottom:1px solid var(--border)22">';
+      html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '18;padding:3px 8px;border-right:1px solid var(--border);white-space:nowrap">';
+      html += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + h.couleur + ';margin-right:4px;vertical-align:middle"></span>';
+      html += '<span style="color:' + h.couleur + ';font-weight:700">' + h.code + '</span>';
+      html += '<span style="color:var(--text3);margin-left:4px">' + sect.nom + '</span>';
+      html += '</td>';
 
       for (let d = 1; d <= daysInMonth; d++) {
-        const cnt = (counts[sect.id][d]||{})[hor.code] || 0;
+        const cnt = rowData[d-1];
         const date = new Date(currentYear, currentMonth, d);
         const isWE = date.getDay() === 0 || date.getDay() === 6;
         const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-        // Alerte si sous ou sur effectif
-        let cellStyle = 'text-align:center;padding:2px;font-weight:700;border-left:' + (date.getDay()===1?'2px solid var(--border)':'1px solid var(--border)11');
-        let cellBg = isToday ? 'background:rgba(79,142,247,0.08);' : isWE ? 'background:rgba(0,0,0,0.02);' : 'background:' + rawBg + '10;';
-        let textColor = 'color:var(--text3)';
-        if (cnt > 0) {
-          if (reqCode > 0 && cnt < reqCode) textColor = 'color:var(--accent4)'; // sous-effectif rouge
-          else if (reqCode > 0 && cnt > reqCode*2) textColor = 'color:var(--accent3)'; // sur-effectif orange
-          else textColor = 'color:' + hor.couleur;
-        }
-        html += '<td style="' + cellStyle + ';' + cellBg + textColor + '">';
+        const bg = isToday ? 'background:rgba(79,142,247,0.1);' : isWE ? 'background:rgba(0,0,0,0.02);' : '';
+        const isMon = date.getDay() === 1;
+        html += '<td style="text-align:center;padding:2px;' + bg + 'color:' + (cnt > 0 ? h.couleur : 'var(--border)') + ';font-weight:' + (cnt > 0 ? '800' : '400') + ';border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)11') + '">';
         html += cnt > 0 ? cnt : '<span style="opacity:0.2">·</span>';
         html += '</td>';
       }
@@ -2475,29 +2595,27 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     });
 
     // Ligne total secteur
-    html += '<tr style="border-top:1px solid ' + sectColor + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '30;padding:3px 8px;border-right:1px solid var(--border);font-weight:700;color:' + sectColor + '">';
-    html += '● ' + sect.nom + ' total</td>';
+    html += '<tr style="border-top:2px solid ' + sectColor + '44;border-bottom:3px solid ' + sectColor + '66">';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '35;padding:4px 8px;border-right:1px solid var(--border);font-weight:800;color:' + sectColor + '">';
+    html += '▶ ' + sect.nom + ' TOTAL</td>';
     for (let d = 1; d <= daysInMonth; d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const req = sect.agentsRequisJour || 3;
       const date = new Date(currentYear, currentMonth, d);
       const isWE = date.getDay() === 0 || date.getDay() === 6;
       const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-      const alertColor = tot === 0 ? 'color:var(--text3)' : tot < req ? 'color:var(--accent4);font-weight:800' : tot > req*1.5 ? 'color:var(--accent3)' : 'color:' + sectColor;
-      const bg = isToday ? 'background:rgba(79,142,247,0.1);' : isWE ? 'background:rgba(0,0,0,0.03);' : 'background:' + rawBg + '18;';
-      html += '<td style="text-align:center;padding:2px;font-weight:700;' + bg + alertColor + ';border-left:' + (date.getDay()===1?'2px solid var(--border)':'1px solid var(--border)11') + '">';
+      const alertColor = tot === 0 ? 'color:var(--text3)' : tot < req ? 'color:var(--accent4);font-weight:900' : tot > req*1.5 ? 'color:var(--accent3)' : 'color:' + sectColor;
+      const bg = isToday ? 'background:rgba(79,142,247,0.12);' : isWE ? 'background:rgba(0,0,0,0.03);' : 'background:' + rawBg + '25;';
+      const isMon = date.getDay() === 1;
+      html += '<td style="text-align:center;padding:3px;font-weight:800;' + bg + alertColor + ';border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)11') + '">';
       html += tot > 0 ? tot : '<span style="opacity:0.2">·</span>';
       html += '</td>';
     }
     html += '</tr>';
-
-    // Ligne vide séparateur entre secteurs
-    html += '<tr style="height:4px"><td colspan="' + (daysInMonth+1) + '" style="background:var(--bg)"></td></tr>';
+    html += '<tr style="height:6px"><td colspan="' + (daysInMonth+1) + '" style="background:var(--bg)"></td></tr>';
   });
 
   html += '</tbody></table>';
-  // Légende
   html += '<div style="padding:6px 8px;font-size:10px;color:var(--text2);display:flex;gap:16px;border-top:1px solid var(--border)">';
   html += '<span><span style="color:var(--accent4)">●</span> Sous-effectif</span>';
   html += '<span><span style="color:var(--accent3)">●</span> Sur-effectif</span>';
@@ -2507,7 +2625,6 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   el.innerHTML = html;
   el.style.cssText = 'margin-top:4px;background:var(--bg2);border-radius:0 0 8px 8px;border:1px solid var(--border);border-top:none;overflow:hidden';
 }
-
 
 
 function changeMonth(delta) {
@@ -2578,63 +2695,206 @@ function getMonthLabel() {
 }
 
 // ============================================================
-// SHIFT PICKER
+// SHIFT PICKER — nouvelle UI enrichie
 // ============================================================
+let _currentModificateur = 'aucun'; // 'aucun' | 'hs' | 'depart' | 'retard'
+let _currentHSHoraire = null; // code horaire pour les HS
+let _selectedSecteurJour = null;
+
+function selectModificateur(type) {
+  _currentModificateur = type;
+  // Reset visual
+  document.querySelectorAll('.shift-mod-btn').forEach(b => {
+    b.style.borderColor = 'transparent';
+    b.style.background = '#1e2538';
+  });
+  const hsInput = document.getElementById('hs-hours-input');
+  if (type === 'hs') {
+    const btn = document.getElementById('mod-btn-hs');
+    if (btn) { btn.style.borderColor = '#38d9a9'; btn.style.background = 'rgba(56,217,169,0.12)'; }
+    if (hsInput) hsInput.style.display = 'block';
+  } else {
+    if (hsInput) hsInput.style.display = 'none';
+    if (type === 'depart') {
+      const btn = document.getElementById('mod-btn-depart');
+      if (btn) { btn.style.borderColor = '#f7a94f'; btn.style.background = 'rgba(247,169,79,0.1)'; }
+    } else if (type === 'retard') {
+      const btn = document.getElementById('mod-btn-retard');
+      if (btn) { btn.style.borderColor = '#f76f6f'; btn.style.background = 'rgba(247,111,111,0.1)'; }
+    } else { // aucun
+      const btn = document.getElementById('mod-btn-aucun');
+      if (btn) { btn.style.borderColor = 'var(--accent)'; }
+    }
+  }
+}
+
 function openShiftPicker(agentId, day) {
   selectedShiftCell = { agentId, day };
   const etab = getEtab();
   const agent = etab.agents.find(a => a.id === agentId);
-  document.getElementById('shift-modal-title').textContent = `Poste du ${day} ${getMonthLabel()}`;
-  document.getElementById('shift-modal-info').textContent = agent ? `${agent.prenom} ${agent.nom} · ${agent.spec}` : '';
+  const date = new Date(currentYear, currentMonth, day);
+  const dayNames = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const dateLabel = `${dayNames[date.getDay()]} ${day} ${getMonthLabel()}`;
+
+  document.getElementById('shift-modal-title').textContent = dateLabel;
+  document.getElementById('shift-modal-info').textContent = agent
+    ? `${agent.prenom||''} ${agent.nom} · ${agent.spec} · ${agent.taux}%`
+    : '';
 
   const planMonth = (etab.planning[currentYear] || {})[currentMonth] || {};
   const currentShift = (planMonth[agentId] || {})[day] || '';
   selectedShiftCode = currentShift;
 
-  const grid = document.getElementById('shift-picker-grid');
-  grid.innerHTML = '';
+  // Reset modificateur
+  _currentModificateur = 'aucun';
+  _currentHSHoraire = null;
+  _selectedSecteurJour = null;
+  selectModificateur('aucun');
 
-  // Add empty option
-  const emptyOpt = document.createElement('div');
-  emptyOpt.className = 'shift-option' + (currentShift === '' ? ' selected' : '');
-  emptyOpt.style.cssText = 'background:var(--bg3);color:var(--text2);border-color:var(--border)';
-  emptyOpt.textContent = '—';
-  emptyOpt.onclick = () => { selectedShiftCode = ''; grid.querySelectorAll('.shift-option').forEach(e=>e.classList.remove('selected')); emptyOpt.classList.add('selected'); };
-  grid.appendChild(emptyOpt);
+  // === SECTEUR CE JOUR ===
+  const secteurSection = document.getElementById('shift-secteur-section');
+  const secteurBtns = document.getElementById('shift-secteur-btns');
+  const secteursMois = etab.secteurs.filter(s => !s.nom.startsWith('BG:'));
+  if (secteursMois.length > 0) {
+    secteurSection.style.display = 'block';
+    const agentSecteur = agent ? (agent.secteurFixe ||
+      ((etab.rotationSectorielle||{})[currentYear]||{})[currentMonth]?.[agentId] ||
+      getSecteurDuMois(agent, currentYear, currentMonth, etab)) : null;
+    _selectedSecteurJour = agentSecteur;
+    secteurBtns.innerHTML = secteursMois.map(s => {
+      const c = secteurCouleurCSS(s);
+      const isActive = s.id === agentSecteur;
+      return `<button onclick="selectSecteurJour('${s.id}',this)" data-sect="${s.id}"
+        style="padding:8px 14px;border-radius:8px;border:2px solid ${isActive ? c : c+'44'};
+        background:${isActive ? c+'22' : 'transparent'};color:${c};font-family:inherit;
+        font-size:12px;font-weight:700;cursor:pointer">• ${s.nom}${isActive ? ' ✓' : ''}</button>`;
+    }).join('');
+  } else {
+    secteurSection.style.display = 'none';
+  }
 
-  etab.horaires.forEach(hor => {
-    // Check exclusions
-    const excl = agent && agent.exclusHoraires && agent.exclusHoraires.includes(hor.code);
-    const opt = document.createElement('div');
-    opt.className = 'shift-option' + (currentShift === hor.code ? ' selected' : '') + (excl ? ' opacity-50' : '');
-    opt.style.cssText = `background:${hor.couleur}22;color:${hor.couleur};border-color:${currentShift===hor.code?hor.couleur:'transparent'}`;
-    if (excl) opt.style.opacity = '0.4';
-    opt.innerHTML = `<div style="font-size:14px;font-weight:800">${hor.code}</div><div style="font-size:9px;margin-top:2px;opacity:0.8">${hor.debut||''}</div>`;
-    opt.onclick = () => {
-      selectedShiftCode = hor.code;
-      grid.querySelectorAll('.shift-option').forEach(e => e.classList.remove('selected'));
-      opt.classList.add('selected');
-      opt.style.borderColor = hor.couleur;
-    };
-    grid.appendChild(opt);
-  });
+  // === HORAIRES DE TRAVAIL ===
+  const travailCodes = etab.horaires.filter(h => h.comptage === 'travail' && !h.code.startsWith('HS'));
+  const travailBtns = document.getElementById('shift-travail-btns');
+  travailBtns.innerHTML = travailCodes.map(h => {
+    const isActive = currentShift === h.code;
+    const excl = agent && (agent.exclusHoraires||[]).includes(h.code);
+    return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
+      style="padding:10px 16px;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
+      background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
+      font-size:13px;font-weight:800;cursor:pointer;opacity:${excl?'0.4':'1'};min-width:80px;text-align:center">
+      <div>${h.code}</div>
+      <div style="font-size:9px;opacity:0.7;font-weight:400">${h.debut||''}${h.fin?' – '+h.fin:''}</div>
+    </button>`;
+  }).join('');
 
-  // Vacataires disponibles ce jour
-  const vacs = suggestVacataires(day, '', null);
-  const vacHtml = vacs.length > 0 ? `
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:8px">
-        Vacataires disponibles ce jour (${vacs.length})
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${vacs.map(v=>`<div class="tag ${v.priorite?'tag-orange':'tag-green'}" style="cursor:pointer" onclick="affectVacataire('${v.id}','${agentId}',${day})" title="Affecter ${v.prenom} ${v.nom}">
-          ${v.prenom} ${v.nom[0]}. · ${v.spec} ${v.priorite?'(HS)':''}
-        </div>`).join('')}
-      </div>
-    </div>` : '';
+  // === HS REPOS (jours de repos travaillé) ===
+  const hsReposBtns = document.getElementById('shift-hs-repos-btns');
+  hsReposBtns.innerHTML = travailCodes.map(h => {
+    const hsCode = 'HS' + h.code; // ex: HSM, HSS, HSJ
+    const isActive = currentShift === hsCode;
+    return `<button onclick="selectShiftCode('${hsCode}',this)" data-code="${hsCode}"
+      style="padding:8px 14px;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
+      background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
+      font-size:12px;font-weight:700;cursor:pointer">
+      HS ${h.code}<br><span style="font-size:9px;opacity:0.6">REPOS → ${h.label||h.code}</span>
+    </button>`;
+  }).join('');
 
-  document.getElementById('shift-picker-grid').insertAdjacentHTML('afterend', vacHtml);
+  // === CONGÉS ===
+  const congesCodes = etab.horaires.filter(h => h.isConge || ['CA','CF'].includes(h.code));
+  const congeBtns = document.getElementById('shift-conge-btns');
+  congeBtns.innerHTML = congesCodes.map(h => {
+    const isActive = currentShift === h.code;
+    return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
+      style="padding:10px 16px;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
+      background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
+      font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
+      <div>${h.code}</div>
+      <div style="font-size:9px;opacity:0.7;font-weight:400">${h.label||''}</div>
+    </button>`;
+  }).join('');
+
+  // === ABSENCES ===
+  const absenceCodes = etab.horaires.filter(h =>
+    ['absent','repos'].includes(h.comptage) && !h.isConge && h.code !== 'R' ||
+    ['MO','EM','AT','FO','GR','R','RC'].includes(h.code)
+  );
+  const absenceBtns = document.getElementById('shift-absence-btns');
+  absenceBtns.innerHTML = absenceCodes.map(h => {
+    const isActive = currentShift === h.code;
+    return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
+      style="padding:10px 14px;border-radius:8px;border:2px solid ${isActive ? h.couleur : '#2a3350'};
+      background:${isActive ? h.couleur+'22' : '#1e2538'};color:${isActive ? h.couleur : '#8892aa'};
+      font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center;min-width:80px">
+      <div style="font-size:13px;font-weight:800;color:${h.couleur}">${h.code}</div>
+      <div style="font-size:9px">${h.label||''}</div>
+    </button>`;
+  }).join('');
+
+  // === HS horaire buttons (pour le modificateur HS) ===
+  const hsHoraireBtns = document.getElementById('hs-horaire-btns');
+  if (hsHoraireBtns) {
+    hsHoraireBtns.innerHTML = travailCodes.map(h =>
+      `<button onclick="selectHSHoraire('${h.code}',this)"
+        style="padding:6px 12px;border-radius:6px;border:2px solid ${h.couleur}44;background:#0f1117;
+        color:${h.couleur};font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
+        ${h.code} <span style="font-size:9px;opacity:0.6">${h.debut||''}</span>
+      </button>`
+    ).join('');
+  }
+
   openModal('modal-shift');
+  resetSessionTimer();
+}
+
+function selectShiftCode(code, el) {
+  selectedShiftCode = code;
+  // Reset all buttons highlight
+  const allBtns = document.querySelectorAll('#shift-travail-btns button, #shift-hs-repos-btns button, #shift-conge-btns button, #shift-absence-btns button');
+  allBtns.forEach(b => {
+    const c = b.style.color;
+    b.style.borderColor = c + '44';
+    b.style.background = '#1e2538';
+    if (b.querySelector('div:first-child')) b.querySelector('div:first-child').style.color = c;
+  });
+  if (el) {
+    el.style.borderColor = el.style.color;
+    el.style.background = el.style.color + '22';
+  }
+}
+
+function selectSecteurJour(sectId, el) {
+  _selectedSecteurJour = sectId;
+  const btns = document.querySelectorAll('#shift-secteur-btns button');
+  btns.forEach(b => {
+    const sid = b.dataset.sect;
+    const etab = getEtab();
+    const s = etab.secteurs.find(x => x.id === sid);
+    const c = s ? secteurCouleurCSS(s) : '#888';
+    b.style.borderColor = c + '44';
+    b.style.background = 'transparent';
+    b.textContent = '• ' + (s ? s.nom : sid);
+  });
+  if (el) {
+    el.style.borderColor = el.style.color;
+    el.style.background = el.style.color + '22';
+    el.textContent = '• ' + el.textContent.replace(/[•✓\s]+/g,'').trim() + ' ✓';
+  }
+}
+
+function selectHSHoraire(code, el) {
+  _currentHSHoraire = code;
+  const btns = document.querySelectorAll('#hs-horaire-btns button');
+  btns.forEach(b => { b.style.background = '#0f1117'; b.style.borderColor = b.style.color + '44'; });
+  if (el) { el.style.background = el.style.color + '22'; el.style.borderColor = el.style.color; }
+}
+
+function clearShiftDay() {
+  if (!selectedShiftCell) return;
+  selectedShiftCode = '';
+  applySingleShift(selectedShiftCell.agentId, selectedShiftCell.day, '');
+  closeModal('modal-shift');
 }
 
 // ============================================================
@@ -2823,15 +3083,47 @@ function affectVacataire(vacId, agentId, day) {
 
 function applyShift() {
   if (!selectedShiftCell) return;
+  const { agentId, day } = selectedShiftCell;
+
   // CA et AM → ouvrir le sélecteur calendrier multi-jours
   if (selectedShiftCode === 'CA' || selectedShiftCode === 'AM' ||
       selectedShiftCode === 'MO' || selectedShiftCode === 'CF') {
     closeModal('modal-shift');
-    openCalAbsence(selectedShiftCell.agentId, selectedShiftCode, selectedShiftCell.day);
+    openCalAbsence(agentId, selectedShiftCode, day);
     return;
   }
-  // Autres codes → appliquer directement sur le jour cliqué
-  applySingleShift(selectedShiftCell.agentId, selectedShiftCell.day, selectedShiftCode);
+
+  // Appliquer le code shift principal
+  applySingleShift(agentId, day, selectedShiftCode);
+
+  // Sauvegarder le secteur si modifié
+  if (_selectedSecteurJour) {
+    const etab = getEtab();
+    if (!etab.rotationSectorielle) etab.rotationSectorielle = {};
+    if (!etab.rotationSectorielle[currentYear]) etab.rotationSectorielle[currentYear] = {};
+    if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
+    etab.rotationSectorielle[currentYear][currentMonth][agentId] = _selectedSecteurJour;
+  }
+
+  // Sauvegarder le modificateur HS
+  if (_currentModificateur === 'hs' && selectedShiftCode && ['M','S','J','NU','N'].includes(selectedShiftCode)) {
+    const etab = getEtab();
+    const nbH = parseFloat(document.getElementById('hs-nb-heures')?.value || 1);
+    const horaire = _currentHSHoraire || selectedShiftCode;
+    if (!etab.heuresSup) etab.heuresSup = {};
+    if (!etab.heuresSup[agentId]) etab.heuresSup[agentId] = [];
+    const dateKey = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    // Remplacer si déjà une entrée ce jour
+    etab.heuresSup[agentId] = etab.heuresSup[agentId].filter(e => e.date !== dateKey);
+    etab.heuresSup[agentId].push({ date: dateKey, heures: nbH, horaire, createdAt: new Date().toISOString() });
+    saveToStorage();
+    showToast(`${nbH}h sup enregistrées sur ${horaire}`, 'success');
+  } else if (_currentModificateur === 'depart') {
+    showToast('Départ anticipé noté', 'info');
+  } else if (_currentModificateur === 'retard') {
+    showToast('Retard noté', 'info');
+  }
+
   closeModal('modal-shift');
 }
 
@@ -2859,26 +3151,27 @@ function renderComptage() {
   if (!etab) return;
   const planMonth = ((etab.planning[currentYear] || {})[currentMonth]) || {};
   const feries = getJoursFeries(currentYear);
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
 
-  // Colonnes : tous les codes sauf R/RC purs
-  const codesAffichage = etab.horaires.filter(h => {
-    const codeComptage = h.comptage || (
-      ['M','S','J','NU','N','FO','AT'].includes(h.code) ? 'travail' :
-      ['CA','CF'].includes(h.code) ? 'presence' :
-      ['MO','AM','EM','GR','CP'].includes(h.code) ? 'absent' : 'repos');
-    return codeComptage !== 'repos' || ['CA','CF','MO','AM'].includes(h.code);
-  });
-
-  let html = `<thead><tr>
-    <th>Agent</th><th>Spéc.</th><th>Taux</th>
-    ${codesAffichage.map(h=>`<th title="${h.label}" style="color:${h.couleur||'inherit'}">${h.code}</th>`).join('')}
-    <th style="min-width:65px">Travaillé</th>
-    <th style="min-width:55px">Présence</th>
-    <th style="min-width:55px">Base</th>
-    <th style="min-width:55px">Écart</th>
-    <th style="min-width:50px" title="Dimanches + fériés travaillés">D+F</th>
-    <th style="min-width:50px" title="Repos dim/fériés acquis">R+</th>
-    <th style="min-width:50px" title="CA pris">CA</th>
+  let html = `<thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px">
+    <th style="min-width:140px;text-align:left;padding:6px 10px">Agent</th>
+    <th>Spéc.</th>
+    <th>Statut</th>
+    <th style="color:var(--accent3)">Taux</th>
+    <th style="color:var(--accent4);min-width:52px" title="CA annuels acquis (prorata taux)">CA droit</th>
+    <th style="color:var(--accent4);min-width:45px" title="CA posés ce mois">CA mois</th>
+    <th style="color:var(--accent4);min-width:52px" title="CA posés sur l'année (cumul)">CA annuel</th>
+    <th style="color:var(--accent4);min-width:58px" title="CA restants à poser">CA restants</th>
+    <th style="color:#e879f9;min-width:48px" title="CF acquis (fractionnement)">CF droit</th>
+    <th style="color:#e879f9;min-width:42px" title="CF posés ce mois">CF mois</th>
+    <th style="color:#e879f9;min-width:48px" title="CF posés sur l'année">CF annuel</th>
+    <th style="min-width:52px;color:var(--text2)" title="Heures périphériques (dim/fériés)">H.pér.</th>
+    <th style="color:#94a3b8;min-width:36px" title="Jours maladie ordinaire">MO</th>
+    <th style="color:#fb923c;min-width:36px" title="Jours enfant malade">EM</th>
+    <th style="min-width:48px;color:var(--accent3)" title="Dimanches + fériés travaillés">Dim+Fér.</th>
+    <th style="min-width:58px;font-weight:700" title="Heures théoriques du mois (base FPT)">H. théor.</th>
+    <th style="min-width:58px;font-weight:700;color:var(--accent)" title="Heures travaillées effectives">H. trav.</th>
+    <th style="min-width:58px;font-weight:800" title="Solde heures (travaillées − théoriques)">Solde</th>
   </tr></thead><tbody>`;
 
   // Grouper par groupe
@@ -2889,50 +3182,60 @@ function renderComptage() {
     groupes[g].push(a);
   });
 
-  const cols = codesAffichage.length + 9;
+  const cols = 17;
   Object.keys(groupes).sort().forEach(gKey => {
     html += `<tr><td colspan="${cols}" style="padding:5px 10px;background:var(--bg3);font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ${gKey}</td></tr>`;
 
     groupes[gKey].forEach(agent => {
       const cpt = calcComptageAgent(agent, planMonth, etab, currentYear, currentMonth);
-      const ecartClass = cpt.ecart > 5 ? 'total-over' : cpt.ecart < -5 ? 'total-under' : 'total-ok';
       const droits = calcDroitsConges(agent, planMonth, etab, currentYear, currentMonth);
+      const soldeClass = cpt.ecart > 5 ? 'total-over' : cpt.ecart < -5 ? 'total-under' : 'total-ok';
 
-      html += `<tr>
-        <td style="white-space:nowrap"><strong>${agent.nom}</strong> ${(agent.prenom||'')[0]||''}.</td>
-        <td>${agent.spec}</td>
-        <td class="comptage-num">${agent.taux}%</td>`;
+      // Calcul CA annuel cumulé (tous les mois de l'année courante)
+      let caAnnuelCumul = 0, cfAnnuelCumul = 0;
+      for (let m = 0; m <= currentMonth; m++) {
+        const pm = ((etab.planning[currentYear] || {})[m] || {});
+        const dIM = new Date(currentYear, m+1, 0).getDate();
+        for (let d = 1; d <= dIM; d++) {
+          const sh = (pm[agent.id] || {})[d] || '';
+          if (sh === 'CA') caAnnuelCumul++;
+          if (sh === 'CF') cfAnnuelCumul++;
+        }
+      }
+      const caRestants = Math.round((droits.droitCA - caAnnuelCumul) * 2) / 2;
 
-      codesAffichage.forEach(h => {
-        const cnt = cpt.shifts[h.code] || 0;
-        html += `<td class="comptage-num" style="color:${cnt>0?(h.couleur||'inherit'):'var(--text3)'}">${cnt||''}</td>`;
-      });
+      const statut = agent.statut || 'Titulaire';
+      const statutLabel = statut.toLowerCase().startsWith('tit') ? 'Titulaire' :
+                          statut.toLowerCase().startsWith('cont') ? 'Contractuel' : statut;
 
-      html += `
-        <td class="comptage-num" style="font-weight:700">${cpt.heuresTravaillees}h</td>
-        <td class="comptage-num text-muted">${cpt.heuresPresence}h</td>
-        <td class="comptage-num text-muted">${cpt.baseH}h</td>
-        <td class="comptage-num"><span class="${ecartClass}">${cpt.ecart >= 0?'+':''}${cpt.ecart}h</span></td>
-        <td class="comptage-num" style="color:${cpt.nbDimFeries>=(etab.config.seuilDimFeries||10)?'var(--accent3)':'inherit'}">${cpt.nbDimFeries}</td>
-        <td class="comptage-num" style="color:${cpt.reposDimFeries>0?'var(--accent2)':'var(--text3)'}">${cpt.reposDimFeries>0?'+'+cpt.reposDimFeries+'h':''}</td>
-        <td class="comptage-num" style="color:var(--accent4)">${cpt.joursCA>0?cpt.joursCA+'j':''}</td>
+      // Heures périphériques (dimanches et fériés = repos rémunérés supplémentaires)
+      const hPer = cpt.reposDimFeries > 0 ? '+' + cpt.reposDimFeries + 'h' : '0h p.';
+      const hPerColor = cpt.reposDimFeries > 0 ? 'var(--accent3)' : 'var(--text3)';
+
+      html += `<tr class="comptage-row" style="border-bottom:1px solid var(--border)22">
+        <td style="padding:5px 10px;white-space:nowrap">
+          <span style="font-weight:400;color:var(--text2)">${agent.prenom||''} </span><strong>${agent.nom}</strong>
+        </td>
+        <td class="comptage-num" style="color:${getSpecColor(agent.spec)}">${agent.spec}</td>
+        <td class="comptage-num" style="font-size:10px;color:var(--text2)">${statutLabel}</td>
+        <td class="comptage-num" style="color:var(--accent3);font-weight:700">${agent.taux}%</td>
+        <td class="comptage-num" style="color:var(--accent4)">${droits.droitCA}j</td>
+        <td class="comptage-num" style="color:var(--accent4)">${cpt.joursCA > 0 ? cpt.joursCA + 'j' : '<span style="opacity:0.3">0j</span>'}</td>
+        <td class="comptage-num" style="color:var(--accent4)">${caAnnuelCumul > 0 ? caAnnuelCumul + 'j / ' + droits.droitCA : '<span style="opacity:0.3">0j / ' + droits.droitCA + '</span>'}</td>
+        <td class="comptage-num" style="color:${caRestants < 0 ? 'var(--accent4)' : caRestants > 0 ? 'var(--accent2)' : 'var(--text2)'};font-weight:700">${caRestants}j</td>
+        <td class="comptage-num" style="color:#e879f9">${droits.droitCF > 0 ? droits.droitCF + 'j' : '<span style="opacity:0.3">0j</span>'}</td>
+        <td class="comptage-num" style="color:#e879f9">${cpt.joursCF > 0 ? cpt.joursCF + 'j' : '<span style="opacity:0.3">0j</span>'}</td>
+        <td class="comptage-num" style="color:#e879f9">${cfAnnuelCumul > 0 ? cfAnnuelCumul + 'j' : '<span style="opacity:0.3">0j</span>'}</td>
+        <td class="comptage-num" style="color:${hPerColor};font-size:10px">${hPer}</td>
+        <td class="comptage-num" style="color:${cpt.joursMO > 0 ? '#94a3b8' : 'var(--text3)'}">${cpt.joursMO > 0 ? cpt.joursMO : '<span style="opacity:0.3">0</span>'}</td>
+        <td class="comptage-num" style="color:${cpt.joursEM > 0 ? '#fb923c' : 'var(--text3)'}">${cpt.joursEM > 0 ? cpt.joursEM : '<span style="opacity:0.3">0</span>'}</td>
+        <td class="comptage-num" style="color:${cpt.nbDimFeries >= (etab.config.seuilDimFeries||10) ? 'var(--accent3)' : 'var(--text2)'}">${cpt.nbDimFeries}</td>
+        <td class="comptage-num" style="font-weight:700;color:var(--text2)">${cpt.baseH}h</td>
+        <td class="comptage-num" style="font-weight:700;color:var(--accent)">${cpt.heuresTravaillees}h</td>
+        <td class="comptage-num"><span class="${soldeClass}" style="font-weight:800">${cpt.ecart >= 0 ? '+' : ''}${cpt.ecart}h</span></td>
       </tr>`;
     });
   });
-
-  // Ligne totaux
-  html += `<tr style="border-top:2px solid var(--border);font-weight:700">
-    <td colspan="3" style="padding:6px 10px;color:var(--text2);font-size:11px">TOTAUX MOIS</td>`;
-  codesAffichage.forEach(h => {
-    let tot = 0;
-    etab.agents.filter(a=>a.actif).forEach(a => {
-      const agPlan = planMonth[a.id] || {};
-      const daysInMonth = new Date(currentYear,currentMonth+1,0).getDate();
-      for(let d=1;d<=daysInMonth;d++) if((agPlan[d]||'')=== h.code) tot++;
-    });
-    html += `<td class="comptage-num" style="color:${h.couleur||'inherit'}">${tot||''}</td>`;
-  });
-  html += `<td colspan="7"></td></tr>`;
 
   html += '</tbody>';
   document.getElementById('comptage-table').innerHTML = html;
@@ -2986,8 +3289,7 @@ function renderAgents() {
       <div class="agent-card-header">
         <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${avatar}</div>
         <div>
-          <div class="agent-card-name">${agent.nom}</div>
-          <div style="font-size:12px;color:var(--text2);font-weight:400;margin-top:-2px">${agent.prenom||''}</div>
+          <div class="agent-card-name">${agent.prenom||''} <span style="font-weight:800">${agent.nom}</span></div>
           <div class="agent-card-spec">${agent.spec} · ${agent.taux}%</div>
         </div>
         ${!agent.actif ? '<span class="tag tag-gray" style="margin-left:auto">Inactif</span>' : ''}
