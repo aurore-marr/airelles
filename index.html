@@ -2353,14 +2353,64 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
   }
 })();
 
-window.onload = function() {
-  if (!DB.etablissements || Object.keys(DB.etablissements).length === 0) {
-    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
-  }
+window.onload = async function() {
   loadTheme();
   checkQRView();
 
-  // ── Reconnexion automatique si session encore valide ──
+  // ── Afficher un indicateur de chargement dans le dropdown ──
+  const sel = document.getElementById('login-etab');
+  if (sel) {
+    sel.innerHTML = '<option value="">⏳ Chargement…</option>';
+    sel.disabled = true;
+  }
+
+  // ── 1. Charger TOUS les établissements depuis Supabase ──
+  try {
+    const { data, error } = await supa
+      .from('plannicare_data')
+      .select('etab_id, data');
+    if (!error && data && data.length > 0) {
+      // Remplacer complètement DB.etablissements par les données Supabase
+      DB.etablissements = {};
+      data.forEach(row => {
+        if (row.etab_id && row.data) {
+          DB.etablissements[row.etab_id] = row.data;
+        }
+      });
+      saveToStorage(); // Mettre à jour le cache local
+    } else {
+      // Fallback : utiliser le localStorage si Supabase échoue
+      const saved = localStorage.getItem('plannicare_db');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.etablissements && Object.keys(parsed.etablissements).length > 0) {
+            DB.etablissements = parsed.etablissements;
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    // Pas de réseau — utiliser le localStorage
+    const saved = localStorage.getItem('plannicare_db');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.etablissements && Object.keys(parsed.etablissements).length > 0) {
+          DB.etablissements = parsed.etablissements;
+        }
+      } catch(ex) {}
+    }
+  }
+
+  if (sel) sel.disabled = false;
+
+  // Si toujours vide (premier lancement sans Supabase), créer un étab par défaut
+  if (!DB.etablissements || Object.keys(DB.etablissements).length === 0) {
+    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
+  }
+
+  // ── 2. Reconnexion automatique si session encore valide ──
   try {
     const savedSession = localStorage.getItem('plannicare_session');
     if (savedSession) {
@@ -2369,17 +2419,25 @@ window.onload = function() {
       if (elapsed < SESSION_DURATION && sess.etabId && sess.user) {
         const etab = DB.etablissements[sess.etabId];
         if (etab) {
-          DB.currentEtab = sess.etabId;
-          DB.currentUser = sess.user;
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('app').style.display = 'block';
-          document.getElementById('sb-etab-name').textContent = etab.nom;
-          document.getElementById('sb-user-name').textContent = sess.user.nom;
-          _sessionStart = sess.loginTime;
-          _sessionWarningShown = false;
-          _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
-          initApp();
-          return;
+          // Vérifier que le login est toujours valide dans les données fraîches
+          const loginOk = etab.logins && etab.logins.find(
+            l => l.login === sess.user.login && l.pwd === sess.user.pwd
+          );
+          if (loginOk) {
+            DB.currentEtab = sess.etabId;
+            DB.currentUser = loginOk;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('sb-etab-name').textContent = etab.nom;
+            document.getElementById('sb-user-name').textContent = loginOk.nom;
+            _sessionStart = sess.loginTime;
+            _sessionWarningShown = false;
+            _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
+            initApp();
+            return;
+          } else {
+            localStorage.removeItem('plannicare_session');
+          }
         }
       } else {
         localStorage.removeItem('plannicare_session');
@@ -2387,6 +2445,7 @@ window.onload = function() {
     }
   } catch(e) {}
 
+  // ── 3. Afficher l'écran de login avec les établissements chargés ──
   populateLoginEtabs();
 
   document.querySelectorAll('.jour-toggle').forEach(el => {
@@ -2643,14 +2702,35 @@ function populateLoginEtabs() {
   }
 }
 
-function doLogin() {
+async function doLogin() {
   const etabId = document.getElementById('login-etab').value;
   const user = document.getElementById('login-user').value.trim();
   const pwd = document.getElementById('login-pwd').value;
   const err = document.getElementById('login-error');
+  const btn = document.querySelector('#login-screen .btn-primary');
 
   if (!etabId) { err.textContent = 'Veuillez sélectionner un établissement.'; return; }
-  const etab = DB.etablissements[etabId];
+
+  // Désactiver le bouton pendant la vérification Supabase
+  if (btn) { btn.disabled = true; btn.textContent = 'Connexion en cours…'; }
+  err.textContent = '';
+
+  let etab = DB.etablissements[etabId];
+
+  // Toujours récupérer la version fraîche depuis Supabase (logins à jour)
+  try {
+    const fresh = await supaLoadEtab(etabId);
+    if (fresh) {
+      DB.etablissements[etabId] = fresh;
+      etab = fresh;
+      saveToStorage();
+      populateLoginEtabs();
+      document.getElementById('login-etab').value = etabId;
+    }
+  } catch(e) { /* pas de réseau — on utilise le localStorage */ }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
+
   if (!etab) { err.textContent = 'Établissement introuvable.'; return; }
 
   const login = etab.logins.find(l => l.login === user && l.pwd === pwd);
@@ -2678,7 +2758,6 @@ function doLogin() {
   // Badge nouvelles dispos
   const newDispos = etab.newDispos || [];
   if (newDispos.length > 0) {
-    // Dédupliquer par agent
     const uniq = [...new Set(newDispos.map(d => d.agentId))];
     const names = uniq.map(id => {
       const a = etab.agents.find(x => x.id === id);
@@ -2687,7 +2766,6 @@ function doLogin() {
     setTimeout(() => {
       showToast(`📬 ${uniq.length} agent(s) ont mis à jour leurs dispos : ${names}`, 'info');
     }, 800);
-    // Effacer après affichage
     etab.newDispos = [];
     saveToStorage();
   }
@@ -2953,14 +3031,12 @@ function renderDashboard() {
     const _codesAbsW = ['CA','CF','MO','AM','EM','AT','FO'];
     const agentsPoste   = etab.agents.filter(a => a.actif && _codesWorkW.includes((dPlan[a.id]||{})[dDay]||''));
     const agentsAbsents = etab.agents.filter(a => a.actif && _codesAbsW.includes((dPlan[a.id]||{})[dDay]||''));
-    const dkDay2 = dYear + '-' + String(dMo+1).padStart(2,'0') + '-' + String(dDay).padStart(2,'0');
-    const nbVacAffectes = ((etab.affectationsVac && etab.affectationsVac[dkDay2]) || []).length;
     const borderCol = isToday2 ? 'var(--accent)' : isWE ? 'var(--accent3)' : 'var(--border)';
     weekHtml += '<div style="border:1px solid '+borderCol+';border-radius:8px;overflow:hidden;min-height:80px">';
     weekHtml += '<div style="padding:4px;text-align:center;background:var(--bg3);border-bottom:1px solid var(--border);min-height:52px">';
     weekHtml += '<div style="font-size:9px;color:'+(isToday2?'var(--accent)':isWE?'var(--accent3)':'var(--text2)')+'">'+dayNames[i]+'</div>';
     weekHtml += '<div style="font-weight:800;font-size:14px;color:'+(isToday2?'var(--accent)':'var(--text)')+'">'+dDay+'</div>';
-    weekHtml += '<div style="font-size:9px;color:var(--text3)">'+agentsPoste.length+' ag.'+(nbVacAffectes>0?' <span style="color:#4f8ef7">+'+nbVacAffectes+'vac</span>':'')+'</div>';
+    weekHtml += '<div style="font-size:9px;color:var(--text3)">'+agentsPoste.length+' ag.</div>';
     weekHtml += '</div>';
     if (agentsPoste.length === 0) {
       weekHtml += '<div style="padding:6px;text-align:center;color:var(--text3);font-size:10px">—</div>';
@@ -2977,21 +3053,6 @@ function renderDashboard() {
         weekHtml += '<span style="font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+a.nom+' '+( a.prenom||'')+'">'+a.nom+'</span>';
         weekHtml += '</div>';
       });
-      // Afficher vacataires/intérimaires affectés ce jour
-      const dkDay = dYear + '-' + String(dMo+1).padStart(2,'0') + '-' + String(dDay).padStart(2,'0');
-      const vacAffectes = (etab.affectationsVac && etab.affectationsVac[dkDay]) || [];
-      if (vacAffectes.length > 0) {
-        weekHtml += '<div style="padding:3px 5px;background:rgba(79,142,247,0.06);border-top:1px solid rgba(79,142,247,0.2)">';
-        vacAffectes.forEach(av => {
-          const isHS = av.statut === 'hs';
-          const vacColor = isHS ? '#f7a94f' : '#4f8ef7';
-          weekHtml += '<div style="display:flex;align-items:center;gap:3px;padding:1px 0">';
-          weekHtml += '<span style="background:'+vacColor+'22;color:'+vacColor+';font-size:8px;font-weight:700;padding:1px 4px;border-radius:2px;font-family:monospace;flex-shrink:0">'+(av.shift||'VAC')+'</span>';
-          weekHtml += '<span style="font-size:9px;color:'+vacColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+av.nom+' '+(av.prenom||'')+' — '+av.spec+'">'+av.nom+'</span>';
-          weekHtml += '</div>';
-        });
-        weekHtml += '</div>';
-      }
       // Afficher absents en bas
       if (agentsAbsents.length > 0) {
         weekHtml += '<div style="padding:3px 5px;background:rgba(247,111,111,0.06);border-top:1px solid rgba(247,111,111,0.15)">';
@@ -5097,55 +5158,23 @@ function rechercherRemplacant() {
     return;
   }
 
-  // Stocker les infos de recherche pour le bouton Affecter
-  window._rechercheContexte = { dayNum, mo, yr, dk, shift, secteur };
-
   resultsEl.innerHTML = `
     <div class="alert alert-info" style="margin-bottom:10px">📅 ${dayLabel} — ${candidates.length} vacataire(s) disponible(s)</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
       ${candidates.map(v => {
         const dispo = (etab.vacDispos[v.id]||{})[dk];
         const specColor = getSpecColor(v.spec);
-        const isAffecter = (etab.affectationsVac && etab.affectationsVac[dk] || []).some(a => a.vacId === v.id);
-        return `<div class="card" style="padding:12px;border-left:3px solid ${specColor};transition:box-shadow 0.2s" id="rech-card-${v.id}">
+        return `<div class="card" style="padding:12px;border-left:3px solid ${specColor}">
           <div style="font-weight:700">${v.prenom} ${v.nom}</div>
           <div class="text-xs text-muted">${v.spec}${v.tel?' · 📞 '+v.tel:''}</div>
-          <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <div style="margin-top:6px">
             <span class="tag ${dispo==='hs'?'tag-orange':'tag-green'}">${dispo==='hs'?'Heure sup':'Disponible'}</span>
-            ${isAffecter
-              ? `<span style="background:rgba(56,217,169,0.15);color:#38d9a9;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid #38d9a940">✓ Affecté</span>`
-              : `<button onclick="affecterDepuisRecherche('${v.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">➕ Affecter</button>`
-            }
           </div>
         </div>`;
       }).join('')}
     </div>`;
 }
 
-
-function affecterDepuisRecherche(vacId) {
-  const etab = getEtab();
-  if (!etab) return;
-  const ctx = window._rechercheContexte;
-  if (!ctx) { showToast("Relancez la recherche", "warning"); return; }
-  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
-  if (!vac) return;
-  const { dayNum, mo, yr, dk } = ctx;
-  const statut = (etab.vacDispos[vac.id]||{})[dk] || "oui";
-  const dateLabel = new Date(yr, mo, dayNum).toLocaleDateString("fr-FR", {weekday:"long",day:"numeric",month:"long"});
-  const shiftCode = ctx.shift || "";
-  const shiftLabel = shiftCode ? " — " + shiftCode : "";
-  if (!confirm("Affecter " + (vac.prenom||"") + " " + vac.nom + " (" + vac.spec + ") le " + dateLabel + shiftLabel + " ?")) return;
-  if (!etab.affectationsVac) etab.affectationsVac = {};
-  if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
-  etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
-  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||"", spec: vac.spec, statut, shift: shiftCode, affecteLe: new Date().toISOString() });
-  saveToStorage();
-  showToast((vac.prenom||"") + " " + vac.nom + " affecte le " + dayNum + "/" + (mo+1), "success");
-  const card = document.getElementById("rech-card-" + vacId);
-  if (card) { const btn = card.querySelector("button"); if (btn) { const badge = document.createElement("span"); badge.style.cssText = "background:rgba(56,217,169,0.15);color:#38d9a9;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid #38d9a940"; badge.textContent = "Affecte"; btn.replaceWith(badge); } }
-  renderDashboard();
-}
 function switchVacTab(tab) {
   document.querySelectorAll('#page-vacataires .tab').forEach((t,i) => {
     t.classList.toggle('active', ['dispos','liste','affectations'][i] === tab);
