@@ -445,6 +445,77 @@ body {
 .shift-AM { background: rgba(79,142,247,0.1); color: #6aa0f8; }
 .shift-empty { background: transparent; color: transparent; }
 
+/* ========== HACHURES HS (repos travaillé) ========== */
+.shift-cell-hs-m {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(79,142,247,0.18) 0px,
+    rgba(79,142,247,0.18) 3px,
+    rgba(79,142,247,0.04) 3px,
+    rgba(79,142,247,0.04) 8px
+  ) !important;
+}
+.shift-cell-hs-s {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(247,169,79,0.22) 0px,
+    rgba(247,169,79,0.22) 3px,
+    rgba(247,169,79,0.05) 3px,
+    rgba(247,169,79,0.05) 8px
+  ) !important;
+}
+.shift-cell-hs-j {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(56,217,169,0.22) 0px,
+    rgba(56,217,169,0.22) 3px,
+    rgba(56,217,169,0.05) 3px,
+    rgba(56,217,169,0.05) 8px
+  ) !important;
+}
+.shift-cell-hs-nu {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(160,126,232,0.22) 0px,
+    rgba(160,126,232,0.22) 3px,
+    rgba(160,126,232,0.05) 3px,
+    rgba(160,126,232,0.05) 8px
+  ) !important;
+}
+
+/* Section vacataires sous planning */
+#planning-vac-section {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  background: var(--card);
+  overflow: hidden;
+}
+#planning-vac-section .vac-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  min-height: 40px;
+}
+#planning-vac-section .vac-name-cell {
+  min-width: 220px; width: 220px;
+  padding: 4px 10px;
+  background: var(--bg3);
+  border-right: 1px solid var(--border);
+  position: sticky; left: 0; z-index: 5;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
+#planning-vac-section .vac-day-cell {
+  min-width: 38px; width: 38px; max-width: 38px;
+  height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
 .total-cell {
   font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600;
   padding: 0 6px; text-align: center; min-width: 50px;
@@ -795,7 +866,33 @@ table input:focus { border-color: var(--accent); }
   font-size: 13px;
 }
 
-/* notification toast */
+.agent-spec-group { margin-bottom: 28px; }
+.agent-spec-group-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+.agent-spec-group-title {
+  font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+}
+.agent-spec-group-count {
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 2px 8px; border-radius: 10px;
+}
+.agent-card-inactive { opacity: 0.55; }
+.agent-card-group-badge {
+  display: inline-flex; align-items: center;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); font-size: 9px; font-weight: 800;
+  padding: 2px 6px; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  font-family: 'DM Mono', monospace;
+}
+/* Agents page: no-results */
+.agents-empty { grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text2); font-size: 14px; }
+
 .toast {
   position: fixed; bottom: 24px; right: 24px;
   background: var(--bg2); border: 1px solid var(--border);
@@ -1074,6 +1171,16 @@ table input:focus { border-color: var(--accent); }
       </div>
       <!-- Totaux secteurs — scroll synchronisé avec le planning -->
       <div id="sector-daily-totals" style="overflow-x:auto;width:100%;margin-top:4px"></div>
+      <!-- Vacataires disponibles ce mois -->
+      <div id="planning-vac-section" style="margin-top:4px;border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden;display:none">
+        <div style="padding:6px 10px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:8px">
+          <span>👥 Vacataires disponibles ce mois</span>
+          <span id="planning-vac-badge" style="background:var(--accent2);color:#0f1117;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px"></span>
+        </div>
+        <div style="overflow-x:auto;width:100%" id="planning-vac-scroll">
+          <div id="planning-vac-container"></div>
+        </div>
+      </div>
     </div>
 
     <!-- COMPTAGE -->
@@ -1088,10 +1195,13 @@ table input:focus { border-color: var(--accent); }
           <span class="month-label" id="month-label-2">—</span>
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(1)">▶</button>
         </div>
+        <select id="filter-spec-comptage" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:inherit;outline:none;font-size:13px" onchange="renderComptage()">
+          <option value="">Toutes spécialités</option>
+        </select>
         <button class="btn btn-secondary btn-sm" onclick="exportComptage()">⬇️ Export Excel</button>
       </div>
       <div class="card" style="padding:0">
-        <div class="scrollable">
+        <div style="overflow-x:auto;width:100%">
           <table class="comptage-table" id="comptage-table"></table>
         </div>
       </div>
@@ -1103,24 +1213,38 @@ table input:focus { border-color: var(--accent); }
         <h2>Gestion des agents</h2>
         <p>Fiches, spécialités et contraintes</p>
       </div>
-      <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:10px">
-        <div class="flex gap-2 items-center" style="flex-wrap:wrap;gap:8px">
-          <div class="search-wrap">
-            <input type="text" class="search-input" id="agent-search" placeholder="Rechercher nom, prénom, spécialité..." oninput="filterAgents()" style="width:260px">
-          </div>
-          <select id="filter-spec" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;outline:none;font-size:13px" onchange="filterAgents()">
-            <option value="">Toutes spécialités</option>
-          </select>
-          <select id="filter-groupe" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;outline:none;font-size:13px" onchange="filterAgents()">
-            <option value="">Tous les groupes</option>
-            <option value="1">Groupe 1</option>
-            <option value="2">Groupe 2</option>
-          </select>
-          <span id="agents-count" class="text-sm text-muted"></span>
+
+      <!-- Onglets Actifs / Inactifs -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;width:fit-content">
+          <div id="agents-tab-actifs" class="tab active" onclick="switchAgentsTab('actifs')" style="cursor:pointer">👥 Actifs</div>
+          <div id="agents-tab-inactifs" class="tab" onclick="switchAgentsTab('inactifs')" style="cursor:pointer">🗄️ Inactifs</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openNewAgent()">+ Nouvel agent</button>
       </div>
-      <div class="agents-grid" id="agents-grid"></div>
+
+      <!-- Barre filtres -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <!-- Tabs spécialités -->
+        <div id="agent-spec-tabs" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        <div style="width:1px;height:24px;background:var(--border)"></div>
+        <!-- Filtre groupe -->
+        <select id="filter-groupe" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:inherit;outline:none;font-size:12px" onchange="filterAgents()">
+          <option value="">Tous groupes</option>
+        </select>
+        <!-- Recherche -->
+        <div class="search-wrap" style="flex:1;min-width:160px">
+          <input type="text" class="search-input" id="agent-search" placeholder="Rechercher..." oninput="filterAgents()" style="width:100%">
+        </div>
+        <span id="agents-count" class="text-sm text-muted"></span>
+        <!-- Hidden select for compatibility -->
+        <select id="filter-spec" style="display:none">
+          <option value="">Toutes spécialités</option>
+        </select>
+      </div>
+
+      <!-- Grille agents (regroupée par spécialité) -->
+      <div id="agents-grid-container"></div>
     </div>
 
     <!-- VACATAIRES -->
@@ -1320,6 +1444,12 @@ table input:focus { border-color: var(--accent); }
               <div class="toggle" id="tog-rtt" onclick="toggleEl(this)"></div>
             </div>
             <button class="btn btn-primary btn-sm mt-3" onclick="saveConfigRegles()">💾 Enregistrer</button>
+          </div>
+          <div class="config-section">
+            <div class="config-section-title">🩺 Règles de calcul par spécialité</div>
+            <p class="text-xs text-muted mb-3">Surcharge les règles générales pour une spécialité donnée. Laisser vide = règle générale appliquée.</p>
+            <div id="spec-regles-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
+            <button class="btn btn-primary btn-sm" onclick="saveSpecRegles()">💾 Enregistrer les règles spécialités</button>
           </div>
           <div class="config-section">
             <div class="config-section-title">📅 Codes d'absence</div>
@@ -1782,6 +1912,12 @@ table input:focus { border-color: var(--accent); }
       <button class="modal-close" onclick="closeModal('modal-shift')" style="color:#8892aa">✕</button>
     </div>
     <p style="color:#8892aa;font-size:12px;margin-bottom:12px" id="shift-modal-info"></p>
+
+    <!-- ABSENCES & CONGÉS DU MOIS -->
+    <div id="shift-absences-mois" style="margin-bottom:14px;display:none">
+      <div style="font-size:10px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Absences & Congés ce mois</div>
+      <div id="shift-absences-content" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
 
     <!-- SECTEUR CE JOUR -->
     <div id="shift-secteur-section" style="margin-bottom:16px;display:none">
@@ -2269,9 +2405,10 @@ window.onload = function() {
 function checkQRView() {
   const params = new URLSearchParams(window.location.search);
   const agentId = params.get('agent');
+  const vacId   = params.get('vac');
   const etabId  = params.get('etab') || ETAB_ID;
   const specFilter = params.get('spec') || '';
-  const isQR    = params.get('qr') === '1' || !!agentId;
+  const isQR    = params.get('qr') === '1' || !!agentId || !!vacId;
 
   if (!isQR) return;
 
@@ -2291,25 +2428,39 @@ function checkQRView() {
 
     if (!etab) {
       if (pinSec) pinSec.insertAdjacentHTML('beforebegin',
-        '<div style="text-align:center;padding:20px;color:#f76f6f;font-size:13px">❌ Données introuvables.<br>Le cadre doit d\'abord cliquer ☁️ Sync Supabase.</div>');
+        '<div style="text-align:center;padding:20px;color:#f76f6f;font-size:13px">❌ Données introuvables.<br>Le cadre doit d'abord cliquer ☁️ Sync Supabase.</div>');
       return;
     }
 
     DB.etablissements[etabId] = etab;
+    _qrEtabId = etabId;
+
+    // ── Accès direct vacataire via QR individuel ──
+    if (vacId) {
+      const vac = (etab.vacataires || []).find(function(v){ return v.id === vacId; });
+      if (vac) {
+        const nameEl2 = document.getElementById('qr-sel-etab-name');
+        if (nameEl2) nameEl2.textContent = etab.nom;
+        _qrAgentId = vacId;
+        _qrAgentType = 'vacataire';
+        _qrPinBuffer = '';
+        updatePinDots();
+        qrOpenPlanning(vacId);
+        return;
+      }
+    }
 
     // Titre spécialité
     const nameEl = document.getElementById('qr-sel-etab-name');
-    if (nameEl) nameEl.textContent = (specFilter ? 'Planning ' + specFilter + ' — ' : '') + etab.nom;
+    if (nameEl) nameEl.textContent = (specFilter ? 'Planning ' + specFilter + ' · ' : '') + etab.nom;
 
-    _qrEtabId = etabId;
     _qrAgentId = agentId || null;
-    _qrSpecFilter = specFilter; // filtre par spécialité
+    _qrSpecFilter = specFilter;
     _qrPinBuffer = '';
     updatePinDots();
     document.getElementById('qr-name-section').style.display = 'none';
     document.getElementById('qr-pin-error').style.display = 'none';
 
-    // Pré-filtrer les agents par spécialité dans le sélecteur
     qrPopulateAgentSelect(etab, specFilter);
   });
 }
@@ -2644,6 +2795,7 @@ function initApp() {
   updateCongesBadge();
   updateFilterSecteur();
   updateFilterSpec();
+  updateAgentSpecTabs();
 }
 
 // ============================================================
@@ -2659,7 +2811,7 @@ function showPage(page) {
   if (page === 'planning') renderPlanning();
   if (page === 'comptage') renderComptage();
   if (page === 'dashboard') renderDashboard();
-  if (page === 'agents') renderAgents();
+  if (page === 'agents') { updateAgentSpecTabs(); renderAgents(); }
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
 }
@@ -2801,12 +2953,14 @@ function renderDashboard() {
     const _codesAbsW = ['CA','CF','MO','AM','EM','AT','FO'];
     const agentsPoste   = etab.agents.filter(a => a.actif && _codesWorkW.includes((dPlan[a.id]||{})[dDay]||''));
     const agentsAbsents = etab.agents.filter(a => a.actif && _codesAbsW.includes((dPlan[a.id]||{})[dDay]||''));
+    const dkDay2 = dYear + '-' + String(dMo+1).padStart(2,'0') + '-' + String(dDay).padStart(2,'0');
+    const nbVacAffectes = ((etab.affectationsVac && etab.affectationsVac[dkDay2]) || []).length;
     const borderCol = isToday2 ? 'var(--accent)' : isWE ? 'var(--accent3)' : 'var(--border)';
     weekHtml += '<div style="border:1px solid '+borderCol+';border-radius:8px;overflow:hidden;min-height:80px">';
     weekHtml += '<div style="padding:4px;text-align:center;background:var(--bg3);border-bottom:1px solid var(--border);min-height:52px">';
     weekHtml += '<div style="font-size:9px;color:'+(isToday2?'var(--accent)':isWE?'var(--accent3)':'var(--text2)')+'">'+dayNames[i]+'</div>';
     weekHtml += '<div style="font-weight:800;font-size:14px;color:'+(isToday2?'var(--accent)':'var(--text)')+'">'+dDay+'</div>';
-    weekHtml += '<div style="font-size:9px;color:var(--text3)">'+agentsPoste.length+' ag.</div>';
+    weekHtml += '<div style="font-size:9px;color:var(--text3)">'+agentsPoste.length+' ag.'+(nbVacAffectes>0?' <span style="color:#4f8ef7">+'+nbVacAffectes+'vac</span>':'')+'</div>';
     weekHtml += '</div>';
     if (agentsPoste.length === 0) {
       weekHtml += '<div style="padding:6px;text-align:center;color:var(--text3);font-size:10px">—</div>';
@@ -2823,6 +2977,21 @@ function renderDashboard() {
         weekHtml += '<span style="font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+a.nom+' '+( a.prenom||'')+'">'+a.nom+'</span>';
         weekHtml += '</div>';
       });
+      // Afficher vacataires/intérimaires affectés ce jour
+      const dkDay = dYear + '-' + String(dMo+1).padStart(2,'0') + '-' + String(dDay).padStart(2,'0');
+      const vacAffectes = (etab.affectationsVac && etab.affectationsVac[dkDay]) || [];
+      if (vacAffectes.length > 0) {
+        weekHtml += '<div style="padding:3px 5px;background:rgba(79,142,247,0.06);border-top:1px solid rgba(79,142,247,0.2)">';
+        vacAffectes.forEach(av => {
+          const isHS = av.statut === 'hs';
+          const vacColor = isHS ? '#f7a94f' : '#4f8ef7';
+          weekHtml += '<div style="display:flex;align-items:center;gap:3px;padding:1px 0">';
+          weekHtml += '<span style="background:'+vacColor+'22;color:'+vacColor+';font-size:8px;font-weight:700;padding:1px 4px;border-radius:2px;font-family:monospace;flex-shrink:0">'+(av.shift||'VAC')+'</span>';
+          weekHtml += '<span style="font-size:9px;color:'+vacColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+av.nom+' '+(av.prenom||'')+' — '+av.spec+'">'+av.nom+'</span>';
+          weekHtml += '</div>';
+        });
+        weekHtml += '</div>';
+      }
       // Afficher absents en bas
       if (agentsAbsents.length > 0) {
         weekHtml += '<div style="padding:3px 5px;background:rgba(247,111,111,0.06);border-top:1px solid rgba(247,111,111,0.15)">';
@@ -3100,6 +3269,7 @@ function renderPlanning() {
         const shift = agPlan[d] || '';
         const hor = etab.horaires.find(h => h.code === shift);
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
+        const isHS = shift && shift.startsWith('HS') && shift.length > 2;
         const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'].includes(shift);
 
         // Couleur secteur PAR JOUR (pas par mois) — corrige le bloc qui déborde sur mois suivant
@@ -3140,13 +3310,19 @@ function renderPlanning() {
 
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
 
-        html += '<td class="shift-cell' + (isWE?' weekend':'') + '"' +
-          ' style="background:' + cellBg + todayStyle + '"' +
-          ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
+        // Jours non travaillés (repos/vide) le week-end → non cliquables
+        const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
+        const weekendNonWork = isWE && isNonTravaille;
+
+        html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
+          ' style="background:' + cellBg + todayStyle + (weekendNonWork ? ';cursor:not-allowed;pointer-events:none;opacity:0.45' : '') + '"' +
+          (weekendNonWork ? '' : ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"') +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
-          (shift
+          (shift && !isNonTravaille
             ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>'
-            : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>') +
+            : (weekendNonWork
+                ? '<span style="color:var(--text3);font-size:10px;opacity:0.1">✕</span>'
+                : (shift ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>' : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>'))) +
           '</td>';
       }
       html += '</tr>';
@@ -3159,10 +3335,23 @@ function renderPlanning() {
   // Synchroniser scroll planning ↔ totaux
   const planWrap = document.getElementById('planning-container');
   const totWrap = document.getElementById('sector-daily-totals');
+  const vacWrap = document.getElementById('planning-vac-scroll');
   if (planWrap && totWrap) {
-    planWrap.onscroll = function() { totWrap.scrollLeft = planWrap.scrollLeft; };
-    totWrap.onscroll  = function() { planWrap.scrollLeft = totWrap.scrollLeft; };
+    planWrap.onscroll = function() {
+      totWrap.scrollLeft = planWrap.scrollLeft;
+      if (vacWrap) vacWrap.scrollLeft = planWrap.scrollLeft;
+    };
+    totWrap.onscroll  = function() {
+      planWrap.scrollLeft = totWrap.scrollLeft;
+      if (vacWrap) vacWrap.scrollLeft = totWrap.scrollLeft;
+    };
+    if (vacWrap) vacWrap.onscroll = function() {
+      planWrap.scrollLeft = vacWrap.scrollLeft;
+      totWrap.scrollLeft = vacWrap.scrollLeft;
+    };
   }
+
+  renderPlanningVacataires(daysInMonth, etab);
 
   // Légende horaires — codes + horaires + pauses
   const legendEl = document.getElementById('planning-legend');
@@ -3288,6 +3477,135 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   el.style.cssText = 'overflow-x:auto;width:100%;margin-top:4px;border-radius:0 0 8px 8px;border:1px solid #2a3350;border-top:none';
 }
 
+// ============================================================
+// VACATAIRES DISPONIBLES SOUS LE PLANNING
+// ============================================================
+function renderPlanningVacataires(daysInMonth, etab) {
+  const section = document.getElementById('planning-vac-section');
+  const container = document.getElementById('planning-vac-container');
+  const badge = document.getElementById('planning-vac-badge');
+  if (!section || !container) return;
+
+  const vacataires = (etab.vacataires || []);
+  if (vacataires.length === 0) { section.style.display = 'none'; return; }
+
+  // Construire une map des jours où chaque vacataire est dispo ce mois
+  const dispoCounts = {}; // vacId -> [days dispo]
+  vacataires.forEach(vac => {
+    dispoCounts[vac.id] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const st = (etab.vacDispos[vac.id]||{})[dk];
+      if (st === 'oui' || st === 'hs') dispoCounts[vac.id].push(d);
+    }
+  });
+
+  // Filtrer les vacataires qui ont au moins 1 dispo ce mois
+  const vacDispo = vacataires.filter(v => dispoCounts[v.id].length > 0);
+  badge.textContent = vacDispo.length;
+  if (vacDispo.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const today = new Date();
+  const colWidth = 38;
+  const nameWidth = 220;
+
+  // Header row (aligned with planning columns)
+  let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
+  html += '<thead><tr>';
+  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:1px solid var(--border)">Vacataire</th>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(currentYear, currentMonth, d);
+    const dow = date.getDay();
+    const isWE = dow === 0 || dow === 6;
+    const isToday2 = date.toDateString() === today.toDateString();
+    const isMon = dow === 1;
+    const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
+    html += '<th style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;text-align:center;padding:2px 0;font-size:9px;font-weight:600;' +
+      'color:' + (isToday2 ? '#4f8ef7' : isWE ? '#f7a94f' : '#6b7fa8') + ';' +
+      'background:var(--bg3);' +
+      'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + '">' +
+      '<div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div>' +
+      '</th>';
+  }
+  html += '<th style="min-width:80px;padding:3px 8px;text-align:center;font-size:9px;color:var(--text2);background:var(--bg3);border-left:1px solid var(--border)">Dispos</th>';
+  html += '</tr></thead><tbody>';
+
+  vacDispo.forEach(vac => {
+    const specColor = getSpecColor(vac.spec);
+    html += '<tr style="background:var(--card)">';
+    html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 10px;border-right:1px solid var(--border);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;border-bottom:1px solid var(--border)">';
+    html += '<div style="display:flex;align-items:center;gap:6px">';
+    html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + (vac.prenom||'') + ' ' + vac.nom + '</span>';
+    html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
+    html += '</div></td>';
+
+    let nbDispo = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const st = (etab.vacDispos[vac.id]||{})[dk];
+      const date = new Date(currentYear, currentMonth, d);
+      const dow = date.getDay();
+      const isWE = dow === 0 || dow === 6;
+      const isMon = dow === 1;
+      const isToday2 = date.toDateString() === today.toDateString();
+      let cellContent = '';
+      let cellBg = isWE ? 'rgba(247,169,79,0.04)' : 'transparent';
+      if (isToday2) cellBg = 'rgba(79,142,247,0.08)';
+
+      if (st === 'oui' || st === 'hs') {
+        nbDispo++;
+        const bgC = st === 'hs' ? 'rgba(247,169,79,0.25)' : 'rgba(56,217,169,0.2)';
+        const col = st === 'hs' ? '#f7a94f' : '#38d9a9';
+        cellContent = '<button onclick="affecterVacataireJour(\'' + vac.id + '\',' + d + ',\'' + st + '\')" ' +
+          'title="Affecter ' + (vac.prenom||'') + ' ' + vac.nom + ' le ' + d + '" ' +
+          'style="background:' + bgC + ';color:' + col + ';border:1px solid ' + col + '55;border-radius:4px;' +
+          'font-size:8px;font-weight:800;cursor:pointer;padding:2px 4px;width:30px;font-family:inherit;line-height:1.2">' +
+          (st === 'hs' ? 'HS' : '✓') + '</button>';
+        cellBg = bgC;
+      }
+
+      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:38px;text-align:center;vertical-align:middle;' +
+        'background:' + cellBg + ';' +
+        'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + ';' +
+        'border-bottom:1px solid var(--border)">' +
+        cellContent + '</td>';
+    }
+
+    html += '<td style="min-width:80px;padding:2px 8px;text-align:center;border-left:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle">';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--accent2)">' + nbDispo + 'j</span>';
+    html += '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function affecterVacataireJour(vacId, day, statut) {
+  const etab = getEtab();
+  if (!etab) return;
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  if (!vac) return;
+
+  // Ouvre le modal shift picker pour choisir l'affectation (ou note directe)
+  const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
+  const msg = `Affecter ${vac.prenom||''} ${vac.nom} (${vac.spec}) le ${dateLabel} ?\n` +
+    `Statut dispo: ${statut === 'hs' ? 'HS (Heure Sup)' : 'Disponible'}`;
+  if (confirm(msg)) {
+    // Enregistrer dans etab.affectationsVac
+    if (!etab.affectationsVac) etab.affectationsVac = {};
+    const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
+    // Retirer si déjà présent
+    etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
+    etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, affecteLe: new Date().toISOString() });
+    saveToStorage();
+    showToast(`${vac.prenom||''} ${vac.nom} affecté(e) le ${day}/${currentMonth+1}`, 'success');
+    renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
+  }
+}
+
 function changeMonth(delta) {
   currentMonth += delta;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
@@ -3407,6 +3725,18 @@ function openShiftPicker(agentId, day) {
     ? `${agent.prenom||''} ${agent.nom} · ${agent.spec} · ${agent.taux}%`
     : '';
 
+  // Show existing DA/Retard for this day
+  const infoEl = document.getElementById('shift-modal-info');
+  if (infoEl && agent) {
+    const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    const existDA = ((etab.departsAnticipes||{})[agentId]||[]).find(e => e.date === dk);
+    const existRetard = ((etab.retards||{})[agentId]||[]).find(e => e.date === dk);
+    let extraInfo = '';
+    if (existDA) extraInfo += ` · <span style="color:#f7a94f;font-weight:700">🏃 DA −${existDA.heures}h</span>`;
+    if (existRetard) extraInfo += ` · <span style="color:#f76f6f;font-weight:700">⏰ Retard −${existRetard.heures}h</span>`;
+    infoEl.innerHTML = `${agent.prenom||''} ${agent.nom} · ${agent.spec} · ${agent.taux}%${extraInfo}`;
+  }
+
   const planMonth = (etab.planning[currentYear] || {})[currentMonth] || {};
   const currentShift = (planMonth[agentId] || {})[day] || '';
   selectedShiftCode = currentShift;
@@ -3513,7 +3843,55 @@ function openShiftPicker(agentId, day) {
 
   openModal('modal-shift');
   resetSessionTimer();
-}
+
+  // === ABSENCES & CONGÉS DU MOIS ===
+  const absSection = document.getElementById('shift-absences-mois');
+  const absContent = document.getElementById('shift-absences-content');
+  if (absSection && absContent && agent) {
+    const agPlanM = planMonth[agentId] || {};
+    // Codes absences/congés dynamiques depuis etab.horaires (tous sauf comptage=travail/repos pur)
+    const absHorMap = {};
+    (etab.horaires || []).forEach(h => {
+      if (h.comptage !== 'travail' && h.code !== 'R') {
+        absHorMap[h.code] = h.couleur || '#8892aa';
+      }
+    });
+    // Fallback codes fixes si non dans horaires
+    const absCodesLabel = absHorMap;
+    const absCouleurs = absHorMap;
+    // Grouper par code
+    const absByCode = {};
+    const daysInM = new Date(currentYear, currentMonth+1, 0).getDate();
+    for (let d2 = 1; d2 <= daysInM; d2++) {
+      const sh2 = agPlanM[d2] || '';
+      if (absHorMap[sh2]) {
+        if (!absByCode[sh2]) absByCode[sh2] = [];
+        absByCode[sh2].push(d2);
+      }
+    }
+    const entries = Object.entries(absByCode);
+    if (entries.length > 0) {
+      absContent.innerHTML = entries.map(([code, days]) => {
+        const col = absCouleurs[code] || '#888';
+        const ranges = [];
+        let start = days[0], prev = days[0];
+        for (let i = 1; i <= days.length; i++) {
+          if (i === days.length || days[i] !== prev + 1) {
+            ranges.push(start === prev ? start + '' : start + '→' + prev);
+            start = days[i]; prev = days[i];
+          } else { prev = days[i]; }
+        }
+        const absHor = (etab.horaires||[]).find(h => h.code === code);
+        const col2 = absHor ? (absHor.couleur || '#888') : '#888';
+        return '<span style="background:' + col2 + '22;color:' + col2 + ';border:1px solid ' + col2 + '55;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;font-family:\'DM Mono\',monospace">' +
+          code + ' <span style="font-weight:400;font-size:10px">' + ranges.join(', ') + '</span>' +
+          '</span>';
+      }).join('');
+      absSection.style.display = 'block';
+    } else {
+      absSection.style.display = 'none';
+    }
+  }
 
 function selectShiftCode(code, el) {
   selectedShiftCode = code;
@@ -3787,9 +4165,23 @@ function applyShift() {
     showToast(`${nbH}h sup enregistrées sur ${horaire}`, 'success');
   } else if (_currentModificateur === 'depart') {
     const nbH = parseFloat(document.getElementById('depart-nb-heures')?.value || 1);
+    const etab = getEtab();
+    if (!etab.departsAnticipes) etab.departsAnticipes = {};
+    if (!etab.departsAnticipes[agentId]) etab.departsAnticipes[agentId] = [];
+    const dateKey = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    etab.departsAnticipes[agentId] = etab.departsAnticipes[agentId].filter(e => e.date !== dateKey);
+    etab.departsAnticipes[agentId].push({ date: dateKey, heures: nbH, createdAt: new Date().toISOString() });
+    saveToStorage();
     showToast(`Départ anticipé de ${nbH}h noté`, 'info');
   } else if (_currentModificateur === 'retard') {
     const nbH = parseFloat(document.getElementById('retard-nb-heures')?.value || 0.5);
+    const etab = getEtab();
+    if (!etab.retards) etab.retards = {};
+    if (!etab.retards[agentId]) etab.retards[agentId] = [];
+    const dateKey = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    etab.retards[agentId] = etab.retards[agentId].filter(e => e.date !== dateKey);
+    etab.retards[agentId].push({ date: dateKey, heures: nbH, createdAt: new Date().toISOString() });
+    saveToStorage();
     showToast(`Retard de ${nbH}h noté`, 'info');
   }
 
@@ -4103,18 +4495,24 @@ function renderComptage() {
     <th style="min-width:48px;color:var(--accent3)" title="Dimanches + fériés travaillés">Dim+Fér.</th>
     <th style="min-width:58px;font-weight:700" title="Heures théoriques du mois (base FPT)">H. théor.</th>
     <th style="min-width:58px;font-weight:700;color:var(--accent)" title="Heures travaillées effectives">H. trav.</th>
-    <th style="min-width:58px;font-weight:800" title="Solde heures (travaillées − théoriques)">Solde</th>
+    <th style="min-width:50px;color:#38d9a9" title="Heures supplémentaires ce mois">HS +</th>
+    <th style="min-width:50px;color:#f7a94f" title="Départs anticipés ce mois (heures retirées)">DA −</th>
+    <th style="min-width:50px;color:#f76f6f" title="Retards ce mois (heures retirées)">RTD −</th>
+    <th style="min-width:58px;font-weight:800" title="Solde heures (travaillées + HS − DA − Retards − théoriques)">Solde</th>
   </tr></thead><tbody>`;
+
+  // Filtre spécialité
+  const specFilterComptage = document.getElementById('filter-spec-comptage')?.value || '';
 
   // Grouper par groupe
   const groupes = {};
-  etab.agents.filter(a => a.actif).forEach(a => {
+  etab.agents.filter(a => a.actif && (!specFilterComptage || a.spec === specFilterComptage)).forEach(a => {
     const g = a.groupeRot || 1;
     if (!groupes[g]) groupes[g] = [];
     groupes[g].push(a);
   });
 
-  const cols = 17;
+  const cols = 21;
   Object.keys(groupes).sort().forEach(gKey => {
     html += `<tr><td colspan="${cols}" style="padding:5px 10px;background:var(--bg3);font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ${gKey}</td></tr>`;
 
@@ -4144,6 +4542,10 @@ function renderComptage() {
       const hPer = cpt.reposDimFeries > 0 ? '+' + cpt.reposDimFeries + 'h' : '0h p.';
       const hPerColor = cpt.reposDimFeries > 0 ? 'var(--accent3)' : 'var(--text3)';
 
+      const hsVal = cpt.heuresSupMois > 0;
+      const daVal = cpt.heuresDA > 0;
+      const retVal = cpt.heuresRetard > 0;
+
       html += `<tr class="comptage-row" style="border-bottom:1px solid var(--border)22">
         <td style="padding:5px 10px;white-space:nowrap">
           <span style="font-weight:400;color:var(--text2)">${agent.prenom||''} </span><strong>${agent.nom}</strong>
@@ -4164,6 +4566,9 @@ function renderComptage() {
         <td class="comptage-num" style="color:${cpt.nbDimFeries >= (etab.config.seuilDimFeries||10) ? 'var(--accent3)' : 'var(--text2)'}">${cpt.nbDimFeries}</td>
         <td class="comptage-num" style="font-weight:700;color:var(--text2)">${cpt.baseH}h</td>
         <td class="comptage-num" style="font-weight:700;color:var(--accent)">${cpt.heuresTravaillees}h</td>
+        <td class="comptage-num" style="color:${hsVal ? '#38d9a9' : 'var(--text3)'};font-weight:${hsVal?'700':'400'}">${hsVal ? '+' + cpt.heuresSupMois + 'h' : '<span style="opacity:0.25">—</span>'}</td>
+        <td class="comptage-num" style="color:${daVal ? '#f7a94f' : 'var(--text3)'};font-weight:${daVal?'700':'400'}">${daVal ? '−' + cpt.heuresDA + 'h<br><span style="font-size:9px;opacity:0.7">' + cpt.nbDA + 'x</span>' : '<span style="opacity:0.25">—</span>'}</td>
+        <td class="comptage-num" style="color:${retVal ? '#f76f6f' : 'var(--text3)'};font-weight:${retVal?'700':'400'}">${retVal ? '−' + cpt.heuresRetard + 'h<br><span style="font-size:9px;opacity:0.7">' + cpt.nbRetard + 'x</span>' : '<span style="opacity:0.25">—</span>'}</td>
         <td class="comptage-num"><span class="${soldeClass}" style="font-weight:800">${cpt.ecart >= 0 ? '+' : ''}${cpt.ecart}h</span></td>
       </tr>`;
     });
@@ -4176,59 +4581,144 @@ function renderComptage() {
 // ============================================================
 // AGENTS
 // ============================================================
+
+let currentAgentsTab = 'actifs'; // 'actifs' | 'inactifs'
+let currentAgentSpecFilter = ''; // '' = toutes spécialités
+
+function switchAgentsTab(tab) {
+  currentAgentsTab = tab;
+  document.getElementById('agents-tab-actifs').className = 'tab' + (tab === 'actifs' ? ' active' : '');
+  document.getElementById('agents-tab-inactifs').className = 'tab' + (tab === 'inactifs' ? ' active' : '');
+  currentAgentSpecFilter = ''; // reset spec filter when switching
+  updateAgentSpecTabs();
+  renderAgents();
+}
+
+function updateAgentSpecTabs() {
+  const etab = getEtab();
+  const tabs = document.getElementById('agent-spec-tabs');
+  if (!tabs || !etab) return;
+
+  // Trouver les spécialités présentes dans la tab courante
+  const agentsPool = currentAgentsTab === 'actifs'
+    ? etab.agents.filter(a => a.actif !== false)
+    : etab.agents.filter(a => a.actif === false);
+
+  const specs = [...new Set(agentsPool.map(a => a.spec).filter(Boolean))].sort();
+  tabs.innerHTML = '';
+
+  const btnTous = document.createElement('button');
+  btnTous.textContent = 'Tous';
+  btnTous.className = 'spec-tab-btn' + (!currentAgentSpecFilter ? ' active' : '');
+  btnTous.onclick = function() { currentAgentSpecFilter = ''; updateAgentSpecTabsUI(); renderAgents(); };
+  tabs.appendChild(btnTous);
+
+  specs.forEach(s => {
+    const btn = document.createElement('button');
+    btn.textContent = s;
+    btn.dataset.spec = s;
+    const specColor = getSpecColor(s);
+    btn.className = 'spec-tab-btn' + (currentAgentSpecFilter === s ? ' active' : '');
+    btn.onclick = (function(sp){ return function(){ currentAgentSpecFilter = sp; updateAgentSpecTabsUI(); renderAgents(); }; })(s);
+    tabs.appendChild(btn);
+  });
+
+  // Sync hidden select (for compatibility)
+  const sel = document.getElementById('filter-spec');
+  if (sel) {
+    sel.innerHTML = '<option value="">Toutes spécialités</option>';
+    specs.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Sync groupe select
+  const grpSel = document.getElementById('filter-groupe');
+  if (grpSel) {
+    const curGrp = grpSel.value;
+    const groupes = [...new Set(agentsPool.map(a => String(a.groupeRot||1)))].sort();
+    grpSel.innerHTML = '<option value="">Tous groupes</option>';
+    groupes.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g; opt.textContent = 'Groupe ' + g;
+      if (g === curGrp) opt.selected = true;
+      grpSel.appendChild(opt);
+    });
+  }
+}
+
+function updateAgentSpecTabsUI() {
+  const btns = document.querySelectorAll('#agent-spec-tabs .spec-tab-btn');
+  btns.forEach(b => {
+    b.classList.toggle('active', b.textContent === (currentAgentSpecFilter || 'Tous'));
+  });
+}
+
 function renderAgents() {
   const etab = getEtab();
   if (!etab) return;
+
   const search = (document.getElementById('agent-search')?.value || '').toLowerCase();
-  const specFilter = document.getElementById('filter-spec')?.value || '';
-  let agents = [...etab.agents];
+  const grpFilter = document.getElementById('filter-groupe')?.value || '';
+
+  // Pool selon onglet actifs/inactifs
+  const isInactifTab = currentAgentsTab === 'inactifs';
+  let agents = etab.agents.filter(a => isInactifTab ? (a.actif === false) : (a.actif !== false));
+
   // Tri alphabétique NOM puis PRÉNOM
   agents.sort((a, b) => {
     const na = (a.nom||'').localeCompare(b.nom||'', 'fr');
     return na !== 0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr');
   });
-  if (search) agents = agents.filter(a =>
-    (a.nom+' '+a.prenom+' '+(a.spec||'')).toLowerCase().includes(search)
-  );
-  if (specFilter) agents = agents.filter(a => a.spec === specFilter);
 
-  const grid = document.getElementById('agents-grid');
+  // Filtres
+  if (search) agents = agents.filter(a =>
+    (a.nom+' '+a.prenom+' '+(a.spec||'')+(a.groupeRot?'Groupe '+a.groupeRot:'')).toLowerCase().includes(search)
+  );
+  if (currentAgentSpecFilter) agents = agents.filter(a => a.spec === currentAgentSpecFilter);
+  if (grpFilter) agents = agents.filter(a => String(a.groupeRot||1) === grpFilter);
+
+  const container = document.getElementById('agents-grid-container');
   const cntEl = document.getElementById('agents-count');
   if (cntEl) cntEl.textContent = agents.length + ' agent' + (agents.length > 1 ? 's' : '');
+
   if (agents.length === 0) {
-    grid.innerHTML = '<p class="text-muted text-sm" style="grid-column:1/-1;padding:20px">Aucun agent ne correspond à votre recherche.</p>';
+    container.innerHTML = '<p class="text-muted text-sm" style="padding:20px;text-align:center">Aucun agent ne correspond à votre recherche.</p>';
     return;
   }
-  // Grouper par spécialité pour l'affichage
-  const groupeFilter = document.getElementById('filter-groupe')?.value || '';
-  if (groupeFilter) agents = agents.filter(a => String(a.groupeRot||1) === groupeFilter);
-  grid.innerHTML = agents.map(agent => {
+
+  // Grouper par spécialité si pas de filtre spé actif
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+
+  function buildAgentCard(agent) {
     const sect = etab.secteurs.find(s => s.id === agent.secteurFixe);
     const sectColor = sect ? secteurCouleurCSS(sect) : '#5a6480';
     const specColor = getSpecColor(agent.spec);
-    const avatar = agent.prenom[0] + agent.nom[0];
+    const avatar = ((agent.prenom||'?')[0] + (agent.nom||'?')[0]).toUpperCase();
     const planMonth = ((etab.planning[currentYear] || {})[currentMonth] || {})[agent.id] || {};
     let totalH = 0, workedDays = 0;
-    const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
     for (let d = 1; d <= daysInMonth; d++) {
       const shift = planMonth[d] || '';
       const hor = etab.horaires.find(h => h.code === shift);
       if (hor && hor.duree > 0) { totalH += hor.duree; workedDays++; }
     }
     const baseH = Math.round(etab.config.baseMensuelle * (agent.taux / 100));
+    const grpLabel = agent.groupeRot ? 'Gr.' + agent.groupeRot + (agent.ligneRoulement||'') : '';
 
-    return `<div class="agent-card" onclick="openEditAgent('${agent.id}')" style="border-left-color:${sectColor}">
+    return `<div class="agent-card${isInactifTab ? ' agent-card-inactive' : ''}" onclick="openEditAgent('${agent.id}')" style="border-left-color:${sectColor}">
       <div class="agent-card-header">
         <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${avatar}</div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="agent-card-name">${agent.prenom||''} <span style="font-weight:800">${agent.nom}</span></div>
           <div class="agent-card-spec">${agent.spec} · ${agent.taux}%${agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : ''}</div>
+          ${grpLabel ? `<div style="margin-top:3px"><span class="agent-card-group-badge">Grp ${agent.groupeRot}${agent.ligneRoulement||''}</span></div>` : ''}
         </div>
-        ${!agent.actif ? '<span class="tag tag-gray" style="margin-left:auto">Inactif</span>' : ''}
+        ${isInactifTab ? '<span class="tag tag-gray" style="margin-left:auto;flex-shrink:0">Inactif</span>' : ''}
       </div>
       <div class="agent-card-tags">
-        ${agent.secteurFixe ? `<span class="tag" style="background:${sectColor}22;color:${sectColor}">${agent.secteurFixe}</span>` : '<span class="tag tag-gray">Rotation</span>'}
-        <span class="tag" style="background:${specColor}22;color:${specColor}">${agent.spec}</span>
+        ${agent.secteurFixe ? `<span class="tag" style="background:${sectColor}22;color:${sectColor}">📍 ${agent.secteurFixe}</span>` : '<span class="tag tag-gray">Rotation</span>'}
         ${agent.exclusHoraires?.length ? `<span class="tag tag-red">Excl. ${agent.exclusHoraires.join(',')}</span>` : ''}
       </div>
       <div class="agent-card-stats">
@@ -4246,24 +4736,51 @@ function renderAgents() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  // Si filtre spécialité actif → affichage plat
+  if (currentAgentSpecFilter) {
+    container.innerHTML = `<div class="agents-grid">${agents.map(buildAgentCard).join('')}</div>`;
+    return;
+  }
+
+  // Sinon → grouper par spécialité
+  const specOrder = (etab.specialites || []);
+  const bySpec = {};
+  agents.forEach(a => {
+    const sp = a.spec || '—';
+    if (!bySpec[sp]) bySpec[sp] = [];
+    bySpec[sp].push(a);
+  });
+
+  // Ordre : spécialités dans l'ordre de etab.specialites, puis les autres
+  const specKeys = [
+    ...specOrder.filter(s => bySpec[s]),
+    ...Object.keys(bySpec).filter(s => !specOrder.includes(s)).sort()
+  ];
+
+  let html = '';
+  specKeys.forEach(spec => {
+    const list = bySpec[spec];
+    if (!list || list.length === 0) return;
+    const specColor = getSpecColor(spec);
+    html += `<div class="agent-spec-group">
+      <div class="agent-spec-group-header">
+        <span style="width:12px;height:12px;border-radius:3px;background:${specColor};display:inline-block;flex-shrink:0"></span>
+        <span class="agent-spec-group-title" style="color:${specColor}">${spec}</span>
+        <span class="agent-spec-group-count">${list.length} agent${list.length>1?'s':''}</span>
+      </div>
+      <div class="agents-grid">
+        ${list.map(buildAgentCard).join('')}
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
 }
 
 function filterAgents() {
-  const etab = getEtab();
-  const grpFilter = document.getElementById('filter-groupe')?.value || '';
-  let agents = [...(etab?.agents || [])];
-  agents.sort((a, b) => {
-    const na = (a.nom||'').localeCompare(b.nom||'', 'fr');
-    return na !== 0 ? na : (a.prenom||'').localeCompare(b.prenom||'', 'fr');
-  });
-  const search = (document.getElementById('agent-search')?.value || '').toLowerCase();
-  const specFilter = document.getElementById('filter-spec')?.value || '';
-  if (search) agents = agents.filter(a => (a.nom+' '+a.prenom+' '+(a.spec||'')).toLowerCase().includes(search));
-  if (specFilter) agents = agents.filter(a => a.spec === specFilter);
-  if (grpFilter) agents = agents.filter(a => String(a.groupeRot||1) === grpFilter);
-  const cnt = document.getElementById('agents-count');
-  if (cnt) cnt.textContent = agents.length + ' agent' + (agents.length>1?'s':'');
+  updateAgentSpecTabs();
   renderAgents();
 }
 
@@ -4357,6 +4874,7 @@ function saveAgent() {
   }
   saveToStorage();
   closeModal('modal-agent');
+  updateAgentSpecTabs();
   renderAgents();
   renderQRPage();
   // Regénérer le planning pour appliquer immédiatement les nouvelles contraintes
@@ -4373,6 +4891,7 @@ function deleteCurrentAgent() {
   etab.agents = etab.agents.filter(a => a.id !== editingAgentId);
   saveToStorage();
   closeModal('modal-agent');
+  updateAgentSpecTabs();
   renderAgents();
   showToast('Agent supprimé', 'success');
 }
@@ -4577,23 +5096,55 @@ function rechercherRemplacant() {
     return;
   }
 
+  // Stocker les infos de recherche pour le bouton Affecter
+  window._rechercheContexte = { dayNum, mo, yr, dk, shift, secteur };
+
   resultsEl.innerHTML = `
     <div class="alert alert-info" style="margin-bottom:10px">📅 ${dayLabel} — ${candidates.length} vacataire(s) disponible(s)</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
       ${candidates.map(v => {
         const dispo = (etab.vacDispos[v.id]||{})[dk];
         const specColor = getSpecColor(v.spec);
-        return `<div class="card" style="padding:12px;border-left:3px solid ${specColor}">
+        const isAffecter = (etab.affectationsVac && etab.affectationsVac[dk] || []).some(a => a.vacId === v.id);
+        return `<div class="card" style="padding:12px;border-left:3px solid ${specColor};transition:box-shadow 0.2s" id="rech-card-${v.id}">
           <div style="font-weight:700">${v.prenom} ${v.nom}</div>
           <div class="text-xs text-muted">${v.spec}${v.tel?' · 📞 '+v.tel:''}</div>
-          <div style="margin-top:6px">
+          <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:6px">
             <span class="tag ${dispo==='hs'?'tag-orange':'tag-green'}">${dispo==='hs'?'Heure sup':'Disponible'}</span>
+            ${isAffecter
+              ? `<span style="background:rgba(56,217,169,0.15);color:#38d9a9;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid #38d9a940">✓ Affecté</span>`
+              : `<button onclick="affecterDepuisRecherche('${v.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">➕ Affecter</button>`
+            }
           </div>
         </div>`;
       }).join('')}
     </div>`;
 }
 
+
+function affecterDepuisRecherche(vacId) {
+  const etab = getEtab();
+  if (!etab) return;
+  const ctx = window._rechercheContexte;
+  if (!ctx) { showToast("Relancez la recherche", "warning"); return; }
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  if (!vac) return;
+  const { dayNum, mo, yr, dk } = ctx;
+  const statut = (etab.vacDispos[vac.id]||{})[dk] || "oui";
+  const dateLabel = new Date(yr, mo, dayNum).toLocaleDateString("fr-FR", {weekday:"long",day:"numeric",month:"long"});
+  const shiftCode = ctx.shift || "";
+  const shiftLabel = shiftCode ? " — " + shiftCode : "";
+  if (!confirm("Affecter " + (vac.prenom||"") + " " + vac.nom + " (" + vac.spec + ") le " + dateLabel + shiftLabel + " ?")) return;
+  if (!etab.affectationsVac) etab.affectationsVac = {};
+  if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
+  etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
+  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||"", spec: vac.spec, statut, shift: shiftCode, affecteLe: new Date().toISOString() });
+  saveToStorage();
+  showToast((vac.prenom||"") + " " + vac.nom + " affecte le " + dayNum + "/" + (mo+1), "success");
+  const card = document.getElementById("rech-card-" + vacId);
+  if (card) { const btn = card.querySelector("button"); if (btn) { const badge = document.createElement("span"); badge.style.cssText = "background:rgba(56,217,169,0.15);color:#38d9a9;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid #38d9a940"; badge.textContent = "Affecte"; btn.replaceWith(badge); } }
+  renderDashboard();
+}
 function switchVacTab(tab) {
   document.querySelectorAll('#page-vacataires .tab').forEach((t,i) => {
     t.classList.toggle('active', ['dispos','liste','affectations'][i] === tab);
@@ -4701,7 +5252,7 @@ function renderQRPage() {
       }).join('')}
     </div>`;
 
-  // Générer les QR codes
+  // Générer les QR codes spécialités
   setTimeout(() => {
     specs.forEach(spec => {
       const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
@@ -4715,6 +5266,52 @@ function renderQRPage() {
       }
     });
   }, 100);
+
+  // ── Section QR Vacataires ──
+  const vacs = etab.vacataires || [];
+  let vacSection = '';
+  if (vacs.length > 0) {
+    vacSection = `<div style="margin-top:32px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px">
+        <span style="width:28px;height:28px;border-radius:8px;background:#f7a94f22;color:#f7a94f;display:inline-flex;align-items:center;justify-content:center;font-size:16px">👤</span>
+        QR Codes Vacataires
+        <span style="font-size:11px;font-weight:600;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:10px">${vacs.length} vacataire${vacs.length>1?'s':''}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Chaque vacataire a son QR personnel. Il le scanne pour renseigner ses dispos et consulter son planning si affecté.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+        ${vacs.map(v => {
+          const url = `${baseUrl}?vac=${encodeURIComponent(v.id)}&etab=${DB.currentEtab || ETAB_ID}`;
+          const specColor = '#f7a94f';
+          return `<div class="card" style="text-align:center;border-top:3px solid ${specColor};padding:16px">
+            <div style="width:40px;height:40px;border-radius:50%;background:${specColor}22;color:${specColor};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;margin:0 auto 8px">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
+            <div style="font-weight:800;font-size:13px;color:var(--text)">${v.prenom} ${v.nom}</div>
+            <div style="font-size:10px;color:var(--text2);margin-bottom:10px">${v.spec||''}</div>
+            <div id="qr-vac-${v.id}" style="margin:0 auto 10px;width:130px;height:130px"></div>
+            <div style="display:flex;gap:5px;justify-content:center">
+              <button class="btn btn-primary btn-sm" onclick="downloadVacQR('${v.id}')">⬇️</button>
+              <button class="btn btn-secondary btn-sm" onclick="printVacQR('${v.id}','${v.prenom} ${v.nom}')">🖨️</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  grid.insertAdjacentHTML('beforeend', vacSection);
+
+  // Générer les QR vacataires
+  setTimeout(() => {
+    vacs.forEach(v => {
+      const url = `${baseUrl}?vac=${encodeURIComponent(v.id)}&etab=${DB.currentEtab || ETAB_ID}`;
+      const container = document.getElementById('qr-vac-' + v.id);
+      if (!container) return;
+      container.innerHTML = '';
+      try {
+        new QRCode(container, { text: url, width: 130, height: 130, colorDark: '#7c3500', colorLight: '#fff8f0' });
+      } catch(e) {
+        container.innerHTML = `<div style="font-size:8px;color:var(--text2);padding:4px;word-break:break-all">${url}</div>`;
+      }
+    });
+  }, 200);
 }
 
 function downloadSpecQR(spec) {
@@ -4739,6 +5336,38 @@ function printSpecQR(spec) {
     <h2>Planning ${spec} — ${etab?.nom || ''}</h2>
     <img src="${img}" style="width:200px;height:200px"><br>
     <p style="font-size:11px;color:#666;margin-top:10px">Scannez ce QR code pour accéder à votre planning</p>
+    <p style="font-size:9px;color:#999">${url}</p>
+    <script>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function downloadVacQR(vacId) {
+  const container = document.getElementById('qr-vac-' + vacId);
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const etab = getEtab();
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  const a = document.createElement('a');
+  a.download = `QR_Vacataire_${vac ? vac.nom + '_' + vac.prenom : vacId}.png`;
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+function printVacQR(vacId, nom) {
+  const container = document.getElementById('qr-vac-' + vacId);
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const img = canvas.toDataURL();
+  const etab = getEtab();
+  const baseUrl = window.location.href.split('?')[0];
+  const url = `${baseUrl}?vac=${encodeURIComponent(vacId)}&etab=${DB.currentEtab || ETAB_ID}`;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
+    <h2>Planning Vacataire — ${nom}</h2>
+    <p style="font-size:12px;color:#666">${etab?.nom || ''}</p>
+    <img src="${img}" style="width:200px;height:200px"><br>
+    <p style="font-size:11px;color:#666;margin-top:10px">Scannez ce QR code pour accéder à votre planning et renseigner vos disponibilités</p>
     <p style="font-size:9px;color:#999">${url}</p>
     <script>window.print();<\/script>
   </body></html>`);
@@ -4836,14 +5465,15 @@ function qrPopulateAgentSelect(etab, specFilter) {
     opt.textContent = a.nom + ' ' + (a.prenom||'') + ' \u00b7 ' + a.spec + grpLabel;
     sel.appendChild(opt);
   });
-  var vacs = (etab.vacataires||[]).filter(function(v){ return v.pin; });
-  if (vacs.length > 0) {
+  // Vacataires avec PIN dans le dropdown (accès alternatif au QR)
+  var vacs2 = (etab.vacataires||[]).filter(function(v){ return v.pin; });
+  if (vacs2.length > 0) {
     var grp = document.createElement('optgroup');
     grp.label = 'Vacataires';
-    vacs.forEach(function(v) {
+    vacs2.forEach(function(v) {
       var opt = document.createElement('option');
       opt.value = v.id;
-      opt.textContent = v.nom + ' ' + (v.prenom||'') + ' (Vacataire)';
+      opt.textContent = v.nom + ' ' + (v.prenom||'') + ' · Vacataire';
       grp.appendChild(opt);
     });
     sel.appendChild(grp);
@@ -5056,10 +5686,22 @@ function qrOpenPlanning(agentId) {
       }
     }
     var caRestants = Math.round((droits.droitCA - caAnnuelPris) * 2) / 2;
+    // Calcul jours travaillés dans le mois courant
+    var joursTravm = 0;
+    var dimCur = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+    var pmCur = ((etab.planning[today.getFullYear()]||{})[today.getMonth()]||{})[agent.id] || {};
+    var travCodes = ['M','S','J','NU','N'];
+    for (var dc = 1; dc <= dimCur; dc++) {
+      if (travCodes.indexOf(pmCur[dc]||'') !== -1) joursTravm++;
+    }
     infoBar.innerHTML =
       '<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:' + sectColor + '15;border:1px solid ' + sectColor + '44">' +
         '<span style="width:8px;height:8px;border-radius:50%;background:' + sectColor + ';display:inline-block"></span>' +
         '<span style="font-size:12px;font-weight:700;color:' + sectColor + '">' + (secteur||'—') + '</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:#e0f2fe;border:1px solid #7dd3fc44">' +
+        '<span style="font-size:13px">📅</span>' +
+        '<span style="font-size:12px;font-weight:700;color:#0369a1">' + joursTravm + 'j travaillés</span>' +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:' + (caRestants > 0 ? '#dcfce7' : '#fef2f2') + ';border:1px solid ' + (caRestants > 0 ? '#86efac' : '#fca5a5') + '">' +
         '<span style="font-size:14px">🌴</span>' +
@@ -5085,8 +5727,8 @@ function qrOpenPlanning(agentId) {
     qrShowTab('dispos');
     qrRenderDispos(etab, agent);
   } else {
-    qrRenderPlanning();
     qrShowTab('planning');
+    qrRenderPlanning();
   }
 }
 
@@ -5631,6 +6273,7 @@ function renderConfigGeneral() {
   if (cf2El) cf2El.value = etab.config.cfFrac2Seuil || 8;
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
+  renderSpecRegles();
 }
 
 function saveConfigGeneral() {
@@ -5674,12 +6317,12 @@ function renderSpecList() {
     </div>`
   ).join('');
   // update selects
-  const allSelects = ['ag-spec', 'vac-spec', 'filter-spec'];
+  const allSelects = ['ag-spec', 'vac-spec', 'filter-spec', 'filter-spec-comptage'];
   allSelects.forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const cur = sel.value;
-    if (id === 'filter-spec') sel.innerHTML = '<option value="">Toutes spécialités</option>';
+    if (id === 'filter-spec' || id === 'filter-spec-comptage') sel.innerHTML = '<option value="">Toutes spécialités</option>';
     else sel.innerHTML = '';
     etab.specialites.forEach(s => {
       const opt = document.createElement('option');
@@ -5877,6 +6520,11 @@ function renderConfigHoraires() {
       <div style="padding:10px;background:var(--bg3);border-radius:8px">
         <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">
           Pause(s) — total : <span style="color:var(--accent3)">${totalPause}h</span>
+          <span style="margin-left:12px;font-size:10px;font-weight:400;color:var(--text3)">Les pauses ci-dessous sont incluses dans la présence mais non comptées en heures travaillées</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--border)">
+          <div class="toggle ${h.pauseNonDecomptee ? 'on' : ''}" onclick="togglePauseNonDecomptee(${i},this)" title="Activer = la pause est réelle (présence) mais n'est PAS déduite du comptage RH"></div>
+          <span style="font-size:12px;color:var(--text)">Pause <strong>sans impact sur le comptage RH</strong> <span style="color:var(--text3);font-size:11px">(présence maintenue, heures non déduites)</span></span>
         </div>
         <div id="pauses-${i}" style="display:flex;flex-direction:column;gap:6px">
           ${pauses.map((p, pi) => `
@@ -7036,6 +7684,15 @@ function isFerie(dateStr, year) {
 function calcComptageAgent(agent, planMonth, etab, year, month) {
   const daysInMonth = new Date(year, month+1, 0).getDate();
   const cfg = etab.config;
+  // Règles effectives : spécialité > global
+  const regle = getRegleAgent ? getRegleAgent(agent, etab) : {
+    baseMensuelle: cfg.baseMensuelle || 151.67,
+    presenceH: cfg.presenceH || 12,
+    travailH: cfg.travailH || 10,
+    caAnnuels: cfg.caAnnuels || 17.5,
+    reposDimFeriesJourH: cfg.reposDimFeriesJourH || 14,
+    reposDimFeriesNuitH: cfg.reposDimFeriesNuitH || 30,
+  };
   const isNuit = agent.spec === 'Nuit';
 
   // Durées par défaut (si horaire importé sans durée configurée)
@@ -7085,16 +7742,46 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
   }
 
   const baseH = Math.round((cfg.baseAnnuelle || 1607) / 12 * (agent.taux / 100) * 100) / 100;
+  // Override baseMensuelle par spécialité si défini
+  const baseHSpec = regle.baseMensuelle !== (cfg.baseMensuelle || 151.67)
+    ? Math.round(regle.baseMensuelle * (agent.taux / 100) * 100) / 100
+    : baseH;
   let reposDimFeries = 0;
   if (nbDimFeries >= (cfg.seuilDimFeries || 10)) {
-    reposDimFeries = isNuit ? (cfg.reposDimFeriesNuitH || 30) : (cfg.reposDimFeriesJourH || 14);
+    reposDimFeries = isNuit ? regle.reposDimFeriesNuitH : regle.reposDimFeriesJourH;
   }
-  const ecart = Math.round((heuresTravaillees - baseH) * 100) / 100;
+
+  // Heures sup
+  const hsEntries = ((etab.heuresSup || {})[agent.id] || []).filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  const heuresSupMois = hsEntries.reduce((s, e) => s + (e.heures || 0), 0);
+
+  // Départs anticipés
+  const daEntries = ((etab.departsAnticipes || {})[agent.id] || []).filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  const heuresDA = daEntries.reduce((s, e) => s + (e.heures || 0), 0);
+
+  // Retards
+  const retardEntries = ((etab.retards || {})[agent.id] || []).filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  const heuresRetard = retardEntries.reduce((s, e) => s + (e.heures || 0), 0);
+
+  // Heures effectives = travaillées + HS - DA - Retards
+  const heuresEffectives = Math.round((heuresTravaillees + heuresSupMois - heuresDA - heuresRetard) * 100) / 100;
+  const ecart = Math.round((heuresEffectives - baseHSpec) * 100) / 100;
 
   return {
-    heuresTravaillees, heuresPresence, baseH, ecart,
+    heuresTravaillees, heuresPresence, heuresEffectives, baseH: baseHSpec, ecart,
     joursCA, joursCF, joursMO, joursEM, joursGR,
-    joursTravailles, nbDimFeries, reposDimFeries, impactNegatif, shifts
+    joursTravailles, nbDimFeries, reposDimFeries, impactNegatif, shifts,
+    heuresSupMois, heuresDA, heuresRetard,
+    nbDA: daEntries.length, nbRetard: retardEntries.length
   };
 }
 
@@ -7104,7 +7791,8 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
 // ============================================================
 function calcDroitsConges(agent, planMonth, etab, year, month) {
   const cfg = etab.config;
-  const caAnnuels = cfg.caAnnuels || 17.5;
+  const regle = getRegleAgent ? getRegleAgent(agent, etab) : { caAnnuels: cfg.caAnnuels || 17.5 };
+  const caAnnuels = regle.caAnnuels || cfg.caAnnuels || 17.5;
   // Proratisation selon taux de travail
   let droitCA = caAnnuels * (agent.taux / 100);
   // Arrondi au demi-jour supérieur
@@ -7383,6 +8071,111 @@ function getSpecColor(spec) {
 
 function dateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function togglePauseNonDecomptee(idx, el) {
+  const etab = getEtab();
+  el.classList.toggle('on');
+  etab.horaires[idx].pauseNonDecomptee = el.classList.contains('on');
+  saveToStorage();
+  showToast(el.classList.contains('on') ? 'Pause non décomptée activée' : 'Pause décomptée du comptage', 'info');
+}
+
+// ============================================================
+// RÈGLES DE CALCUL PAR SPÉCIALITÉ
+// ============================================================
+function renderSpecRegles() {
+  const etab = getEtab();
+  if (!etab) return;
+  const el = document.getElementById('spec-regles-list');
+  if (!el) return;
+  if (!etab.specRegles) etab.specRegles = {};
+
+  const specs = etab.specialites || [];
+  if (specs.length === 0) {
+    el.innerHTML = '<p class="text-xs text-muted">Aucune spécialité configurée.</p>';
+    return;
+  }
+
+  el.innerHTML = specs.map(spec => {
+    const r = etab.specRegles[spec] || {};
+    const specColor = getSpecColor(spec);
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${specColor};margin-bottom:10px">
+        ${spec}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">Base mensuelle (h)</label>
+          <input type="number" id="sr-base-${spec}" value="${r.baseMensuelle||''}" placeholder="ex: 151.67" step="0.01"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">Durée présence (h)</label>
+          <input type="number" id="sr-presence-${spec}" value="${r.presenceH||''}" placeholder="ex: 12" step="0.5"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">Durée travail (h)</label>
+          <input type="number" id="sr-travail-${spec}" value="${r.travailH||''}" placeholder="ex: 10" step="0.5"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">CA annuels (jours)</label>
+          <input type="number" id="sr-ca-${spec}" value="${r.caAnnuels||''}" placeholder="ex: 17.5" step="0.5"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">Repos dim+fériés J (h)</label>
+          <input type="number" id="sr-reposjour-${spec}" value="${r.reposDimFeriesJourH||''}" placeholder="ex: 14" step="0.5"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:10px">Repos dim+fériés N (h)</label>
+          <input type="number" id="sr-reposnuit-${spec}" value="${r.reposDimFeriesNuitH||''}" placeholder="ex: 30" step="0.5"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveSpecRegles() {
+  const etab = getEtab();
+  if (!etab.specRegles) etab.specRegles = {};
+  (etab.specialites || []).forEach(spec => {
+    const r = {};
+    const base = document.getElementById('sr-base-'+spec)?.value;
+    const presence = document.getElementById('sr-presence-'+spec)?.value;
+    const travail = document.getElementById('sr-travail-'+spec)?.value;
+    const ca = document.getElementById('sr-ca-'+spec)?.value;
+    const reposjour = document.getElementById('sr-reposjour-'+spec)?.value;
+    const reposnuit = document.getElementById('sr-reposnuit-'+spec)?.value;
+    if (base) r.baseMensuelle = parseFloat(base);
+    if (presence) r.presenceH = parseFloat(presence);
+    if (travail) r.travailH = parseFloat(travail);
+    if (ca) r.caAnnuels = parseFloat(ca);
+    if (reposjour) r.reposDimFeriesJourH = parseFloat(reposjour);
+    if (reposnuit) r.reposDimFeriesNuitH = parseFloat(reposnuit);
+    if (Object.keys(r).length > 0) etab.specRegles[spec] = r;
+    else delete etab.specRegles[spec];
+  });
+  saveToStorage();
+  renderComptage();
+  showToast('Règles par spécialité enregistrées', 'success');
+}
+
+// Helpers pour obtenir la règle effective d'un agent (spécialité > global)
+function getRegleAgent(agent, etab) {
+  const specR = (etab.specRegles || {})[agent.spec] || {};
+  return {
+    baseMensuelle: specR.baseMensuelle || etab.config.baseMensuelle || 151.67,
+    presenceH: specR.presenceH || etab.config.presenceH || 12,
+    travailH: specR.travailH || etab.config.travailH || 10,
+    caAnnuels: specR.caAnnuels || etab.config.caAnnuels || 17.5,
+    reposDimFeriesJourH: specR.reposDimFeriesJourH || etab.config.reposDimFeriesJourH || 14,
+    reposDimFeriesNuitH: specR.reposDimFeriesNuitH || etab.config.reposDimFeriesNuitH || 30,
+  };
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
