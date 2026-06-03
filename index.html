@@ -299,9 +299,9 @@ body {
   border-right: 1px solid var(--border);
 }
 .agent-cell-poste {
-  padding: 5px 8px; background: var(--bg2);
+  padding: 5px 10px; background: var(--bg2);
   position: sticky; left: 60px; z-index: 5;
-  min-width: 130px; max-width: 130px;
+  min-width: 180px; max-width: 200px;
   border-right: 1px solid var(--border);
 }
 .agent-cell-name { font-weight: 700; color: var(--text); font-size: 12px; }
@@ -1289,8 +1289,8 @@ table input:focus { border-color: var(--accent); }
         <p>Générer et télécharger les QR codes personnels</p>
       </div>
       <div class="flex gap-3 mb-4 flex-wrap">
-        <button class="btn btn-primary btn-sm" onclick="generateAllQR()">🔄 Générer tous les QR</button>
-        <button class="btn btn-secondary btn-sm" onclick="printAllQR()">🖨️ Imprimer tous</button>
+        <button class="btn btn-primary btn-sm" onclick="printAllQROnePage()">🖨️ Imprimer tous (1 page)</button>
+        <button class="btn btn-secondary btn-sm" onclick="generateAllQR()">🔄 Régénérer les QR</button>
       </div>
       <div id="qr-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px"></div>
     </div>
@@ -1408,6 +1408,11 @@ table input:focus { border-color: var(--accent); }
               <div class="toggle" id="tog-rtt" onclick="toggleEl(this)"></div>
             </div>
             <button class="btn btn-primary btn-sm mt-3" onclick="saveConfigRegles()">💾 Enregistrer</button>
+            <hr class="divider" style="margin:20px 0">
+            <div class="config-section-title">🩺 Règles de calcul par spécialité</div>
+            <p class="text-sm text-muted mb-3">Surcharge les règles générales pour une spécialité donnée. Laisser vide = règle générale appliquée.</p>
+            <div id="regles-spec-container"></div>
+            <button class="btn btn-primary btn-sm mt-3" onclick="saveReglesSpec()">💾 Enregistrer les règles spécialités</button>
           </div>
           <div class="config-section">
             <div class="config-section-title">📅 Codes d'absence</div>
@@ -3078,9 +3083,9 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row
-  let html = `<table class="planning-table" style="table-layout:fixed;width:${190 + daysInMonth*38}px"><thead><tr>
+  let html = `<table class="planning-table" style="table-layout:fixed;width:${240 + daysInMonth*38}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:130px;width:130px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
+    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:180px;width:180px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -3296,7 +3301,7 @@ function renderPlanning() {
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
     const horPart = etab.horaires
-      .filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
+      .filter(h => h.comptage === 'travail' || h.code === 'R')
       .map(h => {
         const pauses = h.pauses || [];
         const totalPause = pauses.reduce((s,p) => s+(parseFloat(p.duree)||0), 0);
@@ -3334,7 +3339,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
 
   // Dimensions exactes = même que planning table
   const COL_ID   = 60;
-  const COL_NAME = 130;
+  const COL_NAME = 180;
   const COL_DAY  = 38;
   const totalW = COL_ID + COL_NAME + daysInMonth * COL_DAY;
 
@@ -3455,7 +3460,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   const today = new Date();
   // Dimensions exactement identiques à la planning table
   const COL_ID   = 60;   // colonne Poste (sticky left:0)
-  const COL_NAME = 130;  // colonne Nom  (sticky left:60)
+  const COL_NAME = 180;  // colonne Nom  (sticky left:60)
   const COL_DAY  = 38;   // colonnes jours
   const COL_TOT  = 60;   // colonne total droite
   const totalW = COL_ID + COL_NAME + daysInMonth * COL_DAY + COL_TOT;
@@ -5251,6 +5256,44 @@ function printSpecQR(spec) {
   w.document.close();
 }
 
+function printAllQROnePage() {
+  const etab = getEtab();
+  if (!etab) return;
+  const specs = etab.specialites || [];
+  const items = [];
+  specs.forEach(spec => {
+    const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
+    const canvas = container?.querySelector('canvas');
+    if (canvas) items.push({ label: spec, sub: etab.agents.filter(a=>a.actif&&a.spec===spec).length + ' agents', img: canvas.toDataURL() });
+  });
+  (etab.vacataires||[]).forEach(vac => {
+    const container = document.getElementById('qr-vac-' + vac.id);
+    const canvas = container?.querySelector('canvas');
+    if (canvas) items.push({ label: (vac.prenom||'')+' '+vac.nom, sub: vac.spec||'Vacataire', img: canvas.toDataURL() });
+  });
+  if (items.length === 0) { showToast('Cliquez d\'abord sur Régénérer les QR', 'warning'); return; }
+  const cards = items.map(item => `<div style="display:inline-block;text-align:center;border:1px solid #ddd;border-radius:8px;padding:8px;margin:5px;width:150px;vertical-align:top">
+    <div style="font-weight:800;font-size:12px;margin-bottom:2px">${item.label}</div>
+    <div style="font-size:10px;color:#666;margin-bottom:4px">${item.sub}</div>
+    <img src="${item.img}" style="width:120px;height:120px">
+  </div>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>QR Codes — ${etab.nom}</title>
+  <style>body{font-family:sans-serif;padding:8mm}h1{font-size:15px;margin-bottom:2px}p{font-size:10px;color:#666;margin-bottom:8px}@media print{@page{size:A4;margin:8mm}}</style>
+  </head><body>
+  <h1>QR Codes — ${etab.nom}</h1>
+  <p>Imprimé le ${new Date().toLocaleDateString('fr-FR')}</p>
+  <div>${cards}</div>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function generateAllQR() {
+  renderQRPage();
+  setTimeout(() => showToast('QR codes régénérés', 'success'), 300);
+}
+
 // ============================================================
 // QR AGENT VIEW
 // ============================================================
@@ -6137,6 +6180,7 @@ function renderConfigGeneral() {
   if (cf2El) cf2El.value = etab.config.cfFrac2Seuil || 8;
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
+  renderReglesSpec();
 }
 
 function saveConfigGeneral() {
@@ -6168,6 +6212,71 @@ function saveConfigRegles() {
   saveToStorage();
   renderComptage();
   showToast('Règles FPT enregistrées', 'success');
+}
+
+function renderReglesSpec() {
+  const etab = getEtab();
+  const el = document.getElementById('regles-spec-container');
+  if (!el || !etab) return;
+  const specs = etab.specialites || [];
+  const regles = etab.config.reglesSpec || {};
+  el.innerHTML = specs.map(spec => {
+    const r = regles[spec] || {};
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${spec}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="form-group" style="margin:0"><label>Base mensuelle (h)</label>
+          <input type="number" id="rs-base-${spec}" value="${r.baseMensuelle||''}" placeholder="ex: 151.67" step="0.01"></div>
+        <div class="form-group" style="margin:0"><label>Durée présence (h)</label>
+          <input type="number" id="rs-pres-${spec}" value="${r.presenceH||''}" placeholder="ex: 12"></div>
+        <div class="form-group" style="margin:0"><label>Durée travail (h)</label>
+          <input type="number" id="rs-trav-${spec}" value="${r.travailH||''}" placeholder="ex: 10"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="form-group" style="margin:0"><label>CA annuels (jours)</label>
+          <input type="number" id="rs-ca-${spec}" value="${r.caAnnuels||''}" placeholder="ex: 17.5" step="0.5"></div>
+        <div class="form-group" style="margin:0"><label>Repos dim+fériés J (h)</label>
+          <input type="number" id="rs-rdj-${spec}" value="${r.reposDimFeriesJourH||''}" placeholder="ex: 14" step="0.5"></div>
+        <div class="form-group" style="margin:0"><label>Repos dim+fériés N (h)</label>
+          <input type="number" id="rs-rdn-${spec}" value="${r.reposDimFeriesNuitH||''}" placeholder="ex: 30" step="0.5"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveReglesSpec() {
+  const etab = getEtab();
+  if (!etab.config.reglesSpec) etab.config.reglesSpec = {};
+  (etab.specialites || []).forEach(spec => {
+    const r = {};
+    const v = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
+    const bm = v('rs-base-'+spec); if (bm) r.baseMensuelle = bm;
+    const pr = v('rs-pres-'+spec); if (pr) r.presenceH = pr;
+    const tr = v('rs-trav-'+spec); if (tr) r.travailH = tr;
+    const ca = v('rs-ca-'+spec);   if (ca) r.caAnnuels = ca;
+    const rdj = v('rs-rdj-'+spec); if (rdj) r.reposDimFeriesJourH = rdj;
+    const rdn = v('rs-rdn-'+spec); if (rdn) r.reposDimFeriesNuitH = rdn;
+    etab.config.reglesSpec[spec] = r;
+  });
+  saveToStorage();
+  renderComptage();
+  showToast('Règles spécialités enregistrées', 'success');
+}
+
+function getRegleAgent(agent, etab) {
+  const cfg = etab.config || {};
+  const base = {
+    baseMensuelle: cfg.baseMensuelle || 151.67,
+    presenceH: cfg.presenceH || 12,
+    travailH: cfg.travailH || 10,
+    caAnnuels: cfg.caAnnuels || 17.5,
+    reposDimFeriesJourH: cfg.reposDimFeriesJourH || 14,
+    reposDimFeriesNuitH: cfg.reposDimFeriesNuitH || 30
+  };
+  const overrides = ((cfg.reglesSpec || {})[agent.spec]) || {};
+  return Object.assign({}, base, Object.fromEntries(
+    Object.entries(overrides).filter(([,v]) => v !== null && v !== undefined && v !== '')
+  ));
 }
 
 function renderSpecList() {
@@ -7021,6 +7130,20 @@ function handleImportFile(file) {
           }
 
           if (agents.length > 0) {
+            // Préserver les données existantes (planning déjà posé, pin QR, secteurFixe manuel, notes)
+            agents.forEach(function(newA) {
+              const existing = etab.agents.find(function(a) { return a.id === newA.id; });
+              if (existing) {
+                // Garder le secteurFixe s'il avait été configuré manuellement et que l'import ne le précise pas
+                if (!newA.secteurFixe && existing.secteurFixe) newA.secteurFixe = existing.secteurFixe;
+                // Garder pin QR
+                if (existing.pin) newA.pin = existing.pin;
+                // Garder notes si vides dans l'import
+                if (!newA.notes && existing.notes) newA.notes = existing.notes;
+                // Garder dateArrivee
+                if (!newA.dateArrivee && existing.dateArrivee) newA.dateArrivee = existing.dateArrivee;
+              }
+            });
             etab.agents = agents;
             imported.push(`Agents (${agents.length})`);
           }
@@ -7636,7 +7759,8 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
 // ============================================================
 function calcDroitsConges(agent, planMonth, etab, year, month) {
   const cfg = etab.config;
-  const caAnnuels = cfg.caAnnuels || 17.5;
+  const regle = (typeof getRegleAgent === 'function') ? getRegleAgent(agent, etab) : { caAnnuels: cfg.caAnnuels || 17.5 };
+  const caAnnuels = regle.caAnnuels || cfg.caAnnuels || 17.5;
   // Proratisation selon taux de travail
   let droitCA = caAnnuels * (agent.taux / 100);
   // Arrondi au demi-jour supérieur
