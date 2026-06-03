@@ -2335,22 +2335,8 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 // Init immédiate — charger depuis localStorage d'abord
 // ============================================================
 (function initDB() {
-  try {
-    const saved = localStorage.getItem('plannicare_db');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.etablissements && Object.keys(parsed.etablissements).length > 0) {
-        DB = parsed;
-        return;
-      }
-    }
-  } catch(e) {}
-  try {
-    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
-    localStorage.setItem('plannicare_db', JSON.stringify(DB));
-  } catch(e) {
-    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
-  }
+  // Ne charger le localStorage qu'en dernier recours (fallback offline)
+  // Supabase est maintenant la source principale, chargée dans window.onload
 })();
 
 window.onload = async function() {
