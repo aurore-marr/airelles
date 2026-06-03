@@ -723,8 +723,25 @@ table input:focus { border-color: var(--accent); }
   </button>
   <div class="login-box">
     <div class="login-logo">
-      <div class="logo-mark">🏥</div>
-      <h1>PlanniCare</h1>
+      <svg xmlns="http://www.w3.org/2000/svg" width="200" height="44" viewBox="0 0 240 52" style="margin:0 auto 8px;display:block">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#3B82F6"/><stop offset="1" stop-color="#6366F1"/>
+          </linearGradient>
+          <linearGradient id="ll" x1="28" y1="0" x2="44" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#6366F1"/><stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <circle cx="22" cy="5" r="3.5" fill="url(#lg)"/>
+        <rect x="14" y="10" width="5" height="26" rx="2.5" fill="url(#lg)"/>
+        <rect x="25" y="10" width="5" height="26" rx="2.5" fill="url(#lg)"/>
+        <rect x="14" y="20" width="16" height="5" rx="2.5" fill="url(#lg)"/>
+        <rect x="32" y="19" width="10" height="2.5" rx="1.25" fill="url(#ll)" opacity=".9"/>
+        <rect x="32" y="23" width="8" height="2" rx="1" fill="url(#ll)" opacity=".6"/>
+        <rect x="32" y="27" width="5" height="1.5" rx=".75" fill="url(#ll)" opacity=".35"/>
+        <text x="52" y="28" font-family="Syne,Arial,sans-serif" font-weight="700" font-size="17" fill="#3B82F6" letter-spacing="-0.2">Horizon Planning</text>
+        <text x="52" y="43" font-family="DM Sans,Arial,sans-serif" font-weight="300" font-size="9.5" fill="#64748B" letter-spacing="3">GESTION DU TEMPS</text>
+      </svg>
       <p>Planning établissements de santé</p>
     </div>
     <div class="form-group">
@@ -754,8 +771,25 @@ table input:focus { border-color: var(--accent); }
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <div class="mark">🏥</div>
-        <span>PlanniCare</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="140" height="30" viewBox="0 0 240 52">
+          <defs>
+            <linearGradient id="sg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3B82F6"/><stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+            <linearGradient id="sl" x1="28" y1="0" x2="44" y2="0" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366F1"/><stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="22" cy="5" r="3.5" fill="url(#sg)"/>
+          <rect x="14" y="10" width="5" height="26" rx="2.5" fill="url(#sg)"/>
+          <rect x="25" y="10" width="5" height="26" rx="2.5" fill="url(#sg)"/>
+          <rect x="14" y="20" width="16" height="5" rx="2.5" fill="url(#sg)"/>
+          <rect x="32" y="19" width="10" height="2.5" rx="1.25" fill="url(#sl)" opacity=".9"/>
+          <rect x="32" y="23" width="8" height="2" rx="1" fill="url(#sl)" opacity=".6"/>
+          <rect x="32" y="27" width="5" height="1.5" rx=".75" fill="url(#sl)" opacity=".35"/>
+          <text x="52" y="28" font-family="Syne,Arial,sans-serif" font-weight="700" font-size="17" fill="#3B82F6" letter-spacing="-0.2">Horizon Planning</text>
+          <text x="52" y="43" font-family="DM Sans,Arial,sans-serif" font-weight="300" font-size="9.5" fill="#64748B" letter-spacing="3">GESTION DU TEMPS</text>
+        </svg>
       </div>
     </div>
     <div class="etab-badge">
@@ -824,9 +858,30 @@ table input:focus { border-color: var(--accent); }
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
-      <div class="page-header">
-        <h2 id="dash-title">Tableau de bord</h2>
-        <p id="dash-subtitle">Vue d'ensemble du planning</p>
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <h2 id="dash-title">Tableau de bord</h2>
+          <p id="dash-subtitle">Vue d'ensemble du planning</p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="160" height="35" viewBox="0 0 240 52" style="opacity:0.85;flex-shrink:0">
+          <defs>
+            <linearGradient id="dg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3B82F6"/><stop offset="1" stop-color="#6366F1"/>
+            </linearGradient>
+            <linearGradient id="dl" x1="28" y1="0" x2="44" y2="0" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366F1"/><stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="22" cy="5" r="3.5" fill="url(#dg)"/>
+          <rect x="14" y="10" width="5" height="26" rx="2.5" fill="url(#dg)"/>
+          <rect x="25" y="10" width="5" height="26" rx="2.5" fill="url(#dg)"/>
+          <rect x="14" y="20" width="16" height="5" rx="2.5" fill="url(#dg)"/>
+          <rect x="32" y="19" width="10" height="2.5" rx="1.25" fill="url(#dl)" opacity=".9"/>
+          <rect x="32" y="23" width="8" height="2" rx="1" fill="url(#dl)" opacity=".6"/>
+          <rect x="32" y="27" width="5" height="1.5" rx=".75" fill="url(#dl)" opacity=".35"/>
+          <text x="52" y="28" font-family="Syne,Arial,sans-serif" font-weight="700" font-size="17" fill="#3B82F6" letter-spacing="-0.2">Horizon Planning</text>
+          <text x="52" y="43" font-family="DM Sans,Arial,sans-serif" font-weight="300" font-size="9.5" fill="#64748B" letter-spacing="3">GESTION DU TEMPS</text>
+        </svg>
       </div>
       <div class="stats-row" id="dash-stats"></div>
       <!-- Planning semaine pleine largeur -->
@@ -856,26 +911,42 @@ table input:focus { border-color: var(--accent); }
 
     <!-- PLANNING -->
     <div id="page-planning" class="page">
-      <div class="page-header">
-        <h2>Planning mensuel</h2>
-        <p>Gestion des présences et horaires</p>
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h2>Planning mensuel</h2>
+          <p>Gestion des présences et horaires</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="openHistory()" style="font-size:11px">📋 Historique</button>
+          <button class="btn btn-success btn-sm" onclick="autoFillMonth()" style="font-size:11px">✨ Générer</button>
+          <button class="btn btn-secondary btn-sm" onclick="printPlanning()" style="font-size:11px">🖨️ Imprimer</button>
+        </div>
       </div>
-      <div class="planning-toolbar">
+
+      <!-- Barre de navigation mois + filtres -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <!-- Navigation mois -->
         <div class="month-nav">
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(-1)">◀</button>
           <span class="month-label" id="month-label">—</span>
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(1)">▶</button>
         </div>
-        <select id="filter-secteur" class="form-group" style="margin:0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;outline:none" onchange="renderPlanning()">
-          <option value="">Tous les secteurs</option>
+        <div style="width:1px;height:24px;background:var(--border)"></div>
+        <!-- Filtres spécialité -->
+        <div id="filter-spec-tabs" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        <div style="width:1px;height:24px;background:var(--border)"></div>
+        <!-- Filtre secteur -->
+        <select id="filter-secteur" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:inherit;outline:none;font-size:12px" onchange="renderPlanning()">
+          <option value="">Tous secteurs</option>
         </select>
-        <div class="search-wrap">
+        <!-- Recherche agent -->
+        <div class="search-wrap" style="flex:1;min-width:120px">
           <input type="text" class="search-input" id="filter-agent" placeholder="Chercher agent..." oninput="renderPlanning()">
         </div>
-        <button class="btn btn-success btn-sm" onclick="autoFillMonth()">✨ Remplissage auto</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportPlanning()">⬇️ Export Excel</button>
-        <button class="btn btn-secondary btn-sm" onclick="printPlanning()">🖨️ Imprimer</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportPlanning()" style="font-size:11px">⬇️ Export</button>
       </div>
+
+      <!-- Légende horaires -->
       <div class="card" style="padding:0;overflow:hidden">
         <div id="planning-legend" style="padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;font-size:11px"></div>
         <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%"></div>
@@ -1841,7 +1912,16 @@ table input:focus { border-color: var(--accent); }
   cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text2);
   transition: all 0.15s; user-select: none;
 }
-.jour-toggle.selected { background: rgba(247,111,111,0.2); border-color: #f76f6f; color: #f76f6f; }
+.spec-tab-btn {
+  padding: 5px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: var(--bg3); color: var(--text2); cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+  transition: all 0.15s; white-space: nowrap;
+}
+.spec-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.spec-tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+.light .spec-tab-btn { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.light .spec-tab-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
 .excl-toggle {
   padding: 4px 10px; border-radius: 5px;
   background: var(--bg3); border: 1px solid var(--border);
@@ -2734,6 +2814,7 @@ function renderPlanning() {
   let agents = etab.agents.filter(a => a.actif);
   if (filterSect) agents = agents.filter(a => a.secteurFixe === filterSect);
   if (filterTxt) agents = agents.filter(a => (a.nom+' '+a.prenom).toLowerCase().includes(filterTxt));
+  if (currentSpecFilter) agents = agents.filter(a => a.spec === currentSpecFilter);
 
   const planning = etab.planning;
   if (!planning[currentYear]) planning[currentYear] = {};
@@ -2999,7 +3080,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   // En-tête commun jours
   function makeHeader() {
     let h = '<tr>';
-    h += '<th style="position:sticky;left:0;z-index:10;background:#1a2035;padding:4px 10px;text-align:left;min-width:160px;font-size:10px;color:#8892aa;border-right:1px solid #2a3350;white-space:nowrap"></th>';
+    h += '<th style="position:sticky;left:0;z-index:10;background:#1a2035;padding:4px 10px;text-align:left;min-width:220px;width:220px;font-size:10px;color:#8892aa;border-right:1px solid #2a3350;white-space:nowrap"></th>';
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(currentYear, currentMonth, d);
       const dow = date.getDay();
@@ -3007,7 +3088,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
       const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
       const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
       const isMon = dow === 1;
-      h += '<th style="text-align:center;padding:2px 1px;min-width:32px;font-size:9px;font-weight:600;'
+      h += '<th style="text-align:center;padding:2px 1px;min-width:38px;width:38px;font-size:9px;font-weight:600;'
         + 'color:' + (isToday ? '#4f8ef7' : isWE ? '#f7a94f' : '#5a6480') + ';'
         + 'background:#1a2035;'
         + 'border-left:' + (isMon ? '2px solid #2a3350' : '1px solid #2a335022') + '">'
@@ -3025,7 +3106,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
                 : 'color:#2a3350;font-weight:400';
     const bg = isToday ? 'background:rgba(79,142,247,0.15);'
              : cnt > 0 ? 'background:' + bgColor + ';' : 'background:transparent;';
-    return '<td style="text-align:center;padding:2px 1px;' + bg + alert
+    return '<td style="text-align:center;padding:2px 1px;min-width:38px;width:38px;' + bg + alert
       + ';border-left:' + (isMon ? '2px solid #2a3350' : '1px solid #2a335022') + '">'
       + (cnt > 0 ? cnt : '<span style="opacity:0.12">·</span>')
       + '</td>';
@@ -6572,15 +6653,47 @@ function updateFilterSecteur() {
   });
 }
 
+let currentSpecFilter = ''; // '' = tous
+
 function updateFilterSpec() {
   const etab = getEtab();
+  const tabs = document.getElementById('filter-spec-tabs');
+  if (!tabs || !etab) return;
+
+  const specs = etab.specialites || [];
+  tabs.innerHTML = '';
+
+  // Bouton "Tous"
+  const btnTous = document.createElement('button');
+  btnTous.textContent = 'Tous';
+  btnTous.className = 'spec-tab-btn' + (!currentSpecFilter ? ' active' : '');
+  btnTous.onclick = function() { currentSpecFilter = ''; updateSpecTabsUI(); renderPlanning(); };
+  tabs.appendChild(btnTous);
+
+  specs.forEach(s => {
+    const btn = document.createElement('button');
+    btn.textContent = s;
+    btn.className = 'spec-tab-btn' + (currentSpecFilter === s ? ' active' : '');
+    btn.onclick = (function(sp){ return function(){ currentSpecFilter = sp; updateSpecTabsUI(); renderPlanning(); }; })(s);
+    tabs.appendChild(btn);
+  });
+
+  // Aussi "Tous secteurs" dans le filtre secteur
   const sel = document.getElementById('filter-spec');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Toutes spécialités</option>';
-  etab.specialites.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s; opt.textContent = s;
-    sel.appendChild(opt);
+  if (sel) {
+    sel.innerHTML = '<option value="">Toutes spécialités</option>';
+    specs.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function updateSpecTabsUI() {
+  const btns = document.querySelectorAll('.spec-tab-btn');
+  btns.forEach(b => {
+    b.classList.toggle('active', b.textContent === (currentSpecFilter || 'Tous'));
   });
 }
 
@@ -6774,62 +6887,44 @@ function getSecteurDuMois(agent, year, month, etab) {
 }
 
 // Retourne le secteur d'un agent pour un JOUR précis
-// Règle : si le jour est encore dans le bloc du mois précédent → secteur du mois précédent
-// Retourne le secteur d'un agent pour un JOUR précis
-// Règle : si ce jour fait partie d'un bloc de shifts qui a COMMENCÉ le mois précédent
-// → on garde la couleur du secteur du mois précédent
-// Le bloc est détecté en remontant dans le cycle 42j
+// Si ce jour fait partie d'un bloc commencé le mois précédent → secteur du mois précédent
 function getSecteurDuJour(agent, year, month, day, etab) {
   if (agent.secteurFixe) return agent.secteurFixe;
 
   const refDateCycle = new Date(etab.config.refDate || '2020-11-23');
   const cycleLen     = etab.config.cycleLen || 42;
   const agOff        = agent.rotOffset || 0;
-  const roulement    = etab.roulement[agent.id];
+  const roulement    = etab.roulement ? etab.roulement[agent.id] : null;
   const codesW       = ['M','S','J','NU','N'];
+
+  if (!roulement) return getSecteurDuMois(agent, year, month, etab);
+
+  const refUTC = Date.UTC(refDateCycle.getFullYear(), refDateCycle.getMonth(), refDateCycle.getDate());
 
   // Position dans le cycle pour ce jour
   const dtUTC  = Date.UTC(year, month, day);
-  const refUTC = Date.UTC(refDateCycle.getFullYear(), refDateCycle.getMonth(), refDateCycle.getDate());
   const posJour = ((Math.floor((dtUTC - refUTC) / 86400000) + agOff) % cycleLen + cycleLen) % cycleLen;
-
-  // Shift de ce jour
-  const shiftJour = roulement ? (roulement[posJour] || 'R') : 'R';
+  const shiftJour = roulement[posJour] || 'R';
 
   // Si ce jour n'est pas travaillé : secteur du mois courant
   if (!codesW.includes(shiftJour)) {
     return getSecteurDuMois(agent, year, month, etab);
   }
 
-  // Compter combien de jours CONSÉCUTIFS avec le MÊME shift précèdent ce jour dans le cycle
-  let joursAvant = 0;
+  // Remonter dans le calendrier réel (pas le cycle) pour trouver le 1er jour du bloc
+  // On remonte jour par jour jusqu'à trouver un jour non travaillé ou le début du cycle
+  let debutBlocDate = new Date(year, month, day);
   for (let i = 1; i < cycleLen; i++) {
-    const prevPos = (posJour - i + cycleLen) % cycleLen;
-    if (roulement && roulement[prevPos] === shiftJour) {
-      joursAvant++;
-    } else {
-      break;
-    }
+    const prev = new Date(year, month, day - i);
+    const prevUTC = Date.UTC(prev.getFullYear(), prev.getMonth(), prev.getDate());
+    const prevPos = ((Math.floor((prevUTC - refUTC) / 86400000) + agOff) % cycleLen + cycleLen) % cycleLen;
+    const prevShift = roulement[prevPos] || 'R';
+    if (!codesW.includes(prevShift)) break;
+    debutBlocDate = prev;
   }
 
-  // Position au 1er du mois courant
-  const first1UTC = Date.UTC(year, month, 1);
-  const posAu1er  = ((Math.floor((first1UTC - refUTC) / 86400000) + agOff) % cycleLen + cycleLen) % cycleLen;
-
-  // Est-ce que le bloc en cours a commencé AVANT le 1er du mois ?
-  // = la position de début du bloc est après posAu1er dans le cycle (car le cycle a bouclé)
-  // OU posJour < joursAvant (le bloc commence avant le 1er calendaire)
-  const posDebutBloc = (posJour - joursAvant + cycleLen) % cycleLen;
-
-  // Le bloc a commencé avant le 1er du mois si :
-  // posAu1er est ENTRE posDebutBloc et posJour (dans le sens cyclique)
-  // Mais plus simplement : le jour J dans le mois - 1 = jour J "absolu"
-  // Si joursAvant >= day → le bloc a commencé le mois précédent
-  const jourDansMois = day; // 1-based
-  const blocCommenceAvant = joursAvant >= jourDansMois;
-
-  if (blocCommenceAvant) {
-    // Retourner le secteur du mois précédent
+  // Si le bloc a commencé le mois précédent
+  if (debutBlocDate.getFullYear() < year || debutBlocDate.getMonth() < month) {
     let prevMonth = month - 1, prevYear = year;
     if (prevMonth < 0) { prevMonth = 11; prevYear--; }
     return getSecteurDuMois(agent, prevYear, prevMonth, etab);
