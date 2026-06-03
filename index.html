@@ -333,47 +333,97 @@ body {
 .shift-cell.weekend { background: rgba(247,169,79,0.04); }
 
 /* ============================================================
-   IMPRESSION
+   IMPRESSION — A3 paysage, tout sur 1-2 pages
    ============================================================ */
 @media print {
+  @page { size: A3 landscape; margin: 8mm; }
+
   /* Masquer tout sauf le planning */
-  .sidebar, .planning-toolbar, .page-header,
-  #filter-spec-tabs, #planning-legend + div > button,
-  .btn, button:not(.no-print),
+  .sidebar, aside,
+  .page-header,
+  #filter-spec-tabs, .planning-toolbar,
+  button, .btn,
   #page-dashboard, #page-comptage, #page-agents,
   #page-vacataires, #page-config, #page-import, #page-qr,
-  .modal-backdrop { display: none !important; }
+  .modal-backdrop,
+  #planning-legend { display: none !important; }
 
-  /* Mise en page */
-  body, html { background: #fff !important; color: #000 !important; margin: 0; padding: 0; }
-  .main { margin: 0 !important; padding: 0 !important; }
-  #page-planning { display: block !important; padding: 8px !important; }
-  .card { box-shadow: none !important; border: none !important; }
+  /* Layout */
+  body, html { background: #fff !important; margin: 0; padding: 0; }
+  .main { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  #page-planning { display: block !important; padding: 0 !important; }
+  .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+
+  /* En-tête impression */
+  #print-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 4mm 0;
+    border-bottom: 1.5pt solid #1d4ed8;
+    margin-bottom: 3mm;
+  }
+
+  /* Légende sous l'en-tête */
+  #print-legend {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 2mm 0 3mm 0;
+    font-size: 8pt;
+    border-bottom: 0.5pt solid #ccc;
+    margin-bottom: 2mm;
+  }
+
+  /* Planning table — très compact */
   .planning-wrap { overflow: visible !important; }
-
-  /* En-tête d'impression */
-  #print-header { display: flex !important; }
-
-  /* Planning table */
-  .planning-table { font-size: 9px !important; page-break-inside: auto; }
-  .planning-table th, .planning-table td { padding: 2px 1px !important; }
-  .shift-cell { width: 22px !important; min-width: 22px !important; max-width: 22px !important; height: 28px !important; }
-  .shift-badge { width: 18px !important; height: 16px !important; font-size: 8px !important; border-radius: 3px !important; }
-  .agent-cell { min-width: 40px !important; max-width: 40px !important; width: 40px !important; position: static !important; }
-  .agent-cell-poste { min-width: 130px !important; max-width: 130px !important; position: static !important; }
-  .agent-cell-sector { font-size: 7px !important; padding: 1px 3px !important; }
+  .planning-table {
+    font-size: 7pt !important;
+    page-break-inside: auto;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .planning-table th {
+    padding: 2px 1px !important;
+    font-size: 7pt !important;
+    position: static !important;
+  }
+  .agent-cell {
+    position: static !important;
+    min-width: 28px !important; width: 28px !important; max-width: 28px !important;
+    padding: 1px 2px !important; font-size: 6pt !important;
+  }
+  .agent-cell-poste {
+    position: static !important;
+    min-width: 95px !important; max-width: 95px !important;
+    padding: 1px 3px !important; font-size: 6.5pt !important;
+  }
+  .agent-cell-sector { font-size: 6pt !important; padding: 0 3px !important; }
+  .agent-fixe-badge { width: 10px !important; height: 10px !important; font-size: 6pt !important; }
+  .shift-cell {
+    width: 20px !important; min-width: 20px !important; max-width: 20px !important;
+    height: 18px !important;
+  }
+  .shift-badge {
+    width: 14px !important; height: 12px !important;
+    font-size: 6pt !important; border-radius: 2px !important;
+  }
+  .day-header { font-size: 6pt !important; padding: 2px 1px !important; }
 
   /* Totaux */
-  #sector-daily-totals { display: block !important; page-break-before: avoid; font-size: 8px !important; }
-  #sector-daily-totals td, #sector-daily-totals th { padding: 1px !important; font-size: 8px !important; width: 22px !important; min-width: 22px !important; }
+  #sector-daily-totals { overflow: visible !important; margin-top: 2mm !important; }
+  #sector-daily-totals table { font-size: 7pt !important; }
+  #sector-daily-totals td, #sector-daily-totals th {
+    padding: 1px !important; font-size: 7pt !important;
+    width: 20px !important; min-width: 20px !important;
+  }
 
-  /* Forcer fond blanc sur les badges colorés */
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
-  /* Pagination */
+  /* Groupes — pas de saut de page en milieu de groupe */
+  tr { page-break-inside: avoid !important; }
   thead { display: table-header-group; }
-  tr { page-break-inside: avoid; }
-  .planning-table tbody tr:nth-child(9n) { page-break-after: always; }
+
+  /* Couleurs */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
 .shift-badge {
@@ -1014,14 +1064,16 @@ table input:focus { border-color: var(--accent); }
         </div>
       </div>
 
-      <!-- Légende horaires + planning + totaux dans le même scroll -->
+      <!-- Légende impression (masquée à l'écran) -->
+      <div id="print-legend" style="display:none"></div>
+
+      <!-- Légende horaires + planning -->
       <div class="card" style="padding:0;overflow:hidden">
-        <div id="planning-legend" style="padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;font-size:11px"></div>
-        <div id="planning-scroll-wrap" style="overflow-x:auto;width:100%" onscroll="syncTotalsScroll(this)">
-          <div id="planning-container" style="width:max-content"></div>
-          <div id="sector-daily-totals" style="width:max-content"></div>
-        </div>
+        <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
+        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%"></div>
       </div>
+      <!-- Totaux secteurs — scroll synchronisé avec le planning -->
+      <div id="sector-daily-totals" style="overflow-x:auto;width:100%;margin-top:4px"></div>
     </div>
 
     <!-- COMPTAGE -->
@@ -2674,31 +2726,40 @@ function renderDashboard() {
     </div>
   `;
 
-  // Alertes
+  // Alertes — seulement pour aujourd'hui si c'est un jour travaillé
   const alerts = [];
-  etab.secteurs.forEach(sect => {
-    let cnt = 0;
-    etab.agents.filter(a => a.actif).forEach(a => {
-      const shift = (planMonth[a.id] || {})[today.getDate()];
-      if (shift && shift !== 'R' && shift !== '' && shift !== 'AM') {
-        if (!a.secteurFixe || a.secteurFixe === sect.id) cnt++;
+  const todayDate = today.getDate();
+  const todayShifts = etab.agents.filter(a => a.actif).map(a => (planMonth[a.id]||{})[todayDate]||'');
+  const hasTravailToday = todayShifts.some(s => ['M','S','J','NU','N'].includes(s));
+
+  if (hasTravailToday) {
+    etab.secteurs.forEach(sect => {
+      let cnt = 0;
+      etab.agents.filter(a => a.actif).forEach(a => {
+        const sectM = a.secteurFixe || getSecteurDuMois(a, currentYear, currentMonth, etab);
+        if (sectM !== sect.id) return;
+        const shift = (planMonth[a.id] || {})[todayDate];
+        if (['M','S','J','NU','N'].includes(shift)) cnt++;
+      });
+      if (cnt < (sect.agentsRequisJour||0) && (sect.agentsRequisJour||0) > 0) {
+        alerts.push({ type: 'warning', msg: `${sect.nom} : ${cnt}/${sect.agentsRequisJour} agents aujourd'hui` });
       }
     });
-    if (cnt < sect.agentsRequisJour) {
-      alerts.push({ type: 'warning', msg: `${sect.nom} : ${cnt}/${sect.agentsRequisJour} agents aujourd'hui` });
-    }
-  });
+  }
 
+  // Jours non remplis = jours sans AUCUN agent travaillant (pas juste vide)
   const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
   let unfilledDays = 0;
   for (let d = 1; d <= daysInMonth; d++) {
-    let filled = false;
-    etab.agents.filter(a=>a.actif).forEach(a => {
-      if ((planMonth[a.id] || {})[d]) filled = true;
+    const hasWork = etab.agents.filter(a=>a.actif).some(a => {
+      const s = (planMonth[a.id]||{})[d]||'';
+      return ['M','S','J','NU','N'].includes(s);
     });
-    if (!filled) unfilledDays++;
+    // On n'alerte que si le mois a commencé à être rempli (éviter faux positifs sur mois futur)
+    const dateJ = new Date(currentYear, currentMonth, d);
+    if (!hasWork && dateJ <= today && d > 1) unfilledDays++;
   }
-  if (unfilledDays > 0) alerts.push({ type: 'info', msg: `${unfilledDays} jours non remplis ce mois` });
+  if (unfilledDays > 5) alerts.push({ type: 'info', msg: `${unfilledDays} jours sans agent travaillant ce mois` });
 
   // Alertes demandes de congés en attente
   const pendingConges = (etab.demandesConges || []).filter(d => d.statut === 'en_attente');
@@ -3031,10 +3092,15 @@ function renderPlanning() {
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
         const isAbsence = shift && ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'].includes(shift);
 
-        // Couleur secteur du jour (comme la référence)
-        const scColor = sectColor; // couleur hex du secteur
+        // Couleur secteur PAR JOUR (pas par mois) — corrige le bloc qui déborde sur mois suivant
+        const sectIdJour = isTravail
+          ? getSecteurDuJour(agent, currentYear, currentMonth, d, etab)
+          : secteurMois;
+        const sectObjJour = etab.secteurs.find(s => s.id === sectIdJour) || sectObj;
+        const scColor = sectObjJour ? secteurCouleurCSS(sectObjJour) : sectColor;
         const hexToRgb = (hex) => {
-          const h = hex.replace('#','');
+          const h = (hex||'#888').replace('#','');
+          if (h.length < 6) return [100,116,128];
           return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
         };
         let rgb;
@@ -3080,28 +3146,36 @@ function renderPlanning() {
   html += '</tbody></table>';
   document.getElementById('planning-container').innerHTML = html;
 
-  // Légende horaires
+  // Synchroniser scroll planning ↔ totaux
+  const planWrap = document.getElementById('planning-container');
+  const totWrap = document.getElementById('sector-daily-totals');
+  if (planWrap && totWrap) {
+    planWrap.onscroll = function() { totWrap.scrollLeft = planWrap.scrollLeft; };
+    totWrap.onscroll  = function() { planWrap.scrollLeft = totWrap.scrollLeft; };
+  }
+
+  // Légende horaires — toujours visible, codes + horaires
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
-    // Légende gauche : codes horaires avec couleur horaire
-    const horPart = etab.horaires.filter(h => h.comptage === 'travail').map(h =>
-      '<span style="display:inline-flex;align-items:center;gap:4px">' +
-      '<span style="background:' + h.couleur + '28;color:' + h.couleur + ';padding:2px 7px;border-radius:4px;font-weight:700;font-family:monospace">' + h.code + '</span>' +
-      '<span style="color:var(--text2);font-size:10px">' + (h.debut||'') + (h.fin?' – '+h.fin:'') + '</span>' +
-      '</span>'
-    ).join('');
-    // Séparateur
-    const sep = '<span style="color:var(--border);margin:0 8px">|</span>';
-    // Légende droite : secteurs avec leur couleur BG
-    const sectPart = etab.secteurs.map(s => {
+    const horPart = etab.horaires.filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
+      .map(h => {
+        const horaire = h.debut && h.fin ? `${h.debut.replace(':','h')}–${h.fin.replace(':','h')}` : (h.debut ? h.debut.replace(':','h') : '');
+        const isResto = h.code === 'R';
+        return `<span style="display:inline-flex;align-items:center;gap:5px">
+          <span style="background:${h.couleur||'#888'}${isResto?'18':'28'};color:${h.couleur||'#888'};padding:2px 8px;border-radius:5px;font-weight:800;font-family:monospace;font-size:12px;border:1px solid ${h.couleur||'#888'}44">${h.code}</span>
+          <span style="color:var(--text2);font-size:10px">${h.label||h.code}${horaire ? ' ' + horaire : ''}</span>
+        </span>`;
+      }).join('<span style="color:var(--border);margin:0 4px">|</span>');
+
+    const sectPart = etab.secteurs.filter(s => !s.nom.startsWith('BG:')).map(s => {
       const c = secteurCouleurCSS(s);
-      const bg = s.couleur || '#ccc';
-      return '<span style="display:inline-flex;align-items:center;gap:5px">' +
-        '<span style="width:12px;height:12px;border-radius:3px;background:' + bg + ';border:1px solid ' + c + ';display:inline-block"></span>' +
-        '<span style="color:' + c + ';font-weight:700">' + s.nom + '</span>' +
-        '</span>';
+      return `<span style="display:inline-flex;align-items:center;gap:4px">
+        <span style="width:10px;height:10px;border-radius:2px;background:${s.couleur||c};display:inline-block;border:1px solid ${c}44"></span>
+        <span style="color:${c};font-weight:700;font-size:11px">${s.nom}</span>
+      </span>`;
     }).join('');
-    legendEl.innerHTML = horPart + sep + sectPart;
+
+    legendEl.innerHTML = horPart + '<span style="width:1px;height:16px;background:var(--border);margin:0 8px;display:inline-block"></span>' + sectPart;
   }
 
   // Sector daily totals
@@ -3113,158 +3187,93 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   if (!el) return;
 
   const codesWork = ['M','S','J','NU','N'];
-  const secteurs  = etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG'));
+  const secteurs = etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG'));
   const codesPrésents = etab.horaires.filter(h => codesWork.includes(h.code));
+  const today = new Date();
 
-  // Palette fixe par code (comme le planning)
-  const horPalette = {
-    'M':  { bg: '#1d4ed8', light: '#dbeafe', dark: '#1e3a6e' },
-    'S':  { bg: '#f59e0b', light: '#ede9fe', dark: '#2d1b69' },
-    'J':  { bg: '#059669', light: '#d1fae5', dark: '#064e3b' },
-    'NU': { bg: '#7dd3fc', light: '#e0f2fe', dark: '#0c4a6e' },
-    'N':  { bg: '#7dd3fc', light: '#e0f2fe', dark: '#0c4a6e' },
-  };
-
-  // counts[sectId][day][code] = nb
   const counts = {};
-  secteurs.forEach(s => { counts[s.id] = {}; for (let d=1;d<=daysInMonth;d++) counts[s.id][d] = {}; });
-
-  // totalByCode[code][day] = nb (tous secteurs)
+  secteurs.forEach(s => { counts[s.id] = {}; for(let d=1;d<=daysInMonth;d++) counts[s.id][d]={}; });
   const totalByCode = {};
-  codesPrésents.forEach(h => { totalByCode[h.code] = {}; for(let d=1;d<=daysInMonth;d++) totalByCode[h.code][d]=0; });
+  codesPrésents.forEach(h => { totalByCode[h.code]={}; for(let d=1;d<=daysInMonth;d++) totalByCode[h.code][d]=0; });
 
   agents.forEach(agent => {
-    const sectId = agent.secteurFixe ||
-      ((etab.rotationSectorielle||{})[currentYear]||{})[currentMonth]?.[agent.id] ||
-      getSecteurDuMois(agent, currentYear, currentMonth, etab);
-    for (let d = 1; d <= daysInMonth; d++) {
+    const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
+    for (let d=1; d<=daysInMonth; d++) {
       const sh = (planMonth[agent.id]||{})[d]||'';
       if (!codesWork.includes(sh)) continue;
-      if (sectId && counts[sectId]) {
-        counts[sectId][d][sh] = (counts[sectId][d][sh]||0) + 1;
-      }
-      if (totalByCode[sh]) totalByCode[sh][d] = (totalByCode[sh][d]||0) + 1;
+      if (sectId && counts[sectId]) counts[sectId][d][sh] = (counts[sectId][d][sh]||0)+1;
+      if (totalByCode[sh]) totalByCode[sh][d]++;
     }
   });
 
-  // En-tête commun jours
-  function makeHeader() {
-    let h = '<tr>';
-    h += '<th style="position:sticky;left:0;z-index:10;background:#1a2035;padding:4px 10px;text-align:left;min-width:220px;width:220px;font-size:10px;color:#8892aa;border-right:1px solid #2a3350;white-space:nowrap;box-sizing:border-box"></th>';
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(currentYear, currentMonth, d);
-      const dow = date.getDay();
-      const isWE = dow === 0 || dow === 6;
-      const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-      const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
-      const isMon = dow === 1;
-      h += '<th style="text-align:center;padding:2px 1px;min-width:38px;width:38px;font-size:9px;font-weight:600;'
-        + 'color:' + (isToday ? '#4f8ef7' : isWE ? '#f7a94f' : '#5a6480') + ';'
-        + 'background:#1a2035;'
-        + 'border-left:' + (isMon ? '2px solid #2a3350' : '1px solid #2a335022') + '">'
-        + '<span style="font-weight:400">' + dowStr + '</span><br><strong>' + d + '</strong></th>';
-    }
-    h += '</tr>';
-    return h;
+  function makeCell(val, color, bgCell, isMon, isToday, req) {
+    const alertCol = val>0&&req>0&&val<req ? '#f76f6f' : val>0&&req>0&&val>req*1.5 ? '#f7a94f' : val>0 ? color : '#2a3350';
+    const bg = isToday ? 'rgba(79,142,247,0.2)' : bgCell;
+    return '<td style="text-align:center;padding:2px 0;min-width:38px;width:38px;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
   }
 
-  // Fonction cellule
-  function makeCell(cnt, color, bgColor, req, isMon, isWE, isToday, bold) {
-    const alert = cnt > 0 && req > 0 && cnt < req ? 'color:#f76f6f;font-weight:900'
-                : cnt > 0 && req > 0 && cnt > req * 1.5 ? 'color:#f7a94f;font-weight:800'
-                : cnt > 0 ? 'color:' + color + ';font-weight:' + (bold?'800':'700')
-                : 'color:#2a3350;font-weight:400';
-    const bg = isToday ? 'background:rgba(79,142,247,0.15);'
-             : cnt > 0 ? 'background:' + bgColor + ';' : 'background:transparent;';
-    return '<td style="text-align:center;padding:2px 1px;min-width:38px;width:38px;' + bg + alert
-      + ';border-left:' + (isMon ? '2px solid #2a3350' : '1px solid #2a335022') + '">'
-      + (cnt > 0 ? cnt : '<span style="opacity:0.12">·</span>')
-      + '</td>';
+  // Header row
+  let headerRow = '<tr style="background:#131928">';
+  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:220px;width:220px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
+  for (let d=1;d<=daysInMonth;d++) {
+    const date = new Date(currentYear,currentMonth,d);
+    const dow = date.getDay();
+    const isWE = dow===0||dow===6;
+    const isToday2 = date.toDateString()===today.toDateString();
+    const isMon = dow===1;
+    const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
+    headerRow += '<th style="text-align:center;padding:2px 0;min-width:38px;width:38px;font-size:9px;font-weight:600;color:' + (isToday2?'#4f8ef7':isWE?'#f7a94f':'#6b7fa8') + ';background:#131928;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '"><div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div></th>';
   }
+  headerRow += '</tr>';
 
-  let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px;background:#0f1117">';
-  html += '<thead>' + makeHeader() + '</thead><tbody>';
+  let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px"><tbody>';
+  html += headerRow;
 
-  // ═══ BLOC 1 : lignes M / S / J globales (tous secteurs) ═══
+  // Lignes M/S/J globales
   codesPrésents.forEach(h => {
-    const pal = horPalette[h.code] || { bg: h.couleur, light: h.couleur+'33', dark: h.couleur+'33' };
-    const rowBg = pal.dark;
+    const color = h.couleur || '#888';
+    const rowBg = color + '22';
+    const labelBg = color + '30';
     html += '<tr style="border-bottom:1px solid #2a335033">';
-    // Label
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rowBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box">';
-    html += '<span style="display:inline-flex;align-items:center;gap:6px;font-weight:700">';
-    html += '<span style="width:10px;height:10px;border-radius:2px;background:' + pal.bg + ';display:inline-block;flex-shrink:0"></span>';
-    html += '<span style="color:' + pal.bg + '">' + h.code + '</span>';
-    const regles = etab.secteurs.map(s => {
-      const r = (s.reglesHoraires||{})[h.code];
-      return r !== undefined ? ('±'+r) : '';
-    }).filter(Boolean);
-    if (regles.length) html += '<span style="color:#5a6480;font-size:9px">' + [...new Set(regles)].join(' ') + '</span>';
-    html += '</span></td>';
-    for (let d = 1; d <= daysInMonth; d++) {
-      const cnt = totalByCode[h.code][d] || 0;
-      const date = new Date(currentYear, currentMonth, d);
-      const isMon = date.getDay() === 1;
-      const isWE = date.getDay() === 0 || date.getDay() === 6;
-      const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-      html += makeCell(cnt, pal.bg, rowBg, 0, isMon, isWE, isToday, true);
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    for (let d=1;d<=daysInMonth;d++) {
+      const cnt = totalByCode[h.code][d]||0;
+      const date = new Date(currentYear,currentMonth,d);
+      const isMon = date.getDay()===1;
+      const isToday2 = date.toDateString()===today.toDateString();
+      html += makeCell(cnt, color, cnt>0?rowBg:'transparent', isMon, isToday2, 0);
     }
     html += '</tr>';
   });
 
   // Séparateur
-  html += '<tr style="height:4px"><td colspan="' + (daysInMonth+1) + '" style="background:#0f1117"></td></tr>';
+  html += '<tr style="height:4px;background:#0f1117"><td colspan="' + (daysInMonth+1) + '"></td></tr>';
 
-  // ═══ BLOC 2 : une ligne par secteur avec total ═══
+  // Lignes secteurs
   secteurs.forEach(sect => {
     const sectColor = secteurCouleurCSS(sect);
-    const rawBg = sect.couleur ? (sect.couleur.startsWith('#') ? sect.couleur : '#'+sect.couleur) : '#888';
+    const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
-
-    html += '<tr style="border-top:1px solid ' + rawBg + '33">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '22;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box">';
-    html += '<span style="display:inline-flex;align-items:center;gap:6px;font-weight:700">';
-    html += '<span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span>';
-    html += '<span style="color:' + sectColor + '">' + sect.nom + '</span>';
-    // Afficher les règles min/max si configurées
-    const regleStr = Object.entries(sect.reglesHoraires||{}).map(([c,v])=>'±'+v).filter(Boolean);
-    if (regleStr.length) html += '<span style="color:#5a6480;font-size:9px">' + [...new Set(regleStr)].join(' ') + '</span>';
-    else html += '<span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span>';
-    html += '</span></td>';
-
-    for (let d = 1; d <= daysInMonth; d++) {
+    html += '<tr style="border-top:1px solid ' + rawBg + '44">';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
-      const date = new Date(currentYear, currentMonth, d);
-      const isMon = date.getDay() === 1;
-      const isWE = date.getDay() === 0 || date.getDay() === 6;
-      const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-      const bg = isToday ? 'background:rgba(79,142,247,0.15);'
-               : isWE    ? 'background:' + rawBg + '12;'
-               :            'background:' + rawBg + '18;';
-      const alert = tot === 0 ? 'color:#2a3350'
-                  : tot < req ? 'color:#f76f6f;font-weight:900'
-                  : tot > req*1.5 ? 'color:#f7a94f;font-weight:800'
-                  : 'color:' + sectColor + ';font-weight:800';
-      const isMon2 = date.getDay() === 1;
-      html += '<td style="text-align:center;padding:3px 1px;' + bg + alert
-        + ';border-left:' + (isMon2 ? '2px solid #2a3350' : '1px solid #2a335022') + '">'
-        + (tot > 0 ? '<strong>' + tot + '</strong>' : '<span style="opacity:0.12">·</span>')
-        + '</td>';
+      const date = new Date(currentYear,currentMonth,d);
+      const isMon = date.getDay()===1;
+      const isWE = date.getDay()===0||date.getDay()===6;
+      const isToday2 = date.toDateString()===today.toDateString();
+      const bg = isToday2?'rgba(79,142,247,0.2)':isWE?rawBg+'12':rawBg+'18';
+      html += makeCell(tot, sectColor, bg, isMon, isToday2, req);
     }
     html += '</tr>';
   });
 
   html += '</tbody></table>';
-  html += '<div style="padding:5px 10px;font-size:10px;color:#5a6480;display:flex;gap:16px;background:#0f1117">';
-  html += '<span>⚠️ Sous-effectif sur certains jours</span>';
-  html += '<span>·</span>';
-  html += '<span>⚠️ Sureffectif sur certains jours</span>';
-  html += '</div>';
+  html += '<div style="padding:4px 8px;font-size:10px;color:#5a6480;background:#0f1117;display:flex;gap:12px"><span style="color:#f76f6f">▲ Sous-effectif</span><span>·</span><span style="color:#f7a94f">▲ Sureffectif</span></div>';
 
   el.innerHTML = html;
-  el.style.cssText = 'border-radius:0 0 8px 8px;border:1px solid #2a3350;border-top:none;overflow:hidden';
+  el.style.cssText = 'overflow-x:auto;width:100%;margin-top:4px;border-radius:0 0 8px 8px;border:1px solid #2a3350;border-top:none';
 }
-
 
 function changeMonth(delta) {
   currentMonth += delta;
@@ -5779,29 +5788,98 @@ function renderConfigHoraires() {
   const etab = getEtab();
   if (!etab) return;
   const el = document.getElementById('cfg-horaire-list');
-  let html = '<div style="display:grid;grid-template-columns:50px 1fr 90px 90px 55px 30px auto;gap:6px;align-items:center;margin-bottom:6px;padding:0 4px">' +
-    '<span class="text-xs text-muted">Code</span><span class="text-xs text-muted">Libellé</span>' +
-    '<span class="text-xs text-muted">Début</span><span class="text-xs text-muted">Fin</span>' +
-    '<span class="text-xs text-muted">Durée</span><span></span><span></span></div>';
+
+  let html = '';
   etab.horaires.forEach(function(h, i) {
-    html += '<div style="display:grid;grid-template-columns:50px 1fr 90px 90px 55px 30px auto;gap:6px;align-items:center;margin-bottom:4px">' +
-      '<span class="shift-badge" style="background:' + (h.couleur||'#4f8ef7') + '22;color:' + (h.couleur||'#4f8ef7') + ';font-family:monospace;font-weight:800">' + h.code + '</span>' +
-      '<input type="text" value="' + (h.label||'').replace(/"/g,'&quot;') + '" data-i="' + i + '" data-f="label" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px">' +
-      '<input type="time" value="' + (h.debut||'') + '" data-i="' + i + '" data-f="debut" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">' +
-      '<input type="time" value="' + (h.fin||'') + '" data-i="' + i + '" data-f="fin" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">' +
-      '<input type="number" value="' + (h.duree||0) + '" min="0" max="24" step="0.5" data-i="' + i + '" data-f="duree" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;text-align:center">' +
-      '<input type="color" value="' + (h.couleur||'#4f8ef7') + '" data-i="' + i + '" data-f="couleur" class="hor-edit" style="width:28px;height:28px;border:none;padding:0;cursor:pointer;border-radius:4px">' +
-      '<button class="btn btn-danger btn-sm btn-icon" onclick="removeHoraire(' + i + ')">&#128465;</button>' +
-      '</div>';
+    const pauses = h.pauses || [];
+    const totalPause = pauses.reduce((s, p) => s + (parseFloat(p.duree)||0), 0);
+    const presenceTotale = (parseFloat(h.dureePresence) || (parseFloat(h.duree)||0) + totalPause);
+
+    html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <!-- Code + couleur -->
+        <span class="shift-badge" style="background:${h.couleur||'#4f8ef7'}22;color:${h.couleur||'#4f8ef7'};font-family:monospace;font-weight:800;font-size:14px;min-width:36px;text-align:center">${h.code}</span>
+        <input type="color" value="${h.couleur||'#4f8ef7'}" data-i="${i}" data-f="couleur" class="hor-edit" style="width:28px;height:28px;border:none;padding:0;cursor:pointer;border-radius:4px;flex-shrink:0">
+        <!-- Libellé -->
+        <input type="text" value="${(h.label||'').replace(/"/g,'&quot;')}" data-i="${i}" data-f="label" class="hor-edit" placeholder="Libellé" style="flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px">
+        <!-- Début / Fin -->
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+          <span>Début</span>
+          <input type="time" value="${h.debut||''}" data-i="${i}" data-f="debut" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:12px">
+          <span>Fin</span>
+          <input type="time" value="${h.fin||''}" data-i="${i}" data-f="fin" class="hor-edit" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:12px">
+        </div>
+        <!-- Durée travaillée -->
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+          <span>Durée trav.</span>
+          <input type="number" value="${h.duree||0}" min="0" max="24" step="0.5" data-i="${i}" data-f="duree" class="hor-edit" style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:12px;text-align:center">
+          <span>h</span>
+        </div>
+        <!-- Présence totale calculée -->
+        <div style="background:#22c55e22;color:#22c55e;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;min-width:50px;text-align:center">
+          ${presenceTotale}h
+          <div style="font-size:9px;font-weight:400;opacity:0.8">présence</div>
+        </div>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="removeHoraire(${i})" style="margin-left:auto">🗑</button>
+      </div>
+
+      <!-- Pauses -->
+      <div style="padding:10px;background:var(--bg3);border-radius:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">
+          Pause(s) — total : <span style="color:var(--accent3)">${totalPause}h</span>
+        </div>
+        <div id="pauses-${i}" style="display:flex;flex-direction:column;gap:6px">
+          ${pauses.map((p, pi) => `
+            <div style="display:flex;align-items:center;gap:8px" data-pause="${pi}">
+              <input type="time" value="${p.debut||''}" onchange="updatePause(${i},${pi},'debut',this.value)"
+                style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">
+              <span style="color:var(--text3);font-size:11px">→</span>
+              <input type="time" value="${p.fin||''}" onchange="updatePause(${i},${pi},'fin',this.value)"
+                style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">
+              <input type="number" value="${p.duree||0}" min="0" max="4" step="0.25" onchange="updatePause(${i},${pi},'duree',parseFloat(this.value))"
+                style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;text-align:center">
+              <span style="color:var(--text3);font-size:11px">h</span>
+              <button onclick="removePause(${i},${pi})" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--accent4);padding:2px 7px;cursor:pointer;font-size:12px">✕</button>
+            </div>`).join('')}
+        </div>
+        <button onclick="addPause(${i})" style="margin-top:8px;background:transparent;border:1px dashed var(--border);border-radius:6px;color:var(--text2);padding:4px 12px;cursor:pointer;font-size:11px;font-family:inherit">
+          + pause
+        </button>
+      </div>
+    </div>`;
   });
+
   el.innerHTML = html;
-  // Attacher les événements via delegation
   el.querySelectorAll('.hor-edit').forEach(function(inp) {
     inp.addEventListener('change', function() {
       updateHoraireField(parseInt(this.dataset.i), this.dataset.f,
         this.dataset.f === 'duree' ? parseFloat(this.value) : this.value);
     });
   });
+}
+
+function addPause(horIdx) {
+  const etab = getEtab();
+  if (!etab.horaires[horIdx].pauses) etab.horaires[horIdx].pauses = [];
+  etab.horaires[horIdx].pauses.push({ debut: '', fin: '', duree: 0.5 });
+  saveToStorage(); renderConfigHoraires();
+}
+
+function removePause(horIdx, pauseIdx) {
+  const etab = getEtab();
+  etab.horaires[horIdx].pauses.splice(pauseIdx, 1);
+  saveToStorage(); renderConfigHoraires();
+}
+
+function updatePause(horIdx, pauseIdx, field, val) {
+  const etab = getEtab();
+  if (!etab.horaires[horIdx].pauses) etab.horaires[horIdx].pauses = [];
+  etab.horaires[horIdx].pauses[pauseIdx][field] = val;
+  // Recalculer présence totale
+  const h = etab.horaires[horIdx];
+  const totalPause = (h.pauses||[]).reduce((s,p) => s + (parseFloat(p.duree)||0), 0);
+  h.dureePresence = (parseFloat(h.duree)||0) + totalPause;
+  saveToStorage(); renderConfigHoraires();
 }
 
 function updateHoraireField(idx, field, val) {
@@ -6703,23 +6781,37 @@ function loadLocal() {
   showToast('Données chargées', 'success');
 }
 
-function syncTotalsScroll(wrapper) {
-  // Le scroll est géré par le wrapper parent commun — rien à faire
-}
-
 function printPlanning() {
   const etab = getEtab();
-  // Mettre à jour les infos d'en-tête
   const monthEl = document.getElementById('print-month-label');
-  const etabEl = document.getElementById('print-etab-label');
-  const dateEl = document.getElementById('print-date');
+  const etabEl  = document.getElementById('print-etab-label');
+  const dateEl  = document.getElementById('print-date');
   if (monthEl) monthEl.textContent = 'Planning ' + getMonthLabel();
   if (etabEl && etab) etabEl.textContent = etab.nom;
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-  // S'assurer que le planning et les totaux sont rendus
-  renderPlanning();
+  // Légende codes horaires + secteurs
+  const legEl = document.getElementById('print-legend');
+  if (legEl && etab) {
+    const horPart = etab.horaires.filter(h => ['M','S','J','NU','N','R'].includes(h.code)).map(h =>
+      `<span style="display:inline-flex;align-items:center;gap:3px;font-size:8pt">
+        <span style="background:${h.couleur||'#ccc'}30;color:${h.couleur||'#666'};padding:1px 5px;border-radius:3px;font-weight:800;font-family:monospace">${h.code}</span>
+        <span style="color:#475569">${h.label||h.code}${h.debut?' '+h.debut:''}</span>
+      </span>`
+    ).join('<span style="color:#ccc;margin:0 4px">·</span>');
 
+    const sectPart = etab.secteurs.map(s => {
+      const c = secteurCouleurCSS(s);
+      return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:8pt">
+        <span style="width:10px;height:10px;border-radius:2px;background:${s.couleur||c};display:inline-block"></span>
+        <span style="color:${c};font-weight:700">${s.nom}</span>
+      </span>`;
+    }).join('<span style="color:#ccc;margin:0 4px">·</span>');
+
+    legEl.innerHTML = horPart + '<span style="color:#ccc;margin:0 8px">|</span>' + sectPart;
+  }
+
+  renderPlanning();
   window.print();
 }
 
