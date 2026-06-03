@@ -2353,7 +2353,7 @@ window.onload = async function() {
   // ── 1. Charger TOUS les établissements depuis Supabase ──
   try {
     const { data, error } = await supa
-      .from('plannicare_data')
+      .from('horizon_data')
       .select('etab_id, data');
     if (!error && data && data.length > 0) {
       // Remplacer complètement DB.etablissements par les données Supabase
@@ -2366,7 +2366,7 @@ window.onload = async function() {
       saveToStorage(); // Mettre à jour le cache local
     } else {
       // Fallback : utiliser le localStorage si Supabase échoue
-      const saved = localStorage.getItem('plannicare_db');
+      const saved = localStorage.getItem('horizon_db');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -2378,7 +2378,7 @@ window.onload = async function() {
     }
   } catch(e) {
     // Pas de réseau — utiliser le localStorage
-    const saved = localStorage.getItem('plannicare_db');
+    const saved = localStorage.getItem('horizon_db');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -2396,7 +2396,7 @@ window.onload = async function() {
 
   // ── 2. Reconnexion automatique si session encore valide ──
   try {
-    const savedSession = localStorage.getItem('plannicare_session');
+    const savedSession = localStorage.getItem('horizon_session');
     if (savedSession) {
       const sess = JSON.parse(savedSession);
       const elapsed = Date.now() - (sess.loginTime || 0);
@@ -2420,11 +2420,11 @@ window.onload = async function() {
             initApp();
             return;
           } else {
-            localStorage.removeItem('plannicare_session');
+            localStorage.removeItem('horizon_session');
           }
         }
       } else {
-        localStorage.removeItem('plannicare_session');
+        localStorage.removeItem('horizon_session');
       }
     }
   } catch(e) {}
@@ -2512,7 +2512,7 @@ function checkQRView() {
 async function supaLoadEtab(etabId) {
   try {
     const { data, error } = await supa
-      .from('plannicare_data')
+      .from('horizon_data')
       .select('data')
       .eq('etab_id', etabId)
       .single();
@@ -2529,7 +2529,7 @@ async function saveToSupabase() {
   if (!etab) return;
   const etabId = DB.currentEtab || ETAB_ID;
   try {
-    await supa.from('plannicare_data').upsert({
+    await supa.from('horizon_data').upsert({
       etab_id: etabId,
       data: DB.etablissements[etabId],
       updated_at: new Date().toISOString()
@@ -2585,7 +2585,7 @@ async function supaLoadDispos(etabId) {
 
 function saveToStorage() {
   try {
-    localStorage.setItem('plannicare_db', JSON.stringify(DB));
+    localStorage.setItem('horizon_db', JSON.stringify(DB));
   } catch(e) {
     console.warn('localStorage save error:', e);
   }
@@ -2593,7 +2593,7 @@ function saveToStorage() {
 
 function loadFromStorage() {
   try {
-    const saved = localStorage.getItem('plannicare_db');
+    const saved = localStorage.getItem('horizon_db');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && parsed.etablissements && Object.keys(parsed.etablissements).length > 0) {
@@ -2646,7 +2646,7 @@ function loadTheme() {
 
 function saveToStorage() {
   try {
-    localStorage.setItem('plannicare_db', JSON.stringify(DB));
+    localStorage.setItem('horizon_db', JSON.stringify(DB));
   } catch(e) {
     console.warn('Impossible de sauvegarder:', e);
   }
@@ -2723,7 +2723,7 @@ async function doLogin() {
 
   // Sauvegarder la session pour reconnexion automatique
   try {
-    localStorage.setItem('plannicare_session', JSON.stringify({
+    localStorage.setItem('horizon_session', JSON.stringify({
       etabId, user: login, loginTime: Date.now()
     }));
   } catch(e) {}
@@ -2806,7 +2806,7 @@ function resetSessionTimer() {
 function doLogout() {
   DB.currentEtab = null;
   DB.currentUser = null;
-  try { localStorage.removeItem('plannicare_session'); } catch(e) {}
+  try { localStorage.removeItem('horizon_session'); } catch(e) {}
   clearInterval(_sessionTimer);
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -5989,7 +5989,7 @@ function submitQRConge() {
   });
 
   // Sauvegarder dans Supabase
-  supa.from('plannicare_data').upsert({
+  supa.from('horizon_data').upsert({
     etab_id: _qrEtabId, data: etab, updated_at: new Date().toISOString()
   }, { onConflict: 'etab_id' });
 
@@ -6058,7 +6058,7 @@ function saveQRDispos() {
   var st = document.getElementById('qr-save-status');
   supaDispoUpsert(_qrEtabId, _qrAgentId, _qrDispos).then(function() {
     // Aussi mettre à jour l'étab complet dans Supabase
-    supa.from('plannicare_data').upsert({
+    supa.from('horizon_data').upsert({
       etab_id: _qrEtabId,
       data: etab,
       updated_at: new Date().toISOString()
@@ -7507,7 +7507,7 @@ function clearCache() {
   DB = { etablissements: {}, currentEtab: null, currentUser: null };
   DB.etablissements[etabId || 'etab_demo'] = freshEtab;
 
-  try { localStorage.setItem('plannicare_db', JSON.stringify(DB)); } catch(e) {}
+  try { localStorage.setItem('horizon_db', JSON.stringify(DB)); } catch(e) {}
 
   showToast('Cache vidé — reconnectez-vous et réimportez votre Excel', 'success');
   setTimeout(() => {
