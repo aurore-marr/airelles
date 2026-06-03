@@ -2048,13 +2048,13 @@ table input:focus { border-color: var(--accent); }
         <div class="form-group">
           <label>Jours non travaillés</label>
           <div style="display:flex;gap:4px;flex-wrap:wrap" id="ag-jours-off">
-            <label class="jour-toggle" data-jour="0">Lun</label>
-            <label class="jour-toggle" data-jour="1">Mar</label>
-            <label class="jour-toggle" data-jour="2">Mer</label>
-            <label class="jour-toggle" data-jour="3">Jeu</label>
-            <label class="jour-toggle" data-jour="4">Ven</label>
-            <label class="jour-toggle" data-jour="5">Sam</label>
-            <label class="jour-toggle" data-jour="6">Dim</label>
+            <span class="jour-toggle" data-jour="0" onclick="this.classList.toggle('selected')">Lun</span>
+            <span class="jour-toggle" data-jour="1" onclick="this.classList.toggle('selected')">Mar</span>
+            <span class="jour-toggle" data-jour="2" onclick="this.classList.toggle('selected')">Mer</span>
+            <span class="jour-toggle" data-jour="3" onclick="this.classList.toggle('selected')">Jeu</span>
+            <span class="jour-toggle" data-jour="4" onclick="this.classList.toggle('selected')">Ven</span>
+            <span class="jour-toggle" data-jour="5" onclick="this.classList.toggle('selected')">Sam</span>
+            <span class="jour-toggle" data-jour="6" onclick="this.classList.toggle('selected')">Dim</span>
           </div>
         </div>
         <div class="form-group">
@@ -2181,6 +2181,9 @@ table input:focus { border-color: var(--accent); }
   background: var(--bg3); border: 1px solid var(--border);
   cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text2);
   transition: all 0.15s; user-select: none;
+}
+.jour-toggle.selected {
+  background: rgba(247,111,111,0.2); border-color: #f76f6f; color: #f76f6f;
 }
 .spec-tab-btn {
   padding: 5px 14px; border-radius: 20px; border: 1.5px solid var(--border);
@@ -3230,18 +3233,16 @@ function renderPlanning() {
 
   Object.keys(groupes).sort().forEach(gKey => {
     const gAgents = groupes[gKey];
-    // Séparateur de groupe avec badge équilibre
+    // Séparateur de groupe principal
     const nbActifsGroupe = gAgents.filter(a => a.actif).length;
     html += '<tr><td colspan="' + (daysInMonth + 3) + '" style="padding:5px 10px;background:var(--bg3);border-top:2px solid var(--border)">' +
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
       '<span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ' + gKey + ' — ' + nbActifsGroupe + ' agent' + (nbActifsGroupe>1?'s':'') + '</span>' +
       '</div></td></tr>';
 
-    // Calculer les alertes pour ce groupe après avoir rendu les agents
-    // (on les injectera après via JS inline)
+    // Alertes groupe
     const alertesGroupe = [];
     etab.secteurs
-      // Ignorer les secteurs fantômes (nom commence par "BG:" = vestige du localStorage)
       .filter(sect => sect.nom && !sect.nom.startsWith('BG:') && !sect.id.startsWith('BG'))
       .forEach(sect => {
         const today2 = new Date().getDate();
@@ -3252,11 +3253,9 @@ function renderPlanning() {
           const sh = (planMonth[a.id]||{})[today2]||'';
           if (['M','S','J','NU'].includes(sh)) cntTravail++;
         });
-        // Alertes par code horaire (si reglesHoraires configurées) sinon total
         const regles = sect.reglesHoraires || {};
         const hasRegles = Object.keys(regles).length > 0;
         if (hasRegles) {
-          // Compter par horaire
           const cntByHor = {};
           gAgents.forEach(function(a) {
             const sectM = a.secteurFixe || getSecteurDuMois(a, currentYear, currentMonth, etab);
@@ -3279,7 +3278,13 @@ function renderPlanning() {
         '<div style="font-size:10px;display:flex;flex-wrap:wrap;gap:12px">' + alertesGroupe.join(' &nbsp;|&nbsp; ') + '</div></td></tr>';
     }
 
-    gAgents.forEach(agent => {
+    // Séparer équipe (L1) et contre-équipe (L2+) par ligneRoulement
+    const lignes = [...new Set(gAgents.map(a => a.ligneRoulement || 'L1'))].sort();
+    const hasMultiLignes = lignes.length > 1;
+
+    // Fonction qui render les agents d'une sous-liste
+    function renderAgentsList(agentsList) {
+    agentsList.forEach(agent => {
       if (!planMonth[agent.id]) planMonth[agent.id] = {};
       const agPlan = planMonth[agent.id];
 
@@ -3313,8 +3318,10 @@ function renderPlanning() {
         '</td>' +
         // Colonne Nom+Info
         '<td class="agent-cell-poste" style="background:' + rowBgLine + ';border-right:1px solid var(--border)">' +
-          '<div style="font-weight:700;font-size:12px;color:var(--text)">' + (agent.prenom||'') + ' ' + agent.nom + '</div>' +
+          '<div style="font-weight:700;font-size:12px;color:var(--text)"><strong>' + agent.nom + '</strong> ' + (agent.prenom||'') + '</div>' +
           '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + agent.spec + ' · ' + agent.taux + '%' +
+            (agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : '') +
+            (agent.groupeRot ? ' · <span style="color:var(--accent3)">Groupe ' + agent.groupeRot + '</span>' : '') +
             (agent.posteNomme ? ' · <span style="color:var(--accent2)">' + agent.posteNomme + '</span>' : '') +
           '</div>' +
           '<span class="agent-cell-sector" style="background:' + sectColor + '28;color:' + sectColor + ';border:1px solid ' + sectColor + '44">' +
@@ -3373,23 +3380,38 @@ function renderPlanning() {
 
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
 
-        // Jours non travaillés (repos/vide) le week-end → non cliquables
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
-        const weekendNonWork = isWE && isNonTravaille;
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="background:' + cellBg + todayStyle + (weekendNonWork ? ';cursor:not-allowed;pointer-events:none;opacity:0.45' : '') + '"' +
-          (weekendNonWork ? '' : ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"') +
+          ' style="background:' + cellBg + todayStyle + '"' +
+          ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
             ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>'
-            : (weekendNonWork
-                ? '<span style="color:var(--text3);font-size:10px;opacity:0.1">✕</span>'
-                : (shift ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>' : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>'))) +
+            : (shift ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>' : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>')) +
           '</td>';
       }
       html += '</tr>';
     });
+    } // fin renderAgentsList
+
+    if (hasMultiLignes) {
+      // Afficher une sous-section par ligne de roulement (équipe / contre-équipe)
+      lignes.forEach(function(ligne) {
+        const ligneAgents = gAgents.filter(a => (a.ligneRoulement || 'L1') === ligne);
+        if (ligneAgents.length === 0) return;
+        const isContreEquipe = ligne !== 'L1';
+        const ligneLabel = isContreEquipe ? 'Contre-équipe · ' + ligne : 'Équipe · ' + ligne;
+        const ligneBg = isContreEquipe ? 'rgba(247,169,79,0.07)' : 'rgba(79,142,247,0.06)';
+        const ligneColor = isContreEquipe ? 'var(--accent3)' : 'var(--accent)';
+        html += '<tr><td colspan="' + (daysInMonth + 3) + '" style="padding:3px 10px 3px 20px;background:' + ligneBg + ';border-top:1px solid var(--border)">' +
+          '<span style="font-size:10px;font-weight:700;color:' + ligneColor + ';letter-spacing:0.5px">' + ligneLabel + ' — ' + ligneAgents.length + ' agent' + (ligneAgents.length>1?'s':'') + '</span>' +
+          '</td></tr>';
+        renderAgentsList(ligneAgents);
+      });
+    } else {
+      renderAgentsList(gAgents);
+    }
   });
 
   html += '</tbody></table>';
@@ -4775,9 +4797,8 @@ function renderAgents() {
       <div class="agent-card-header">
         <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${avatar}</div>
         <div style="flex:1;min-width:0">
-          <div class="agent-card-name">${agent.prenom||''} <span style="font-weight:800">${agent.nom}</span></div>
-          <div class="agent-card-spec">${agent.spec} · ${agent.taux}%${agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : ''}</div>
-          ${grpLabel ? `<div style="margin-top:3px"><span class="agent-card-group-badge">Grp ${agent.groupeRot}${agent.ligneRoulement||''}</span></div>` : ''}
+          <div class="agent-card-name"><span style="font-weight:800">${agent.nom}</span> ${agent.prenom||''}</div>
+          <div class="agent-card-spec">${agent.spec} · ${agent.taux}%${agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : ''}${agent.groupeRot ? ' · <span style="font-size:10px;color:var(--accent3)">Groupe ' + agent.groupeRot + '</span>' : ''}</div>
         </div>
         ${isInactifTab ? '<span class="tag tag-gray" style="margin-left:auto;flex-shrink:0">Inactif</span>' : ''}
       </div>
