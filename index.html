@@ -2391,10 +2391,8 @@ window.onload = async function() {
 
   if (sel) sel.disabled = false;
 
-  // Si toujours vide (premier lancement sans Supabase), créer un étab par défaut
-  if (!DB.etablissements || Object.keys(DB.etablissements).length === 0) {
-    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
-  }
+  // Si toujours vide (pas de réseau ET pas de cache), ne rien créer — évite les doublons
+  // L'établissement sera créé uniquement via "Créer un compte" ou Supabase
 
   // ── 2. Reconnexion automatique si session encore valide ──
   try {
@@ -2603,9 +2601,6 @@ function loadFromStorage() {
       }
     }
   } catch(e) {}
-  if (!DB.etablissements || Object.keys(DB.etablissements).length === 0) {
-    DB.etablissements[ETAB_ID] = defaultEtab('EHPAD Les Airelles', 'Annecy', 'admin', 'admin123');
-  }
 }
 
 // HTML de la vue QR (pour la recréer après chargement Supabase)
