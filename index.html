@@ -1482,10 +1482,22 @@ table input:focus { border-color: var(--accent); }
           <div class="config-section-title">🔑 Accès cadres de santé</div>
           <div id="logins-list" style="margin-bottom:16px"></div>
           <hr class="divider">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
             <div class="form-group" style="margin:0"><label>Nom complet</label><input type="text" id="new-login-nom" placeholder="M. Dupont"></div>
             <div class="form-group" style="margin:0"><label>Identifiant</label><input type="text" id="new-login-id" placeholder="mdupont"></div>
             <div class="form-group" style="margin:0"><label>Mot de passe</label><input type="password" id="new-login-pwd" placeholder="••••••"></div>
+            <div class="form-group" style="margin:0">
+              <label>Fonction</label>
+              <select id="new-login-role" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none;width:100%">
+                <option value="cadre">Cadre</option>
+                <option value="IDEC">IDEC</option>
+                <option value="IDEC Binome">IDEC Binôme</option>
+                <option value="Ass Dir">Ass. Direction</option>
+                <option value="Dir">Direction</option>
+                <option value="Resp Hot">Resp. Hôtellerie</option>
+                <option value="admin">Administrateur</option>
+              </select>
+            </div>
             <button class="btn btn-success btn-sm" style="align-self:end" onclick="addLogin()">+ Ajouter</button>
           </div>
         </div>
@@ -6126,29 +6138,71 @@ function renderConfigLogins() {
   if (!etab) return;
   const el = document.getElementById('logins-list');
   if (!el) return;
-  el.innerHTML = etab.logins.map((l, i) => `
-    <div class="flex items-center gap-2 mb-2" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
-      <span style="font-weight:600;flex:1">${l.nom}</span>
-      <span class="font-mono text-muted text-sm">${l.login}</span>
-      <span class="tag ${l.role==='admin'?'tag-blue':'tag-gray'}">${l.role||'cadre'}</span>
-      ${i > 0 ? `<button class="btn btn-danger btn-sm btn-icon" onclick="removeLogin(${i})">×</button>` : ''}
+
+  const roleColors = {
+    admin:'tag-blue', IDEC:'tag-green', 'IDEC Binome':'tag-green',
+    'Ass Dir':'tag-orange', Dir:'tag-orange', 'Resp Hot':'tag-gray', cadre:'tag-gray'
+  };
+  const roleOptions = ['cadre','IDEC','IDEC Binome','Ass Dir','Dir','Resp Hot','admin'];
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
+      <span>Nom complet</span><span>Identifiant</span><span>Mot de passe</span><span>Fonction</span><span></span><span></span>
+    </div>` +
+  etab.logins.map((l, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px">
+      <input type="text" value="${(l.nom||'').replace(/"/g,'&quot;')}"
+        onchange="updateLogin(${i},'nom',this.value)"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%">
+      <input type="text" value="${(l.login||'').replace(/"/g,'&quot;')}"
+        ${i===0?'readonly style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text2);font-size:12px;font-family:monospace;width:100%"':
+        'onchange="updateLogin('+i+',\'login\',this.value)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:monospace;width:100%"'}>
+      <input type="text" value="${(l.pwd||'').replace(/"/g,'&quot;')}"
+        onchange="updateLogin(${i},'pwd',this.value)" placeholder="Nouveau mot de passe"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%">
+      <select onchange="updateLogin(${i},'role',this.value)"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%">
+        ${roleOptions.map(r => `<option value="${r}" ${l.role===r?'selected':''}>${r}</option>`).join('')}
+      </select>
+      <span class="tag ${roleColors[l.role]||'tag-gray'}" style="text-align:center">${l.role||'cadre'}</span>
+      ${i > 0
+        ? `<button class="btn btn-danger btn-sm btn-icon" onclick="removeLogin(${i})" title="Supprimer">×</button>`
+        : `<span></span>`}
     </div>`
   ).join('');
 }
 
+function updateLogin(idx, field, val) {
+  const etab = getEtab();
+  if (!etab.logins[idx]) return;
+  // Vérifier doublon identifiant
+  if (field === 'login' && etab.logins.find((l, i) => i !== idx && l.login === val)) {
+    showToast('Identifiant déjà utilisé', 'error');
+    renderConfigLogins();
+    return;
+  }
+  etab.logins[idx][field] = val;
+  saveToStorage();
+  // Re-render seulement pour le badge rôle (pas tout le formulaire pour éviter perte de focus)
+  if (field === 'role') renderConfigLogins();
+  showToast('Compte mis à jour', 'success');
+}
+
 function addLogin() {
-  const nom = document.getElementById('new-login-nom').value.trim();
+  const nom   = document.getElementById('new-login-nom').value.trim();
   const login = document.getElementById('new-login-id').value.trim();
-  const pwd = document.getElementById('new-login-pwd').value;
+  const pwd   = document.getElementById('new-login-pwd').value;
+  const role  = document.getElementById('new-login-role')?.value || 'cadre';
   if (!nom || !login || !pwd) { showToast('Remplissez tous les champs', 'error'); return; }
   const etab = getEtab();
   if (etab.logins.find(l => l.login === login)) { showToast('Identifiant déjà utilisé', 'error'); return; }
-  etab.logins.push({ nom, login, pwd, role: 'cadre' });
+  etab.logins.push({ nom, login, pwd, role });
   saveToStorage(); renderConfigLogins();
   document.getElementById('new-login-nom').value = '';
   document.getElementById('new-login-id').value = '';
   document.getElementById('new-login-pwd').value = '';
-  showToast('Accès ajouté', 'success');
+  if (document.getElementById('new-login-role')) document.getElementById('new-login-role').value = 'cadre';
+  showToast('Accès ' + role + ' ajouté', 'success');
 }
 
 function removeLogin(idx) {
