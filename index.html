@@ -2258,19 +2258,18 @@ function checkQRView() {
   const params = new URLSearchParams(window.location.search);
   const agentId = params.get('agent');
   const etabId  = params.get('etab') || ETAB_ID;
+  const specFilter = params.get('spec') || '';
   const isQR    = params.get('qr') === '1' || !!agentId;
 
   if (!isQR) return;
 
-  // Masquer login/app, montrer QR
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'none';
   document.getElementById('qr-view').style.display = 'block';
 
-  // Afficher spinner dans la zone PIN
   const pinSec = document.getElementById('qr-pin-section');
   if (pinSec) {
-    pinSec.insertAdjacentHTML('beforebegin', 
+    pinSec.insertAdjacentHTML('beforebegin',
       '<div id="qr-load-msg" style="text-align:center;padding:20px;color:#38bdf8;font-size:14px">⏳ Chargement des données...</div>');
   }
 
@@ -2284,23 +2283,22 @@ function checkQRView() {
       return;
     }
 
-    // Stocker dans DB local pour la session
     DB.etablissements[etabId] = etab;
 
-    // Mettre à jour le nom de l'étab
+    // Titre spécialité
     const nameEl = document.getElementById('qr-sel-etab-name');
-    if (nameEl) nameEl.textContent = etab.nom;
+    if (nameEl) nameEl.textContent = (specFilter ? 'Planning ' + specFilter + ' — ' : '') + etab.nom;
 
-    // Initialiser la vue QR
     _qrEtabId = etabId;
     _qrAgentId = agentId || null;
+    _qrSpecFilter = specFilter; // filtre par spécialité
     _qrPinBuffer = '';
     updatePinDots();
     document.getElementById('qr-name-section').style.display = 'none';
     document.getElementById('qr-pin-error').style.display = 'none';
 
-    // Peupler le sélecteur de noms
-    qrPopulateAgentSelect(etab, '');
+    // Pré-filtrer les agents par spécialité dans le sélecteur
+    qrPopulateAgentSelect(etab, specFilter);
   });
 }
 
@@ -3154,16 +3152,19 @@ function renderPlanning() {
     totWrap.onscroll  = function() { planWrap.scrollLeft = totWrap.scrollLeft; };
   }
 
-  // Légende horaires — toujours visible, codes + horaires
+  // Légende horaires — codes + horaires + pauses
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
-    const horPart = etab.horaires.filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
+    const horPart = etab.horaires
+      .filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
       .map(h => {
+        const pauses = h.pauses || [];
+        const totalPause = pauses.reduce((s,p) => s+(parseFloat(p.duree)||0), 0);
+        const pauseStr = totalPause > 0 ? ` — pause ${totalPause}h` : '';
         const horaire = h.debut && h.fin ? `${h.debut.replace(':','h')}–${h.fin.replace(':','h')}` : (h.debut ? h.debut.replace(':','h') : '');
-        const isResto = h.code === 'R';
         return `<span style="display:inline-flex;align-items:center;gap:5px">
-          <span style="background:${h.couleur||'#888'}${isResto?'18':'28'};color:${h.couleur||'#888'};padding:2px 8px;border-radius:5px;font-weight:800;font-family:monospace;font-size:12px;border:1px solid ${h.couleur||'#888'}44">${h.code}</span>
-          <span style="color:var(--text2);font-size:10px">${h.label||h.code}${horaire ? ' ' + horaire : ''}</span>
+          <span style="background:${h.couleur||'#888'}28;color:${h.couleur||'#888'};padding:2px 8px;border-radius:5px;font-weight:800;font-family:monospace;font-size:12px;border:1px solid ${h.couleur||'#888'}44">${h.code}</span>
+          <span style="color:var(--text2);font-size:10px">${h.label||h.code}${horaire?' '+horaire:''}${pauseStr}</span>
         </span>`;
       }).join('<span style="color:var(--border);margin:0 4px">|</span>');
 
@@ -4653,47 +4654,84 @@ function renderQRPage() {
   const etab = getEtab();
   if (!etab) return;
   const grid = document.getElementById('qr-agents-grid');
-  grid.innerHTML = etab.agents.filter(a => a.actif).map(agent => {
-    const specColor = getSpecColor(agent.spec);
-    return `<div class="card" style="text-align:center;cursor:pointer" onclick="showQRModal('${agent.id}')">
-      <div style="width:44px;height:44px;border-radius:12px;background:${specColor}22;color:${specColor};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin:0 auto 8px">${agent.prenom[0]}${agent.nom[0]}</div>
-      <div style="font-weight:700;font-size:13px">${agent.prenom} ${agent.nom}</div>
-      <div class="text-xs text-muted mb-3">${agent.spec}</div>
-      <button class="btn btn-primary btn-sm w-full" onclick="event.stopPropagation();showQRModal('${agent.id}')">📱 QR Code</button>
+
+  // Un QR par spécialité
+  const specs = etab.specialites || [];
+  const baseUrl = window.location.href.split('?')[0];
+  const specColors = { AS:'#4f8ef7', IDE:'#38d9a9', AMP:'#f7a94f', ASH:'#a07ee8', Nuit:'#6366f1', AUX:'#f76f6f' };
+
+  grid.innerHTML = `
+    <div style="margin-bottom:20px;padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">
+        ℹ️ Chaque QR code donne accès au planning de la spécialité correspondante.<br>
+        <span style="font-weight:400;color:var(--text3)">Les agents scannent le QR de leur spécialité, saisissent leur PIN (numéro de poste sur 4 chiffres) et voient leur planning.</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+      ${specs.map(spec => {
+        const color = specColors[spec] || '#4f8ef7';
+        const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
+        const agentCount = etab.agents.filter(a => a.actif && a.spec === spec).length;
+        return `<div class="card" style="text-align:center;border-top:3px solid ${color}">
+          <div style="width:48px;height:48px;border-radius:14px;background:${color}22;color:${color};
+            display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin:0 auto 10px">
+            ${spec[0]}
+          </div>
+          <div style="font-weight:800;font-size:15px;color:var(--text)">${spec}</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:12px">${agentCount} agent${agentCount>1?'s':''}</div>
+          <div id="qr-spec-${spec.replace(/\s/g,'_')}" style="margin:0 auto 12px;width:140px;height:140px"></div>
+          <div style="font-size:9px;color:var(--text3);margin-bottom:10px;word-break:break-all;padding:0 4px">${url}</div>
+          <div style="display:flex;gap:6px;justify-content:center">
+            <button class="btn btn-primary btn-sm" onclick="downloadSpecQR('${spec}')">⬇️ Télécharger</button>
+            <button class="btn btn-secondary btn-sm" onclick="printSpecQR('${spec}')">🖨️ Imprimer</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
-  }).join('');
+
+  // Générer les QR codes
+  setTimeout(() => {
+    specs.forEach(spec => {
+      const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
+      const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
+      if (!container) return;
+      container.innerHTML = '';
+      try {
+        new QRCode(container, { text: url, width: 140, height: 140, colorDark: '#0f1117', colorLight: '#ffffff' });
+      } catch(e) {
+        container.innerHTML = `<div style="font-size:9px;color:var(--text2);padding:8px;word-break:break-all">${url}</div>`;
+      }
+    });
+  }, 100);
 }
 
-function showQRModal(agentId) {
-  const etab = getEtab();
-  const agent = etab.agents.find(a => a.id === agentId);
-  if (!agent) return;
-  document.getElementById('qr-modal-title').textContent = `QR — ${agent.prenom} ${agent.nom}`;
-  document.getElementById('qr-modal-info').textContent = agent.spec;
-
-  const container = document.getElementById('qrcode-display');
-  container.innerHTML = '';
-  const url = window.location.href.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
-  try {
-    new QRCode(container, { text: url, width: 200, height: 200, colorDark: '#0f1117', colorLight: '#ffffff' });
-  } catch(e) {
-    container.innerHTML = `<div style="background:#fff;padding:16px;border-radius:8px;word-break:break-all;font-size:11px;color:#000;max-width:200px">${url}</div>`;
-  }
-  currentQRAgent = agentId;
-  openModal('modal-qr');
-}
-
-function downloadQR() {
-  const canvas = document.querySelector('#qrcode-display canvas');
+function downloadSpecQR(spec) {
+  const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
+  const canvas = container?.querySelector('canvas');
   if (!canvas) return;
   const a = document.createElement('a');
-  a.download = `qr_agent_${currentQRAgent}.png`;
+  a.download = `QR_Planning_${spec}.png`;
   a.href = canvas.toDataURL();
   a.click();
 }
 
-function generateAllQR() { showToast('QR codes générés', 'success'); renderQRPage(); }
-function printAllQR() { window.print(); }
+function printSpecQR(spec) {
+  const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const img = canvas.toDataURL();
+  const etab = getEtab();
+  const url = window.location.href.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
+    <h2>Planning ${spec} — ${etab?.nom || ''}</h2>
+    <img src="${img}" style="width:200px;height:200px"><br>
+    <p style="font-size:11px;color:#666;margin-top:10px">Scannez ce QR code pour accéder à votre planning</p>
+    <p style="font-size:9px;color:#999">${url}</p>
+    <script>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
+}
 
 // ============================================================
 // QR AGENT VIEW
@@ -6783,32 +6821,46 @@ function loadLocal() {
 
 function printPlanning() {
   const etab = getEtab();
+  const now = new Date();
+  const specFilter = currentSpecFilter || '';
+
+  // En-tête
   const monthEl = document.getElementById('print-month-label');
   const etabEl  = document.getElementById('print-etab-label');
   const dateEl  = document.getElementById('print-date');
-  if (monthEl) monthEl.textContent = 'Planning ' + getMonthLabel();
+  if (monthEl) monthEl.textContent = 'Planning ' + (specFilter || 'Tous agents') + ' — ' + getMonthLabel();
   if (etabEl && etab) etabEl.textContent = etab.nom;
-  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  if (dateEl) dateEl.textContent = now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})
+    + ' à ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
 
-  // Légende codes horaires + secteurs
+  // Légende codes horaires avec pauses + secteurs
   const legEl = document.getElementById('print-legend');
   if (legEl && etab) {
-    const horPart = etab.horaires.filter(h => ['M','S','J','NU','N','R'].includes(h.code)).map(h =>
-      `<span style="display:inline-flex;align-items:center;gap:3px;font-size:8pt">
-        <span style="background:${h.couleur||'#ccc'}30;color:${h.couleur||'#666'};padding:1px 5px;border-radius:3px;font-weight:800;font-family:monospace">${h.code}</span>
-        <span style="color:#475569">${h.label||h.code}${h.debut?' '+h.debut:''}</span>
-      </span>`
-    ).join('<span style="color:#ccc;margin:0 4px">·</span>');
+    const horPart = etab.horaires
+      .filter(h => ['M','S','J','NU','N','R'].includes(h.code))
+      .map(h => {
+        const pauses = h.pauses || [];
+        const pauseStr = pauses.length > 0
+          ? ' (pause ' + pauses.map(p => (p.duree||0) + 'h' + (p.debut?' '+p.debut:'') ).join(', ') + ')'
+          : '';
+        const horaire = h.debut && h.fin ? ` ${h.debut}–${h.fin}` : '';
+        return `<span style="display:inline-flex;align-items:center;gap:4px">
+          <span style="background:${h.couleur||'#888'}30;color:${h.couleur||'#666'};padding:1px 6px;border-radius:3px;font-weight:800;font-family:monospace;font-size:8pt">${h.code}</span>
+          <span style="color:#374151;font-size:8pt">${h.label||h.code}${horaire}${pauseStr}</span>
+        </span>`;
+      }).join('<span style="color:#d1d5db;margin:0 5px">|</span>');
 
-    const sectPart = etab.secteurs.map(s => {
+    const sectPart = etab.secteurs.filter(s => !s.nom.startsWith('BG:')).map(s => {
       const c = secteurCouleurCSS(s);
-      return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:8pt">
+      return `<span style="display:inline-flex;align-items:center;gap:4px">
         <span style="width:10px;height:10px;border-radius:2px;background:${s.couleur||c};display:inline-block"></span>
-        <span style="color:${c};font-weight:700">${s.nom}</span>
+        <span style="color:${c};font-weight:700;font-size:8pt">${s.nom}</span>
       </span>`;
-    }).join('<span style="color:#ccc;margin:0 4px">·</span>');
+    }).join('<span style="color:#d1d5db;margin:0 5px">·</span>');
 
-    legEl.innerHTML = horPart + '<span style="color:#ccc;margin:0 8px">|</span>' + sectPart;
+    legEl.innerHTML = horPart
+      + '<span style="width:1px;height:14px;background:#d1d5db;margin:0 10px;display:inline-block;vertical-align:middle"></span>'
+      + sectPart;
   }
 
   renderPlanning();
