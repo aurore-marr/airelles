@@ -1418,7 +1418,7 @@ table input:focus { border-color: var(--accent); }
         <button class="btn btn-primary btn-sm" onclick="generateAllQR()">🔄 Générer tous les QR</button>
         <button class="btn btn-secondary btn-sm" onclick="printAllQR()">🖨️ Imprimer tous</button>
       </div>
-      <div id="qr-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+      <div id="qr-agents-grid" style="display:block"></div>
     </div>
 
     <!-- CONFIG -->
@@ -3594,15 +3594,16 @@ function renderPlanning() {
         };
         let rgb;
         try { rgb = hexToRgb(scColor); } catch(e) { rgb = [100,116,128]; }
-        const rowBg   = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.13)`;
-        const fixeBg  = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
+        const rowBg   = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`;
+        const fixeBg  = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.32)`;
         const sectBorder = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.45)`;
 
         let cellBg, badgeStyle;
 
         if (isTravail) {
           cellBg = isFixe ? fixeBg : rowBg;
-          badgeStyle = `background:transparent;color:${scColor};font-weight:800;border:1px solid ${sectBorder}`;
+          const horColor = hor ? (hor.couleur || scColor) : scColor;
+          badgeStyle = `background:${horColor}30;color:${horColor};font-weight:800;border:1px solid ${horColor}70;border-radius:5px`;
         } else if (isAbsence) {
           const horColor = hor ? hor.couleur : '#f76f6f';
           cellBg = isWE ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.06)` : rowBg;
@@ -3727,7 +3728,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   function makeCell(val, color, bgCell, isMon, isToday, req) {
     const alertCol = val>0&&req>0&&val<req ? '#f76f6f' : val>0&&req>0&&val>req*1.5 ? '#f7a94f' : val>0 ? color : '#2a3350';
     const bg = isToday ? 'rgba(79,142,247,0.2)' : bgCell;
-    return '<td style="text-align:center;padding:2px 0;min-width:38px;width:38px;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
+    return '<td style="text-align:center;padding:2px 0;min-width:46px;width:46px;max-width:46px;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
   }
 
   // Header row
@@ -3740,7 +3741,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const isToday2 = date.toDateString()===today.toDateString();
     const isMon = dow===1;
     const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
-    headerRow += '<th style="text-align:center;padding:2px 0;min-width:38px;width:38px;font-size:9px;font-weight:600;color:' + (isToday2?'#4f8ef7':isWE?'#f7a94f':'#6b7fa8') + ';background:#131928;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '"><div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div></th>';
+    headerRow += '<th style="text-align:center;padding:2px 0;min-width:46px;width:46px;max-width:46px;font-size:9px;font-weight:600;color:' + (isToday2?'#4f8ef7':isWE?'#f7a94f':'#6b7fa8') + ';background:#131928;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '"><div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div></th>';
   }
   headerRow += '</tr>';
 
@@ -3823,7 +3824,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   section.style.display = 'block';
 
   const today = new Date();
-  const colWidth = 38;
+  const colWidth = 46;
   const nameWidth = 210;
 
   // Header row (aligned with planning columns)
@@ -4131,13 +4132,15 @@ function openShiftPicker(agentId, day) {
 
   // === ABSENCES ===
   // Include hardcoded absence codes + any custom codes from absenceCodes config
-  const builtinAbsCodes = ['MO','EM','AT','FO','GR','R','RC','AM','CP'];
+  // Exclude R (repos) and any codes already shown in conges section
+  const congesCodesSet = new Set(congesCodes.map(h => h.code));
+  const builtinAbsCodes = ['MO','EM','AT','FO','GR','RC','AM','CP'];
   const customAbsCodes = (etab.absenceCodes || []).map(a => a.code);
-  const allAbsCodesToShow = [...new Set([...builtinAbsCodes, ...customAbsCodes])];
+  const allAbsCodesToShow = [...new Set([...builtinAbsCodes, ...customAbsCodes])].filter(c => !congesCodesSet.has(c));
   const absenceCodes = etab.horaires.filter(h => allAbsCodesToShow.includes(h.code));
   // Also add any absenceCodes from config that aren't in horaires yet
   const absenceCodesExtra = (etab.absenceCodes || []).filter(a =>
-    !absenceCodes.find(h => h.code === a.code)
+    !absenceCodes.find(h => h.code === a.code) && !congesCodesSet.has(a.code)
   ).map(a => ({ code: a.code, label: a.label, couleur: '#8892aa' }));
   const absenceBtns = document.getElementById('shift-absence-btns');
   absenceBtns.innerHTML = [...absenceCodes, ...absenceCodesExtra].map(h => {
