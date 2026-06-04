@@ -319,12 +319,12 @@ body {
   background: var(--accent4); color: #fff;
 }
 
-.day-header { cursor: default; min-width:38px; width:38px; max-width:38px; }
+.day-header { cursor: default; min-width:46px; width:46px; max-width:46px; }
 .day-header.weekend { background: rgba(247,169,79,0.1) !important; }
 .day-header.today { background: rgba(79,142,247,0.15) !important; color: var(--accent) !important; }
 
 .shift-cell {
-  width: 38px; min-width: 38px; max-width: 38px;
+  width: 46px; min-width: 46px; max-width: 46px;
   height: 46px; text-align: center; vertical-align: middle;
   cursor: pointer; transition: background 0.1s;
   position: relative;
@@ -1328,7 +1328,7 @@ table input:focus { border-color: var(--accent); }
         <button class="btn btn-primary btn-sm" onclick="generateAllQR()">🔄 Générer tous les QR</button>
         <button class="btn btn-secondary btn-sm" onclick="printAllQR()">🖨️ Imprimer tous</button>
       </div>
-      <div id="qr-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px"></div>
+      <div id="qr-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
     </div>
 
     <!-- CONFIG -->
@@ -3916,12 +3916,13 @@ function openShiftPicker(agentId, day) {
   const absenceBtns = document.getElementById('shift-absence-btns');
   absenceBtns.innerHTML = absenceCodes.map(h => {
     const isActive = currentShift === h.code;
+    const col = h.couleur || '#8892aa';
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
-      style="padding:10px 14px;border-radius:8px;border:2px solid ${isActive ? h.couleur : '#2a3350'};
-      background:${isActive ? h.couleur+'22' : '#1e2538'};color:${isActive ? h.couleur : '#8892aa'};
+      style="padding:10px 14px;border-radius:8px;border:2px solid ${isActive ? col : col+'44'};
+      background:${isActive ? col+'22' : '#1e2538'};color:${col};
       font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center;min-width:80px">
-      <div style="font-size:13px;font-weight:800;color:${h.couleur}">${h.code}</div>
-      <div style="font-size:9px">${h.label||''}</div>
+      <div style="font-size:13px;font-weight:800">${h.code}</div>
+      <div style="font-size:9px;opacity:0.8">${h.label||''}</div>
     </button>`;
   }).join('');
 
@@ -5273,7 +5274,7 @@ function renderQRPage() {
         <span style="font-weight:400;color:var(--text3)">Les agents scannent le QR de leur spécialité, saisissent leur PIN (numéro de poste sur 4 chiffres) et voient leur planning.</span>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;max-width:100%">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-width:100%">
       ${specs.map(spec => {
         const color = specColors[spec] || '#4f8ef7';
         const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
@@ -5321,7 +5322,7 @@ function renderQRPage() {
         <span style="font-size:11px;font-weight:600;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:10px">${vacs.length} vacataire${vacs.length>1?'s':''}</span>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Chaque vacataire a son QR personnel. Il le scanne pour renseigner ses dispos et consulter son planning si affecté.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
         ${vacs.map(v => {
           const url = `${baseUrl}?vac=${encodeURIComponent(v.id)}&etab=${DB.currentEtab || ETAB_ID}`;
           const specColor = '#f7a94f';
