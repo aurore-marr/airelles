@@ -3221,7 +3221,7 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row
-  let html = `<table class="planning-table" style="min-width:${218 + daysInMonth*38}px"><thead><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*38}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
@@ -3293,7 +3293,15 @@ function renderPlanning() {
           });
         } else {
           const req = sect.agentsRequisJour || 3;
-          if (cntTravail < req) alertesGroupe.push('<span style="color:var(--accent4);font-weight:600">' + sect.nom + ' manque ' + (req-cntTravail) + ' agent' + (req-cntTravail>1?'s':'') + '</span>');
+          // Ne pas alerter si le manque est entièrement dû aux agents en Repos (jour de repos planifié)
+          let cntRepos = 0;
+          gAgents.forEach(a => {
+            const sectM = a.secteurFixe || getSecteurDuMois(a, currentYear, currentMonth, etab);
+            if (sectM !== sect.id) return;
+            const sh = (planMonth[a.id]||{})[today2]||'';
+            if (sh === 'R' || sh === 'RC') cntRepos++;
+          });
+          if (cntTravail < req && cntRepos < (req - cntTravail)) alertesGroupe.push('<span style="color:var(--accent4);font-weight:600">' + sect.nom + ' manque ' + (req-cntTravail) + ' agent' + (req-cntTravail>1?'s':'') + '</span>');
         }
       });
     if (alertesGroupe.length > 0) {
@@ -3512,7 +3520,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
 
   // Header row
   let headerRow = '<tr style="background:#131928">';
-  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:218px;width:218px;font-size:9px;color:#9aaabf;border-right:3px solid var(--accent);box-sizing:border-box;white-space:nowrap"></th>';
+  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:210px;width:210px;font-size:9px;color:#9aaabf;border-right:3px solid var(--accent);box-sizing:border-box;white-space:nowrap"></th>';
   for (let d=1;d<=daysInMonth;d++) {
     const date = new Date(currentYear,currentMonth,d);
     const dow = date.getDay();
@@ -3533,7 +3541,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rowBg = color + '22';
     const labelBg = color + '30';
     html += '<tr style="border-bottom:1px solid #2a335033">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:218px;width:218px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const cnt = totalByCode[h.code][d]||0;
       const date = new Date(currentYear,currentMonth,d);
@@ -3553,7 +3561,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
     html += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:218px;width:218px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const date = new Date(currentYear,currentMonth,d);
@@ -3604,7 +3612,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   const today = new Date();
   const colWidth = 38;
-  const nameWidth = 218;
+  const nameWidth = 210;
 
   // Header row (aligned with planning columns)
   let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
@@ -3910,11 +3918,17 @@ function openShiftPicker(agentId, day) {
   }).join('');
 
   // === ABSENCES ===
-  const absenceCodes = etab.horaires.filter(h =>
-    ['MO','EM','AT','FO','GR','R','RC'].includes(h.code)
-  );
+  // Include hardcoded absence codes + any custom codes from absenceCodes config
+  const builtinAbsCodes = ['MO','EM','AT','FO','GR','R','RC','AM','CP'];
+  const customAbsCodes = (etab.absenceCodes || []).map(a => a.code);
+  const allAbsCodesToShow = [...new Set([...builtinAbsCodes, ...customAbsCodes])];
+  const absenceCodes = etab.horaires.filter(h => allAbsCodesToShow.includes(h.code));
+  // Also add any absenceCodes from config that aren't in horaires yet
+  const absenceCodesExtra = (etab.absenceCodes || []).filter(a =>
+    !absenceCodes.find(h => h.code === a.code)
+  ).map(a => ({ code: a.code, label: a.label, couleur: '#8892aa' }));
   const absenceBtns = document.getElementById('shift-absence-btns');
-  absenceBtns.innerHTML = absenceCodes.map(h => {
+  absenceBtns.innerHTML = [...absenceCodes, ...absenceCodesExtra].map(h => {
     const isActive = currentShift === h.code;
     const col = h.couleur || '#8892aa';
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
@@ -5313,34 +5327,7 @@ function renderQRPage() {
       </div>
     </div>
 
-    <!-- QR par spécialité (optionnels, pour impression ciblée) -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px">
-        <span>QR par spécialité</span>
-        <span style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel — si vous souhaitez afficher un QR par service)</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-width:100%">
-        ${specs.map(spec => {
-          const color = specColors[spec] || '#4f8ef7';
-          const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
-          const agentCount = etab.agents.filter(a => a.actif && a.spec === spec).length;
-          return `<div class="card" style="text-align:center;border-top:3px solid ${color}">
-            <div style="width:40px;height:40px;border-radius:12px;background:${color}22;color:${color};
-              display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;margin:0 auto 8px">
-              ${spec[0]}
-            </div>
-            <div style="font-weight:800;font-size:14px;color:var(--text)">${spec}</div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${agentCount} agent${agentCount>1?'s':''}</div>
-            <div id="qr-spec-${spec.replace(/\s/g,'_')}" style="margin:0 auto 10px;width:120px;height:120px"></div>
-            <div style="font-size:9px;color:var(--text3);margin-bottom:8px;word-break:break-all;padding:0 4px">${url}</div>
-            <div style="display:flex;gap:6px;justify-content:center">
-              <button class="btn btn-primary btn-sm" onclick="downloadSpecQR('${spec}')">⬇️</button>
-              <button class="btn btn-secondary btn-sm" onclick="printSpecQR('${spec}')">🖨️</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+  `;
 
   // Générer le QR universel
   setTimeout(() => {
@@ -5353,18 +5340,7 @@ function renderQRPage() {
         uContainer.innerHTML = `<div style="font-size:9px;color:var(--text2);padding:8px;word-break:break-all">${universalUrl}</div>`;
       }
     }
-    // Générer les QR spécialités
-    specs.forEach(spec => {
-      const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
-      const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
-      if (!container) return;
-      container.innerHTML = '';
-      try {
-        new QRCode(container, { text: url, width: 120, height: 120, colorDark: '#0f1117', colorLight: '#ffffff' });
-      } catch(e) {
-        container.innerHTML = `<div style="font-size:9px;color:var(--text2);padding:8px;word-break:break-all">${url}</div>`;
-      }
-    });
+
   }, 100);
 
   // ── Section QR Vacataires ──
