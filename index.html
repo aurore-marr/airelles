@@ -190,8 +190,12 @@ body {
   display: flex; flex-direction: column;
   z-index: 100;
   padding: 20px 0;
+  transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
 }
-.sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.sidebar.collapsed { width: 60px; }
+.sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; transition: padding 0.25s; }
+.sidebar.collapsed .sidebar-header { padding: 0 10px 16px; }
 .sidebar-logo { display: flex; align-items: center; gap: 10px; }
 .sidebar-logo .mark {
   width: 36px; height: 36px;
@@ -200,38 +204,80 @@ body {
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; flex-shrink: 0;
 }
-.sidebar-logo span { font-weight: 700; font-size: 15px; color: var(--text); }
+.sidebar-logo span { font-weight: 700; font-size: 15px; color: var(--text); white-space: nowrap; transition: opacity 0.2s, width 0.25s; overflow: hidden; }
+.sidebar.collapsed .sidebar-logo span { opacity: 0; width: 0; }
+
+/* Toggle button */
+.sidebar-toggle {
+  position: absolute; top: 14px; right: -12px;
+  width: 24px; height: 24px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 11px; z-index: 110;
+  transition: all 0.2s; color: var(--text2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.sidebar-toggle:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sidebar.collapsed .sidebar-toggle { right: -12px; }
 
 .etab-badge {
   margin: 0 12px 8px;
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px 10px;
-  font-size: 11px;
+  font-size: 11px; transition: all 0.25s; white-space: nowrap; overflow: hidden;
 }
+.sidebar.collapsed .etab-badge { margin: 0 6px 8px; padding: 6px; display:flex; align-items:center; justify-content:center; }
 .etab-badge .etab-name { font-weight: 600; color: var(--accent); font-size: 12px; }
 .etab-badge .etab-role { color: var(--text2); margin-top: 2px; }
+.sidebar.collapsed .etab-badge .etab-name,
+.sidebar.collapsed .etab-badge .etab-role { display: none; }
+.etab-badge-icon { display: none; font-size: 16px; }
+.sidebar.collapsed .etab-badge-icon { display: block; }
 
 .nav-section { padding: 0 12px; margin-bottom: 4px; }
-.nav-section-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; }
+.sidebar.collapsed .nav-section { padding: 0 6px; }
+.nav-section-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; transition: opacity 0.2s; white-space: nowrap; }
+.sidebar.collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; overflow: hidden; margin: 0; }
 .nav-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: 8px;
   color: var(--text2); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: all 0.15s;
-  user-select: none;
+  user-select: none; white-space: nowrap; position: relative;
 }
+.sidebar.collapsed .nav-item { padding: 9px; justify-content: center; }
 .nav-item:hover { background: var(--bg3); color: var(--text); }
 .nav-item.active { background: rgba(79,142,247,0.15); color: var(--accent); }
-.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-item .nav-label { transition: opacity 0.2s, width 0.25s; overflow: hidden; }
+.sidebar.collapsed .nav-item .nav-label { opacity: 0; width: 0; display: none; }
 .nav-badge {
   margin-left: auto; background: var(--accent4);
   color: #fff; font-size: 10px; font-weight: 700;
   padding: 2px 6px; border-radius: 10px;
 }
+.sidebar.collapsed .nav-badge {
+  position: absolute; top: 4px; right: 4px;
+  margin-left: 0; padding: 1px 4px; font-size: 9px;
+}
+.sidebar.collapsed #session-timer { opacity: 0; height: 0; overflow: hidden; padding: 0; }
+
+/* Tooltip on hover when collapsed */
+.sidebar.collapsed .nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute; left: 54px; top: 50%; transform: translateY(-50%);
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); font-size: 12px; font-weight: 500;
+  padding: 5px 10px; border-radius: 6px; white-space: nowrap;
+  pointer-events: none; z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
 
 .sidebar-footer { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--border); }
+.sidebar.collapsed .sidebar-footer { padding: 16px 6px 0; }
 
-.main { margin-left: 240px; padding: 28px; min-height: 100vh; }
+.main { margin-left: 240px; padding: 28px; min-height: 100vh; transition: margin-left 0.25s cubic-bezier(0.4,0,0.2,1); }
+.main.sidebar-collapsed { margin-left: 60px; }
 .page { display: none; }
 .page.active { display: block; }
 
@@ -959,10 +1005,12 @@ table input:focus { border-color: var(--accent); }
 <!-- =========== APP =========== -->
 <div id="app">
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <!-- Toggle collapse button -->
+    <div class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Réduire/Agrandir">◀</div>
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <svg xmlns="http://www.w3.org/2000/svg" width="140" height="30" viewBox="0 0 240 52">
+        <svg xmlns="http://www.w3.org/2000/svg" width="140" height="30" viewBox="0 0 240 52" style="flex-shrink:0;min-width:140px">
           <defs>
             <linearGradient id="sg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
               <stop stop-color="#3B82F6"/><stop offset="1" stop-color="#6366F1"/>
@@ -984,68 +1032,72 @@ table input:focus { border-color: var(--accent); }
       </div>
     </div>
     <div class="etab-badge">
+      <span class="etab-badge-icon">🏥</span>
       <div class="etab-name" id="sb-etab-name">Établissement</div>
       <div class="etab-role" id="sb-user-name">Utilisateur</div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Planning</div>
-      <div class="nav-item active" onclick="showPage('dashboard')">
-        <span class="icon">📊</span><span>Tableau de bord</span>
+      <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
+        <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
       </div>
-      <div class="nav-item" onclick="showPage('planning')">
-        <span class="icon">📅</span><span>Planning mensuel</span>
+      <div class="nav-item" onclick="showPage('planning')" data-tooltip="Planning mensuel">
+        <span class="icon">📅</span><span class="nav-label">Planning mensuel</span>
       </div>
-      <div class="nav-item" onclick="showPage('comptage')">
-        <span class="icon">⏱️</span><span>Comptage temps</span>
+      <div class="nav-item" onclick="showPage('comptage')" data-tooltip="Comptage temps">
+        <span class="icon">⏱️</span><span class="nav-label">Comptage temps</span>
+      </div>
+      <div class="nav-item" onclick="showPage('astreintes')" data-tooltip="Astreintes">
+        <span class="icon">🔔</span><span class="nav-label">Astreintes</span>
       </div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Ressources</div>
-      <div class="nav-item" onclick="showPage('agents')">
-        <span class="icon">👥</span><span>Agents</span>
+      <div class="nav-item" onclick="showPage('agents')" data-tooltip="Agents">
+        <span class="icon">👥</span><span class="nav-label">Agents</span>
       </div>
-      <div class="nav-item" onclick="showPage('vacataires')">
-        <span class="icon">📋</span><span>Vacataires</span>
+      <div class="nav-item" onclick="showPage('vacataires')" data-tooltip="Vacataires">
+        <span class="icon">📋</span><span class="nav-label">Vacataires</span>
         <span class="nav-badge" id="vac-badge">0</span>
       </div>
-      <div class="nav-item" onclick="showPage('qr')">
-        <span class="icon">📱</span><span>QR Codes</span>
+      <div class="nav-item" onclick="showPage('qr')" data-tooltip="QR Codes">
+        <span class="icon">📱</span><span class="nav-label">QR Codes</span>
       </div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Paramétrage</div>
-      <div class="nav-item" onclick="showPage('config')">
-        <span class="icon">⚙️</span><span>Configuration</span>
+      <div class="nav-item" onclick="showPage('config')" data-tooltip="Configuration">
+        <span class="icon">⚙️</span><span class="nav-label">Configuration</span>
       </div>
-      <div class="nav-item" onclick="showPage('import')">
-        <span class="icon">📂</span><span>Import / Export</span>
+      <div class="nav-item" onclick="showPage('import')" data-tooltip="Import / Export">
+        <span class="icon">📂</span><span class="nav-label">Import / Export</span>
       </div>
     </div>
     <div class="sidebar-footer">
-      <div class="nav-item" onclick="toggleTheme()" id="theme-toggle-btn">
-        <span class="icon" id="theme-icon">☀️</span><span id="theme-label">Mode clair</span>
+      <div class="nav-item" onclick="toggleTheme()" id="theme-toggle-btn" data-tooltip="Mode clair">
+        <span class="icon" id="theme-icon">☀️</span><span class="nav-label" id="theme-label">Mode clair</span>
       </div>
-      <div class="nav-item" onclick="openHistory()" style="color:var(--text2)">
-        <span class="icon">🕐</span><span>Historique</span>
+      <div class="nav-item" onclick="openHistory()" style="color:var(--text2)" data-tooltip="Historique">
+        <span class="icon">🕐</span><span class="nav-label">Historique</span>
       </div>
-      <div class="nav-item" onclick="openCongesValidation()" id="nav-conges" style="color:var(--text2)">
-        <span class="icon">🌴</span><span>Demandes congés <span id="conges-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span>
+      <div class="nav-item" onclick="openCongesValidation()" id="nav-conges" style="color:var(--text2)" data-tooltip="Demandes congés">
+        <span class="icon">🌴</span><span class="nav-label">Demandes congés <span id="conges-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span>
       </div>
-      <div class="nav-item" onclick="exportRH()" style="color:var(--text2)">
-        <span class="icon">📊</span><span>Export RH</span>
+      <div class="nav-item" onclick="exportRH()" style="color:var(--text2)" data-tooltip="Export RH">
+        <span class="icon">📊</span><span class="nav-label">Export RH</span>
       </div>
-      <div class="nav-item" onclick="saveToSupabase()" style="color:var(--accent2)">
-        <span class="icon">☁️</span><span>Sync Supabase</span>
+      <div class="nav-item" onclick="saveToSupabase()" style="color:var(--accent2)" data-tooltip="Sync Supabase">
+        <span class="icon">☁️</span><span class="nav-label">Sync Supabase</span>
       </div>
-      <div id="session-timer" style="font-size:11px;color:var(--text3);padding:4px 12px;text-align:center;font-family:'DM Mono',monospace">🕐 8h00</div>
-      <div class="nav-item" onclick="doLogout()">
-        <span class="icon">🚪</span><span>Déconnexion</span>
+      <div id="session-timer" style="font-size:11px;color:var(--text3);padding:4px 12px;text-align:center;font-family:'DM Mono',monospace;transition:opacity 0.2s">🕐 8h00</div>
+      <div class="nav-item" onclick="doLogout()" data-tooltip="Déconnexion">
+        <span class="icon">🚪</span><span class="nav-label">Déconnexion</span>
       </div>
     </div>
   </aside>
 
   <!-- MAIN -->
-  <main class="main">
+  <main class="main" id="main-content">
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
@@ -1688,7 +1740,132 @@ table input:focus { border-color: var(--accent); }
       </div>
     </div>
 
+    <!-- ASTREINTES -->
+    <div id="page-astreintes" class="page">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2>🔔 Astreintes annuelles</h2>
+          <p>Planning des IDEC et Directeurs d'astreinte — <span id="astr-year-label">2026</span></p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select id="astr-year-sel" onchange="astrChangeYear(this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none">
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('astr-excel-input').click()">
+            📊 Importer Excel
+          </button>
+          <input type="file" id="astr-excel-input" accept=".xlsx,.xls" style="display:none" onchange="importAstreinteExcel(event)">
+          <button class="btn btn-primary btn-sm" onclick="openAstrModal()">+ Ajouter</button>
+          <button class="btn btn-success btn-sm" onclick="exportAstreinteExcel()">⬇️ Exporter</button>
+        </div>
+      </div>
+
+      <!-- Légende types -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent)">🩺 IDEC</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(56,217,169,0.15);border:1px solid rgba(56,217,169,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent2)">🏥 Directeur</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(247,169,79,0.15);border:1px solid rgba(247,169,79,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent3)">🔄 Astreinte commune</span>
+      </div>
+
+      <!-- Vue calendrier annuel -->
+      <div class="card" style="margin-bottom:20px;overflow-x:auto">
+        <div class="card-header">
+          <span class="card-title">📅 Vue calendrier annuel</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="astrView='calendar';renderAstreintes()">Calendrier</button>
+            <button class="btn btn-secondary btn-sm" onclick="astrView='list';renderAstreintes()">Liste</button>
+          </div>
+        </div>
+        <div id="astr-calendar-container"></div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px" id="astr-stats-row"></div>
+
+      <!-- Format import Excel attendu -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Format d'import Excel</span></div>
+        <p class="text-xs text-muted" style="margin-bottom:12px">Votre fichier Excel doit contenir les colonnes suivantes (la 1ère ligne = en-têtes) :</p>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="background:var(--bg3)">
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Date début</th>
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Date fin</th>
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Nom</th>
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Type</th>
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Téléphone</th>
+                <th style="padding:8px 12px;border:1px solid var(--border);text-align:left;font-weight:700;color:var(--accent)">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">01/01/2026</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">07/01/2026</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">MARTIN Sophie</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">IDEC</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">06 12 34 56 78</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">Semaine 1</td>
+              </tr>
+              <tr style="background:var(--bg3)22">
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">01/01/2026</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">07/01/2026</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">DUPONT Jean</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">Directeur</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">06 98 76 54 32</td>
+                <td style="padding:8px 12px;border:1px solid var(--border);color:var(--text2)">Semaine 1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-muted" style="margin-top:8px">⚠️ Le type doit être exactement : <strong>IDEC</strong>, <strong>Directeur</strong> ou <strong>Astreinte commune</strong></p>
+      </div>
+    </div>
+
   </main>
+</div>
+
+<!-- =========== MODAL ASTREINTE =========== -->
+<div class="modal-backdrop" id="modal-astreinte">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="astr-modal-title">Nouvelle astreinte</span>
+      <button class="modal-close" onclick="closeModal('modal-astreinte')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Nom de la personne</label>
+      <input type="text" id="astr-nom" placeholder="Ex: MARTIN Sophie">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Date début</label>
+        <input type="date" id="astr-debut">
+      </div>
+      <div class="form-group">
+        <label>Date fin</label>
+        <input type="date" id="astr-fin">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Type d'astreinte</label>
+      <select id="astr-type">
+        <option value="IDEC">🩺 IDEC</option>
+        <option value="Directeur">🏥 Directeur</option>
+        <option value="Astreinte commune">🔄 Astreinte commune</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Téléphone astreinte</label>
+      <input type="text" id="astr-tel" placeholder="Ex: 06 12 34 56 78">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="astr-notes" placeholder="Ex: Semaine 1, garde longue...">
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-astreinte')">Annuler</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveAstreinte()">Enregistrer</button>
+    </div>
+  </div>
 </div>
 
 <!-- =========== QR VIEW AGENT =========== -->
@@ -1987,15 +2164,10 @@ table input:focus { border-color: var(--accent); }
       </div>
     </div>
 
-    <!-- CONGÉS & DROITS -->
+    <!-- CONGÉS & ABSENCES (regroupés) -->
     <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Droits</div>
-      <div id="shift-conge-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    </div>
-
-    <!-- ABSENCES -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏥 Absences</div>
+      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Absences</div>
+      <div id="shift-conge-btns" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"></div>
       <div id="shift-absence-btns" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
 
@@ -2755,6 +2927,7 @@ async function doLogin() {
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  initSidebarState();
 
   document.getElementById('sb-etab-name').textContent = etab.nom;
   document.getElementById('sb-user-name').textContent = login.nom;
@@ -2898,6 +3071,7 @@ function showPage(page) {
   if (page === 'agents') { updateAgentSpecTabs(); renderAgents(); }
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
+  if (page === 'astreintes') renderAstreintes();
 }
 
 // ============================================================
@@ -5284,49 +5458,53 @@ function renderQRPage() {
   const universalUrl = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
 
   grid.innerHTML = `
-    <div style="margin-bottom:24px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+    <!-- ══ BLOC INFOS (en haut) ══ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">ℹ️ Comment ça marche</div>
+        <ol style="padding-left:18px;font-size:12px;color:var(--text2);line-height:2">
+          <li>L'agent scanne ce QR code avec son téléphone</li>
+          <li>Il choisit sa spécialité dans les filtres</li>
+          <li>Il sélectionne son nom dans la liste</li>
+          <li>Il saisit son PIN (numéro de poste sur 4 chiffres)</li>
+          <li>Il voit son planning du mois</li>
+        </ol>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">📋 Agents par spécialité</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${specs.map(spec => {
+            const color = specColors[spec] || '#4f8ef7';
+            const cnt = etab.agents.filter(a => a.actif && a.spec === spec).length;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;background:${color}10;border:1px solid ${color}33;border-radius:8px;padding:7px 12px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
+                <span style="font-weight:700;color:${color};font-size:13px">${spec}</span>
+              </div>
+              <span style="font-size:12px;color:var(--text2);font-weight:600">${cnt} agent${cnt>1?'s':''}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QR CODE UNIVERSEL (en dessous des infos) ══ -->
+    <div style="margin-bottom:32px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px">
         <span style="width:28px;height:28px;border-radius:8px;background:var(--accent)22;color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:16px">🔗</span>
         QR Code Universel — À afficher pour tout le personnel
       </div>
-      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
-        <div style="background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(79,142,247,0.15)">
-          <div id="qr-universal" style="margin:0 auto 12px;width:180px;height:180px"></div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:12px;word-break:break-all;padding:0 4px;max-width:180px">${universalUrl}</div>
+      <div style="display:flex;justify-content:flex-start">
+        <div style="background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;box-shadow:0 4px 20px rgba(79,142,247,0.15);max-width:260px">
+          <div id="qr-universal" style="margin:0 auto 14px;width:200px;height:200px"></div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:14px;word-break:break-all;padding:0 4px;max-width:200px">${universalUrl}</div>
           <div style="display:flex;gap:8px;justify-content:center">
             <button class="btn btn-primary btn-sm" onclick="downloadUniversalQR()">⬇️ Télécharger</button>
             <button class="btn btn-secondary btn-sm" onclick="printUniversalQR()">🖨️ Imprimer</button>
           </div>
         </div>
-        <div style="flex:1;min-width:220px">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">ℹ️ Comment ça marche</div>
-            <ol style="padding-left:18px;font-size:12px;color:var(--text2);line-height:1.8">
-              <li>L'agent scanne ce QR code avec son téléphone</li>
-              <li>Il choisit sa spécialité dans les filtres</li>
-              <li>Il sélectionne son nom dans la liste</li>
-              <li>Il saisit son PIN (numéro de poste sur 4 chiffres)</li>
-              <li>Il voit son planning du mois</li>
-            </ol>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px">
-            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Agents par spécialité</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px">
-              ${specs.map(spec => {
-                const color = specColors[spec] || '#4f8ef7';
-                const cnt = etab.agents.filter(a => a.actif && a.spec === spec).length;
-                return `<span style="display:inline-flex;align-items:center;gap:5px;background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:4px 10px">
-                  <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>
-                  <span style="font-weight:700;color:${color};font-size:12px">${spec}</span>
-                  <span style="font-size:11px;color:var(--text2)">${cnt} agent${cnt>1?'s':''}</span>
-                </span>`;
-              }).join('')}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
-
   `;
 
   // Générer le QR universel
@@ -8293,6 +8471,312 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 function toggleEl(el) { el.classList.toggle('on'); }
+
+// ============================================================
+// SIDEBAR COLLAPSE
+// ============================================================
+let sidebarCollapsed = false;
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const sb = document.getElementById('sidebar');
+  const main = document.getElementById('main-content');
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (sidebarCollapsed) {
+    sb.classList.add('collapsed');
+    main.classList.add('sidebar-collapsed');
+    btn.textContent = '▶';
+    localStorage.setItem('sb_collapsed', '1');
+  } else {
+    sb.classList.remove('collapsed');
+    main.classList.remove('sidebar-collapsed');
+    btn.textContent = '◀';
+    localStorage.setItem('sb_collapsed', '0');
+  }
+}
+
+function initSidebarState() {
+  if (localStorage.getItem('sb_collapsed') === '1') {
+    sidebarCollapsed = false; // force toggle to true state
+    toggleSidebar();
+  }
+}
+
+// ============================================================
+// ASTREINTES
+// ============================================================
+let astrView = 'calendar';
+let astrCurrentYear = new Date().getFullYear();
+let editingAstrId = null;
+
+function getAstreintes() {
+  const etab = getEtab();
+  if (!etab) return [];
+  if (!etab.astreintes) etab.astreintes = [];
+  return etab.astreintes;
+}
+
+function astrChangeYear(year) {
+  astrCurrentYear = parseInt(year);
+  document.getElementById('astr-year-label').textContent = astrCurrentYear;
+  renderAstreintes();
+}
+
+function initAstrYears() {
+  const sel = document.getElementById('astr-year-sel');
+  if (!sel) return;
+  const cur = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (let y = cur - 1; y <= cur + 2; y++) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === astrCurrentYear) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function openAstrModal(id) {
+  editingAstrId = id || null;
+  const entry = id ? getAstreintes().find(a => a.id === id) : null;
+  document.getElementById('astr-modal-title').textContent = entry ? 'Modifier l\'astreinte' : 'Nouvelle astreinte';
+  document.getElementById('astr-nom').value = entry ? entry.nom : '';
+  document.getElementById('astr-debut').value = entry ? entry.debut : '';
+  document.getElementById('astr-fin').value = entry ? entry.fin : '';
+  document.getElementById('astr-type').value = entry ? entry.type : 'IDEC';
+  document.getElementById('astr-tel').value = entry ? (entry.tel || '') : '';
+  document.getElementById('astr-notes').value = entry ? (entry.notes || '') : '';
+  openModal('modal-astreinte');
+}
+
+function saveAstreinte() {
+  const etab = getEtab();
+  if (!etab) return;
+  if (!etab.astreintes) etab.astreintes = [];
+  const nom = document.getElementById('astr-nom').value.trim();
+  const debut = document.getElementById('astr-debut').value;
+  const fin = document.getElementById('astr-fin').value;
+  const type = document.getElementById('astr-type').value;
+  const tel = document.getElementById('astr-tel').value.trim();
+  const notes = document.getElementById('astr-notes').value.trim();
+  if (!nom || !debut || !fin) { showToast('Remplissez le nom, la date début et fin', 'error'); return; }
+  if (editingAstrId) {
+    const idx = etab.astreintes.findIndex(a => a.id === editingAstrId);
+    if (idx >= 0) etab.astreintes[idx] = { ...etab.astreintes[idx], nom, debut, fin, type, tel, notes };
+  } else {
+    etab.astreintes.push({ id: 'AST' + Date.now(), nom, debut, fin, type, tel, notes });
+  }
+  saveToStorage();
+  closeModal('modal-astreinte');
+  renderAstreintes();
+  showToast('Astreinte enregistrée', 'success');
+}
+
+function deleteAstreinte(id) {
+  const etab = getEtab();
+  if (!etab || !etab.astreintes) return;
+  if (!confirm('Supprimer cette astreinte ?')) return;
+  etab.astreintes = etab.astreintes.filter(a => a.id !== id);
+  saveToStorage();
+  renderAstreintes();
+  showToast('Astreinte supprimée', 'info');
+}
+
+function astrTypeStyle(type) {
+  if (type === 'IDEC') return { color: 'var(--accent)', bg: 'rgba(79,142,247,0.15)', border: 'rgba(79,142,247,0.35)', icon: '🩺' };
+  if (type === 'Directeur') return { color: 'var(--accent2)', bg: 'rgba(56,217,169,0.15)', border: 'rgba(56,217,169,0.35)', icon: '🏥' };
+  return { color: 'var(--accent3)', bg: 'rgba(247,169,79,0.15)', border: 'rgba(247,169,79,0.35)', icon: '🔄' };
+}
+
+function renderAstreintes() {
+  initAstrYears();
+  const container = document.getElementById('astr-calendar-container');
+  if (!container) return;
+  const astreintes = getAstreintes().filter(a => {
+    const y1 = new Date(a.debut).getFullYear();
+    const y2 = new Date(a.fin).getFullYear();
+    return y1 === astrCurrentYear || y2 === astrCurrentYear;
+  });
+
+  if (astrView === 'list') {
+    renderAstrList(astreintes, container);
+  } else {
+    renderAstrCalendar(astreintes, container);
+  }
+  renderAstrStats(astreintes);
+}
+
+function renderAstrList(astreintes, container) {
+  if (astreintes.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">Aucune astreinte pour cette année. Ajoutez-en ou importez un Excel.</div>';
+    return;
+  }
+  const sorted = [...astreintes].sort((a,b) => a.debut.localeCompare(b.debut));
+  container.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--bg3)">
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Type</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:left">Nom</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:center">Début</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:center">Fin</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:center">Durée</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:center">Téléphone</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:left">Notes</th>
+      <th style="padding:10px 12px;border:1px solid var(--border);text-align:center">Actions</th>
+    </tr></thead><tbody>` +
+    sorted.map(a => {
+      const s = astrTypeStyle(a.type);
+      const d1 = new Date(a.debut), d2 = new Date(a.fin);
+      const duree = Math.round((d2-d1)/(1000*60*60*24))+1;
+      const fmtDate = d => d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});
+      return `<tr style="border-bottom:1px solid var(--border)22">
+        <td style="padding:9px 12px;border:1px solid var(--border)">
+          <span style="display:inline-flex;align-items:center;gap:4px;background:${s.bg};border:1px solid ${s.border};color:${s.color};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700">${s.icon} ${a.type}</span>
+        </td>
+        <td style="padding:9px 12px;border:1px solid var(--border);font-weight:600">${a.nom}</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;color:var(--text2)">${fmtDate(d1)}</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;color:var(--text2)">${fmtDate(d2)}</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:${s.color}">${duree}j</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);text-align:center;font-size:12px;color:var(--text2)">${a.tel||'—'}</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);font-size:12px;color:var(--text2)">${a.notes||''}</td>
+        <td style="padding:9px 12px;border:1px solid var(--border);text-align:center">
+          <div style="display:flex;gap:4px;justify-content:center">
+            <button class="btn btn-secondary btn-sm" onclick="openAstrModal('${a.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAstreinte('${a.id}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function renderAstrCalendar(astreintes, container) {
+  const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:4px">';
+  for (let m = 0; m < 12; m++) {
+    const daysInMonth = new Date(astrCurrentYear, m+1, 0).getDate();
+    html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:var(--bg2);padding:8px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);border-bottom:1px solid var(--border)">${moisNoms[m]}</div>
+      <div style="padding:8px">`;
+
+    // Get astreintes overlapping this month
+    const monthAstr = astreintes.filter(a => {
+      const d1 = new Date(a.debut), d2 = new Date(a.fin);
+      return d1 <= new Date(astrCurrentYear, m+1, 0) && d2 >= new Date(astrCurrentYear, m, 1);
+    }).sort((a,b) => a.debut.localeCompare(b.debut));
+
+    if (monthAstr.length === 0) {
+      html += '<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px">Aucune astreinte</div>';
+    } else {
+      monthAstr.forEach(a => {
+        const s = astrTypeStyle(a.type);
+        const d1 = new Date(a.debut), d2 = new Date(a.fin);
+        const startDay = Math.max(1, d1.getMonth() === m && d1.getFullYear() === astrCurrentYear ? d1.getDate() : 1);
+        const endDay = Math.min(daysInMonth, d2.getMonth() === m && d2.getFullYear() === astrCurrentYear ? d2.getDate() : daysInMonth);
+        html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:5px 8px;margin-bottom:4px;cursor:pointer" onclick="openAstrModal('${a.id}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+            <span style="font-size:11px;font-weight:700;color:${s.color}">${s.icon} ${a.nom}</span>
+            <span style="font-size:10px;color:${s.color};opacity:0.8;flex-shrink:0">${startDay}→${endDay}</span>
+          </div>
+          ${a.tel ? `<div style="font-size:10px;color:var(--text2);margin-top:2px">📞 ${a.tel}</div>` : ''}
+        </div>`;
+      });
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function renderAstrStats(astreintes) {
+  const statsEl = document.getElementById('astr-stats-row');
+  if (!statsEl) return;
+  const nbIDEC = astreintes.filter(a => a.type === 'IDEC').length;
+  const nbDir = astreintes.filter(a => a.type === 'Directeur').length;
+  const nbAutre = astreintes.filter(a => a.type === 'Astreinte commune').length;
+  const namesIDEC = [...new Set(astreintes.filter(a => a.type === 'IDEC').map(a => a.nom))];
+  const namesDir = [...new Set(astreintes.filter(a => a.type === 'Directeur').map(a => a.nom))];
+  statsEl.innerHTML = `
+    <div class="stat-card blue">
+      <div class="stat-label">Périodes IDEC</div>
+      <div class="stat-value">${nbIDEC}</div>
+      <div class="stat-sub">${namesIDEC.length} personnes distinctes</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Périodes Directeur</div>
+      <div class="stat-value">${nbDir}</div>
+      <div class="stat-sub">${namesDir.length} personnes distinctes</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Astreintes communes</div>
+      <div class="stat-value">${nbAutre}</div>
+      <div class="stat-sub">Total : ${nbIDEC+nbDir+nbAutre} périodes</div>
+    </div>`;
+}
+
+function importAstreinteExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const etab = getEtab();
+  if (!etab) return;
+  if (!etab.astreintes) etab.astreintes = [];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      let added = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row[0] && !row[2]) continue;
+        const parseDate = (v) => {
+          if (!v) return '';
+          if (v instanceof Date) return v.toISOString().slice(0,10);
+          const s = String(v).trim();
+          // dd/mm/yyyy
+          const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+          // yyyy-mm-dd
+          if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          // Excel serial
+          if (!isNaN(Number(s))) {
+            const d = new Date(Math.round((Number(s)-25569)*86400*1000));
+            return d.toISOString().slice(0,10);
+          }
+          return s;
+        };
+        const debut = parseDate(row[0]);
+        const fin = parseDate(row[1]);
+        const nom = String(row[2]).trim();
+        const type = String(row[3]).trim() || 'IDEC';
+        const tel = String(row[4]).trim();
+        const notes = String(row[5]).trim();
+        if (!debut || !nom) continue;
+        etab.astreintes.push({ id: 'AST' + Date.now() + i, nom, debut, fin: fin || debut, type, tel, notes });
+        added++;
+      }
+      saveToStorage();
+      renderAstreintes();
+      showToast(`${added} astreinte(s) importée(s)`, 'success');
+    } catch(err) {
+      showToast('Erreur de lecture Excel : ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function exportAstreinteExcel() {
+  const astreintes = getAstreintes();
+  const rows = [['Date début', 'Date fin', 'Nom', 'Type', 'Téléphone', 'Notes']];
+  [...astreintes].sort((a,b) => a.debut.localeCompare(b.debut)).forEach(a => {
+    rows.push([a.debut, a.fin, a.nom, a.type, a.tel||'', a.notes||'']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:14},{wch:14},{wch:22},{wch:18},{wch:18},{wch:28}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Astreintes');
+  XLSX.writeFile(wb, `Astreintes_${astrCurrentYear}.xlsx`);
+  showToast('Export Excel téléchargé', 'success');
+}
 
 function showToast(msg, type) {
   const t = document.getElementById('toast');
