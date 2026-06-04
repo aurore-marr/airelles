@@ -1270,6 +1270,13 @@ table input:focus { border-color: var(--accent); }
       </div>
       <!-- Totaux secteurs — scroll synchronisé avec le planning -->
       <div id="sector-daily-totals" style="overflow-x:auto;width:100%;margin-top:4px"></div>
+      <!-- Astreintes de la semaine -->
+      <div id="planning-astreintes-banner" style="display:none;margin-top:4px;border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden">
+        <div style="padding:6px 14px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:8px">
+          🔔 Astreintes — semaine en cours
+        </div>
+        <div id="planning-astreintes-content" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
       <!-- Vacataires disponibles ce mois -->
       <div id="planning-vac-section" style="margin-top:4px;border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden;display:none">
         <div style="padding:6px 10px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:8px">
@@ -2046,7 +2053,7 @@ table input:focus { border-color: var(--accent); }
       <div style="font-size:12px;color:#6b7fa8;margin-bottom:16px;padding:10px 14px;background:#161b27;border-radius:10px">
         Faites une demande de congé. Elle sera soumise au cadre pour validation.
       </div>
-      <div style="background:#161b27;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div style="background:#161b27;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Type de congé</label>
           <select id="qr-conge-type" style="width:100%;padding:12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:14px;outline:none">
@@ -2057,11 +2064,11 @@ table input:focus { border-color: var(--accent); }
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de début</label>
-          <input type="date" id="qr-conge-debut" style="width:100%;padding:12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:14px;outline:none;box-sizing:border-box">
+          <input type="date" id="qr-conge-debut" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;max-width:100%;min-width:0">
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de fin</label>
-          <input type="date" id="qr-conge-fin" style="width:100%;padding:12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:14px;outline:none;box-sizing:border-box">
+          <input type="date" id="qr-conge-fin" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;max-width:100%;min-width:0">
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Motif (optionnel)</label>
@@ -3741,6 +3748,64 @@ function renderPlanning() {
 
   // Sector daily totals
   renderSectorTotals(daysInMonth, agents, planMonth, etab);
+  // Astreintes semaine courante
+  renderAstreintesBanner(etab);
+}
+
+function renderAstreintesBanner(etab) {
+  const banner = document.getElementById('planning-astreintes-banner');
+  const content = document.getElementById('planning-astreintes-content');
+  if (!banner || !content) return;
+
+  const astreintes = etab.astreintes || [];
+  if (astreintes.length === 0) { banner.style.display = 'none'; return; }
+
+  // Trouver les astreintes actives cette semaine (semaine du mois affiché contenant aujourd'hui, ou début du mois)
+  const today = new Date();
+  // Utiliser le lundi de la semaine courante si on est dans le mois affiché, sinon le 1er du mois
+  let refDate = new Date(currentYear, currentMonth, 1);
+  if (today.getFullYear() === currentYear && today.getMonth() === currentMonth) {
+    refDate = new Date(today);
+  }
+  const refStr = refDate.toISOString().slice(0, 10);
+
+  // Astreintes qui couvrent cette date
+  const actives = astreintes.filter(a => a.debut <= refStr && a.fin >= refStr);
+
+  if (actives.length === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  banner.style.display = 'block';
+
+  // Grouper par type
+  const typeColors = { 'Direction': '#6366f1', 'Organisation et Soins': '#38d9a9', 'Technique': '#f7a94f', 'IDEC': '#38d9a9', 'Cadre': '#4f8ef7' };
+  const grouped = {};
+  actives.forEach(a => {
+    const t = a.type || 'Autre';
+    if (!grouped[t]) grouped[t] = [];
+    grouped[t].push(a);
+  });
+
+  // Label semaine
+  const debutSem = actives[0] ? actives[0].debut : refStr;
+  const finSem = actives[0] ? actives[0].fin : refStr;
+  const fmtDate = s => { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}/${m}`; };
+
+  content.innerHTML = Object.entries(grouped).map(([type, list]) => {
+    const col = typeColors[type] || '#8892aa';
+    return list.map(a => `
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:${col}18;border:1px solid ${col}44">
+        <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${col}">${type}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${a.nom}</div>
+          ${a.tel ? `<div style="font-size:11px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+          <div style="font-size:10px;color:var(--text3)">${fmtDate(a.debut)} → ${fmtDate(a.fin)}</div>
+        </div>
+      </div>`).join('');
+  }).join('');
 }
 
 function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
@@ -6403,34 +6468,52 @@ function submitQRConge() {
 
   if (!etab.demandesConges) etab.demandesConges = [];
   var agent = etab.agents.find(function(a){ return a.id===_qrAgentId; });
-  etab.demandesConges.push({
+  var newDemande = {
     id: 'DC' + Date.now(),
     agentId: _qrAgentId,
     agentNom: agent ? agent.nom + ' ' + (agent.prenom||'') : _qrAgentId,
-    type, debut, fin, motif,
+    type: type, debut: debut, fin: fin, motif: motif,
     statut: 'en_attente',
     createdAt: new Date().toISOString()
+  };
+
+  // Afficher confirmation immédiatement
+  if (st) { st.style.color='#38d9a9'; st.textContent='⏳ Envoi en cours…'; st.style.display='block'; }
+
+  // Recharger les données fraîches avant de merger + sauver (évite d'écraser les modifs du cadre)
+  supaLoadEtab(_qrEtabId).then(function(fresh) {
+    var dataToSave = fresh || etab;
+    if (!dataToSave.demandesConges) dataToSave.demandesConges = [];
+    // Éviter les doublons (même agent, même dates)
+    var isDuplicate = dataToSave.demandesConges.some(function(d) {
+      return d.agentId === newDemande.agentId && d.debut === newDemande.debut && d.fin === newDemande.fin && d.type === newDemande.type;
+    });
+    if (!isDuplicate) {
+      dataToSave.demandesConges.push(newDemande);
+    }
+    if (!dataToSave.newDispos) dataToSave.newDispos = [];
+    dataToSave.newDispos.push({
+      agentId: _qrAgentId,
+      type: 'conge',
+      message: (agent ? agent.nom : _qrAgentId) + ' demande ' + type + ' du ' + debut + ' au ' + fin,
+      updatedAt: new Date().toISOString()
+    });
+    // Mettre à jour DB local avec données fraîches mergées
+    DB.etablissements[_qrEtabId] = dataToSave;
+    return supa.from('horizon_data').upsert({
+      etab_id: _qrEtabId, data: dataToSave, updated_at: new Date().toISOString()
+    }, { onConflict: 'etab_id' });
+  }).then(function() {
+    if (st) { st.style.color='#38d9a9'; st.textContent='✅ Demande envoyée au cadre !'; st.style.display='block'; }
+    document.getElementById('qr-conge-debut').value = '';
+    document.getElementById('qr-conge-fin').value = '';
+    document.getElementById('qr-conge-motif').value = '';
+    setTimeout(function(){ qrRenderCongeList(); }, 300);
+  }).catch(function(e) {
+    if (st) { st.style.color='#f76f6f'; st.textContent='❌ Erreur réseau — réessayez'; st.style.display='block'; }
   });
 
-  // Notification cadre
-  if (!etab.newDispos) etab.newDispos = [];
-  etab.newDispos.push({
-    agentId: _qrAgentId,
-    type: 'conge',
-    message: (agent ? agent.nom : _qrAgentId) + ' demande ' + type + ' du ' + debut + ' au ' + fin,
-    updatedAt: new Date().toISOString()
-  });
-
-  // Sauvegarder dans Supabase
-  supa.from('horizon_data').upsert({
-    etab_id: _qrEtabId, data: etab, updated_at: new Date().toISOString()
-  }, { onConflict: 'etab_id' });
-
-  if (st) { st.style.color='#38d9a9'; st.textContent='✅ Demande envoyée au cadre !'; st.style.display='block'; }
-  document.getElementById('qr-conge-debut').value = '';
-  document.getElementById('qr-conge-fin').value = '';
-  document.getElementById('qr-conge-motif').value = '';
-  setTimeout(function(){ qrRenderCongeList(); }, 500);
+  return; // early return — suite gérée dans les .then()
 }
 
 function qrRenderCongeList() {
@@ -8893,13 +8976,19 @@ function importAstreinteExcel(event) {
           if (!v) return '';
           if (v instanceof Date) return v.toISOString().slice(0,10);
           const s = String(v).trim();
+          // dd/mm (sans année — utiliser l'année du fichier ou courante)
+          const m2 = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+          if (m2) {
+            const yr = astrCurrentYear || new Date().getFullYear();
+            return `${yr}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+          }
           // dd/mm/yyyy
           const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
           if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
           // yyyy-mm-dd
           if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
           // Excel serial
-          if (!isNaN(Number(s))) {
+          if (!isNaN(Number(s)) && Number(s) > 100) {
             const d = new Date(Math.round((Number(s)-25569)*86400*1000));
             return d.toISOString().slice(0,10);
           }
