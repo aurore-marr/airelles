@@ -805,6 +805,18 @@ body {
   .main { margin-left: 60px; padding: 16px; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .config-grid { grid-template-columns: 1fr; }
+  .day-header { min-width:38px; width:38px; max-width:38px; }
+  .shift-cell { width:38px; min-width:38px; max-width:38px; height:40px; }
+}
+
+@media (max-width: 1400px) and (min-width: 901px) {
+  .day-header { min-width:40px; width:40px; max-width:40px; }
+  .shift-cell { width:40px; min-width:40px; max-width:40px; height:42px; }
+}
+
+@media (min-width: 1600px) {
+  .day-header { min-width:50px; width:50px; max-width:50px; }
+  .shift-cell { width:50px; min-width:50px; max-width:50px; height:50px; }
 }
 
 /* ========== UTILS ========== */
@@ -1100,6 +1112,10 @@ table input:focus { border-color: var(--accent); }
         <span class="icon">📋</span><span class="nav-label">Vacataires</span>
         <span class="nav-badge" id="vac-badge">0</span>
       </div>
+      <div class="nav-item" onclick="openCongesValidation()" id="nav-conges" data-tooltip="Demandes congés">
+        <span class="icon">🌴</span><span class="nav-label">Demandes congés</span>
+        <span class="nav-badge" id="conges-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" onclick="showPage('qr')" data-tooltip="QR Codes">
         <span class="icon">📱</span><span class="nav-label">QR Codes</span>
       </div>
@@ -1119,9 +1135,6 @@ table input:focus { border-color: var(--accent); }
       </div>
       <div class="nav-item" onclick="openHistory()" style="color:var(--text2)" data-tooltip="Historique">
         <span class="icon">🕐</span><span class="nav-label">Historique</span>
-      </div>
-      <div class="nav-item" onclick="openCongesValidation()" id="nav-conges" style="color:var(--text2)" data-tooltip="Demandes congés">
-        <span class="icon">🌴</span><span class="nav-label">Demandes congés <span id="conges-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span>
       </div>
       <div class="nav-item" onclick="exportRH()" style="color:var(--text2)" data-tooltip="Export RH">
         <span class="icon">📊</span><span class="nav-label">Export RH</span>
@@ -1195,6 +1208,17 @@ table input:focus { border-color: var(--accent); }
             <span id="dash-conges-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">0</span>
           </div>
           <div id="dash-conges-list" style="font-size:12px;color:var(--text2)">Aucune demande en attente</div>
+        </div>
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title">🔔 Astreintes</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="dashAstrNav(-1)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;width:26px;height:26px;font-size:12px;cursor:pointer">◀</button>
+              <span id="dash-astr-label" style="font-size:11px;font-weight:700;color:var(--text2);min-width:80px;text-align:center"></span>
+              <button onclick="dashAstrNav(1)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;width:26px;height:26px;font-size:12px;cursor:pointer">▶</button>
+            </div>
+          </div>
+          <div id="dash-astr-content" style="font-size:12px;color:var(--text2)"></div>
         </div>
       </div>
     </div>
@@ -1902,9 +1926,9 @@ table input:focus { border-color: var(--accent); }
     <div class="form-group">
       <label>Type d'astreinte</label>
       <select id="astr-type">
-        <option value="IDEC">🩺 IDEC</option>
-        <option value="Directeur">🏥 Directeur</option>
-        <option value="Astreinte commune">🔄 Astreinte commune</option>
+        <option value="Direction">🏛️ Direction</option>
+        <option value="Organisation et Soins">🩺 Organisation et Soins</option>
+        <option value="Technique">🔧 Technique</option>
       </select>
     </div>
     <div class="form-group">
@@ -2064,11 +2088,19 @@ table input:focus { border-color: var(--accent); }
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de début</label>
-          <input type="date" id="qr-conge-debut" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;max-width:100%;min-width:0">
+          <div style="display:flex;gap:6px">
+            <select id="qr-conge-debut-j" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrCountJoursTravailles()"></select>
+            <select id="qr-conge-debut-m" style="flex:2;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrUpdateJours('debut');qrCountJoursTravailles()"></select>
+            <select id="qr-conge-debut-a" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrUpdateJours('debut');qrCountJoursTravailles()"></select>
+          </div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Date de fin</label>
-          <input type="date" id="qr-conge-fin" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;max-width:100%;min-width:0">
+          <div style="display:flex;gap:6px">
+            <select id="qr-conge-fin-j" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrCountJoursTravailles()"></select>
+            <select id="qr-conge-fin-m" style="flex:2;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrUpdateJours('fin');qrCountJoursTravailles()"></select>
+            <select id="qr-conge-fin-a" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none" onchange="qrUpdateJours('fin');qrCountJoursTravailles()"></select>
+          </div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px">Motif (optionnel)</label>
@@ -2077,6 +2109,7 @@ table input:focus { border-color: var(--accent); }
         <button onclick="submitQRConge()" style="width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">
           🌴 Envoyer la demande
         </button>
+        <div id="qr-conge-jours-info" style="display:none;text-align:center;font-size:12px;color:#38bdf8;padding:6px;background:#0f1117;border-radius:8px;border:1px solid #1e3050"></div>
         <div id="qr-conge-status" style="display:none;text-align:center;font-size:13px;font-weight:600;margin-top:4px"></div>
       </div>
 
@@ -2701,6 +2734,27 @@ function checkQRView() {
     DB.etablissements[etabId] = etab;
     _qrEtabId = etabId;
 
+    // ── Restaurer session QR si encore valide (8h) ──
+    try {
+      const savedQR = localStorage.getItem('qr_session');
+      if (savedQR) {
+        const s = JSON.parse(savedQR);
+        const elapsed = Date.now() - (s.ts || 0);
+        if (elapsed < 8 * 60 * 60 * 1000 && s.etabId === etabId && s.agentId) {
+          const agOk = etab.agents.find(function(a){ return a.id === s.agentId; })
+                    || (etab.vacataires||[]).find(function(v){ return v.id === s.agentId; });
+          if (agOk) {
+            _qrAgentId = s.agentId;
+            _qrAgentType = agOk.spec ? 'agent' : 'vacataire';
+            qrOpenPlanning(s.agentId);
+            return;
+          }
+        } else {
+          localStorage.removeItem('qr_session');
+        }
+      }
+    } catch(e) {}
+
     // ── Accès direct vacataire via QR individuel ──
     if (vacId) {
       const vac = (etab.vacataires || []).find(function(v){ return v.id === vacId; });
@@ -3145,6 +3199,70 @@ function secteurCouleurCSS(sect) {
 // ============================================================
 // DASHBOARD
 // ============================================================
+let _dashAstrWeekOffset = 0; // 0 = semaine courante, 1 = semaine suivante, etc.
+
+function dashAstrNav(delta) {
+  _dashAstrWeekOffset += delta;
+  // Limiter à -2 semaines et +4 semaines
+  if (_dashAstrWeekOffset < -2) _dashAstrWeekOffset = -2;
+  if (_dashAstrWeekOffset > 4) _dashAstrWeekOffset = 4;
+  renderDashAstreintes();
+}
+
+function renderDashAstreintes() {
+  const etab = getEtab();
+  const labelEl = document.getElementById('dash-astr-label');
+  const contentEl = document.getElementById('dash-astr-content');
+  if (!labelEl || !contentEl) return;
+
+  // Calculer la date de la semaine visée
+  const today = new Date();
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const lundi = new Date(today); lundi.setDate(today.getDate() - dow + _dashAstrWeekOffset * 7);
+  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
+
+  const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  const getWeekNum = d => {
+    const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = d2.getUTCDay() || 7;
+    d2.setUTCDate(d2.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+    return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
+  };
+
+  const wn = getWeekNum(lundi);
+  const labelTxt = _dashAstrWeekOffset === 0 ? `S${wn} — Cette sem.` : `S${wn} · ${fmt(lundi)}-${fmt(dimanche)}`;
+  labelEl.textContent = labelTxt;
+
+  const astreintes = (etab ? etab.astreintes || [] : []);
+  const lundiStr = lundi.toISOString().slice(0,10);
+  const dimStr = dimanche.toISOString().slice(0,10);
+  const actives = astreintes.filter(a => a.debut <= dimStr && a.fin >= lundiStr);
+
+  if (actives.length === 0) {
+    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:8px 0">Aucune astreinte cette semaine</p>';
+    return;
+  }
+
+  const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
+  const sorted = [...actives].sort((a,b) => {
+    const ia = typeOrder.indexOf(a.type), ib = typeOrder.indexOf(b.type);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+
+  contentEl.innerHTML = sorted.map(a => {
+    const s = astrTypeStyle(a.type);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)22">
+      <span style="font-size:13px">${s.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:${s.color};font-weight:700">${a.type}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nom}</div>
+        ${a.tel ? `<div style="font-size:11px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderDashboard() {
   const etab = getEtab();
   if (!etab) return;
@@ -3452,6 +3570,8 @@ function renderDashboard() {
       ).join('');
     }
   }
+  // Card astreintes semaine
+  renderDashAstreintes();
 }
 
 // ============================================================
@@ -4673,7 +4793,7 @@ function _renderCongesModal() {
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--text)">${d.agentNom}${specLabel}</div>
           <div style="font-size:12px;color:var(--text2);margin-top:2px">
-            <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${nbJours}j</strong>
+            <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${d.joursTravailles !== undefined ? d.joursTravailles + 'j travaillés' : nbJours + 'j'}</strong>
           </div>
           ${d.motif ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic">"${d.motif}"</div>` : ''}
           <div style="font-size:10px;color:var(--text3);margin-top:3px">${new Date(d.createdAt).toLocaleString('fr-FR')}</div>
@@ -6172,6 +6292,11 @@ function qrOpenPlanning(agentId) {
   if (screenSel) screenSel.style.display = 'none';
   if (screenPlan) screenPlan.style.display = 'block';
 
+  // Sauvegarder session QR (8h)
+  try {
+    localStorage.setItem('qr_session', JSON.stringify({ agentId: agentId, etabId: _qrEtabId, ts: Date.now() }));
+  } catch(e) {}
+
   var nameEl = document.getElementById('qr-plan-name');
   var infoEl = document.getElementById('qr-plan-info');
   if (nameEl) nameEl.textContent = agent.nom + ' ' + (agent.prenom || '');
@@ -6444,6 +6569,7 @@ function qrShowTab(tab) {
     if (ctr) ctr.style.display='none';
     if (tcong) { tcong.style.color='#f59e0b'; tcong.style.borderTopColor='#f59e0b'; }
     qrRenderCongeList();
+    qrInitDateSelects();
   }
 }
 
@@ -6452,8 +6578,8 @@ function submitQRConge() {
   var etab = DB.etablissements[_qrEtabId];
   if (!etab || !_qrAgentId) return;
   var type = document.getElementById('qr-conge-type').value;
-  var debut = document.getElementById('qr-conge-debut').value;
-  var fin = document.getElementById('qr-conge-fin').value;
+  var debut = qrGetDateVal('debut');
+  var fin = qrGetDateVal('fin');
   var motif = document.getElementById('qr-conge-motif').value;
   var st = document.getElementById('qr-conge-status');
 
@@ -6476,6 +6602,19 @@ function submitQRConge() {
     statut: 'en_attente',
     createdAt: new Date().toISOString()
   };
+
+  // Calculer jours travaillés (pas repos)
+  var codesW = ['M','S','J','NU','N'];
+  var joursT = 0;
+  var cur2 = new Date(debut + 'T00:00:00');
+  var fin2 = new Date(fin + 'T00:00:00');
+  while (cur2 <= fin2) {
+    var y2=cur2.getFullYear(),m2=cur2.getMonth(),d2=cur2.getDate();
+    var sh2 = ((((etab.planning||{})[y2]||{})[m2]||{})[_qrAgentId]||{})[d2]||'';
+    if (codesW.includes(sh2)) joursT++;
+    cur2.setDate(cur2.getDate()+1);
+  }
+  newDemande.joursTravailles = joursT;
 
   // Afficher confirmation immédiatement
   if (st) { st.style.color='#38d9a9'; st.textContent='⏳ Envoi en cours…'; st.style.display='block'; }
@@ -6505,8 +6644,7 @@ function submitQRConge() {
     }, { onConflict: 'etab_id' });
   }).then(function() {
     if (st) { st.style.color='#38d9a9'; st.textContent='✅ Demande envoyée au cadre !'; st.style.display='block'; }
-    document.getElementById('qr-conge-debut').value = '';
-    document.getElementById('qr-conge-fin').value = '';
+    qrInitDateSelects(); // reset to today
     document.getElementById('qr-conge-motif').value = '';
     setTimeout(function(){ qrRenderCongeList(); }, 300);
   }).catch(function(e) {
@@ -6514,6 +6652,87 @@ function submitQRConge() {
   });
 
   return; // early return — suite gérée dans les .then()
+}
+
+function qrCountJoursTravailles() {
+  var etab = DB.etablissements[_qrEtabId];
+  var infoEl = document.getElementById('qr-conge-jours-info');
+  if (!infoEl) return;
+  var debut = qrGetDateVal('debut');
+  var fin = qrGetDateVal('fin');
+  if (!debut || !fin || debut > fin) { infoEl.style.display='none'; return; }
+
+  var codesWork = ['M','S','J','NU','N'];
+  var joursT = 0, joursR = 0, total = 0;
+  var cur = new Date(debut + 'T00:00:00');
+  var finD = new Date(fin + 'T00:00:00');
+  while (cur <= finD) {
+    total++;
+    var y = cur.getFullYear(), m = cur.getMonth(), d = cur.getDate();
+    var shift = '';
+    if (etab && _qrAgentId) {
+      shift = ((((etab.planning||{})[y]||{})[m]||{})[_qrAgentId]||{})[d] || '';
+    }
+    if (codesWork.includes(shift)) joursT++;
+    else joursR++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  infoEl.style.display = 'block';
+  infoEl.innerHTML = '📅 ' + total + ' j. calendrier · <span style="color:#38d9a9">✓ ' + joursT + ' j. travaillés</span> · <span style="color:#6b7fa8">' + joursR + ' j. repos (non décomptés)</span>';
+}
+
+function qrInitDateSelects() {
+  var moisFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var today = new Date();
+  ['debut','fin'].forEach(function(p) {
+    var mSel = document.getElementById('qr-conge-'+p+'-m');
+    var aSel = document.getElementById('qr-conge-'+p+'-a');
+    if (!mSel || !aSel) return;
+    // Mois
+    mSel.innerHTML = moisFr.map(function(mn, i) {
+      return '<option value="'+(i+1)+'"'+(i===today.getMonth()?' selected':'')+'>'+mn+'</option>';
+    }).join('');
+    // Années : année courante et suivante
+    var yr = today.getFullYear();
+    aSel.innerHTML = [yr, yr+1].map(function(y) {
+      return '<option value="'+y+'"'+(y===yr?' selected':'')+'>'+(p==='debut'?y:y)+'</option>';
+    }).join('');
+    qrUpdateJours(p);
+    // Pré-sélectionner le jour aujourd'hui pour début, +7 pour fin
+    var jSel = document.getElementById('qr-conge-'+p+'-j');
+    if (jSel) {
+      var defDay = p === 'debut' ? today.getDate() : Math.min(today.getDate()+7, parseInt(jSel.options[jSel.options.length-1].value));
+      jSel.value = defDay;
+    }
+  });
+}
+
+function qrUpdateJours(p) {
+  var mSel = document.getElementById('qr-conge-'+p+'-m');
+  var aSel = document.getElementById('qr-conge-'+p+'-a');
+  var jSel = document.getElementById('qr-conge-'+p+'-j');
+  if (!mSel || !aSel || !jSel) return;
+  var m = parseInt(mSel.value), y = parseInt(aSel.value);
+  var prev = parseInt(jSel.value) || 1;
+  var dim = new Date(y, m, 0).getDate();
+  jSel.innerHTML = '';
+  for (var d = 1; d <= dim; d++) {
+    var opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (d === prev) opt.selected = true;
+    jSel.appendChild(opt);
+  }
+}
+
+function qrGetDateVal(p) {
+  var jSel = document.getElementById('qr-conge-'+p+'-j');
+  var mSel = document.getElementById('qr-conge-'+p+'-m');
+  var aSel = document.getElementById('qr-conge-'+p+'-a');
+  if (!jSel || !mSel || !aSel) return '';
+  var j = String(jSel.value).padStart(2,'0');
+  var m = String(mSel.value).padStart(2,'0');
+  var a = aSel.value;
+  return a+'-'+m+'-'+j;
 }
 
 function qrRenderCongeList() {
@@ -6538,6 +6757,7 @@ function qrRenderCongeList() {
 
 function qrBack() {
   _qrAgentId = null;
+  try { localStorage.removeItem('qr_session'); } catch(e) {}
   var screenPlan = document.getElementById('qr-screen-planning');
   var screenSel = document.getElementById('qr-screen-select');
   var nameSec = document.getElementById('qr-name-section');
@@ -8827,9 +9047,13 @@ function deleteAstreinte(id) {
 }
 
 function astrTypeStyle(type) {
+  if (type === 'Direction') return { color: '#6366f1', bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.35)', icon: '🏛️' };
+  if (type === 'Organisation et Soins') return { color: 'var(--accent)', bg: 'rgba(79,142,247,0.15)', border: 'rgba(79,142,247,0.35)', icon: '🩺' };
+  if (type === 'Technique') return { color: 'var(--accent3)', bg: 'rgba(247,169,79,0.15)', border: 'rgba(247,169,79,0.35)', icon: '🔧' };
+  // Legacy fallback
   if (type === 'IDEC') return { color: 'var(--accent)', bg: 'rgba(79,142,247,0.15)', border: 'rgba(79,142,247,0.35)', icon: '🩺' };
   if (type === 'Directeur') return { color: 'var(--accent2)', bg: 'rgba(56,217,169,0.15)', border: 'rgba(56,217,169,0.35)', icon: '🏥' };
-  return { color: 'var(--accent3)', bg: 'rgba(247,169,79,0.15)', border: 'rgba(247,169,79,0.35)', icon: '🔄' };
+  return { color: 'var(--accent3)', bg: 'rgba(247,169,79,0.15)', border: 'rgba(247,169,79,0.35)', icon: '🔔' };
 }
 
 function renderAstreintes() {
@@ -8895,33 +9119,58 @@ function renderAstrList(astreintes, container) {
 function renderAstrCalendar(astreintes, container) {
   const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:4px">';
+
   for (let m = 0; m < 12; m++) {
     const daysInMonth = new Date(astrCurrentYear, m+1, 0).getDate();
-    html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden">
-      <div style="background:var(--bg2);padding:8px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);border-bottom:1px solid var(--border)">${moisNoms[m]}</div>
-      <div style="padding:8px">`;
-
-    // Get astreintes overlapping this month
     const monthAstr = astreintes.filter(a => {
       const d1 = new Date(a.debut), d2 = new Date(a.fin);
       return d1 <= new Date(astrCurrentYear, m+1, 0) && d2 >= new Date(astrCurrentYear, m, 1);
     }).sort((a,b) => a.debut.localeCompare(b.debut));
 
+    html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:var(--bg2);padding:8px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);border-bottom:1px solid var(--border)">${moisNoms[m]}</div>
+      <div style="padding:8px">`;
+
     if (monthAstr.length === 0) {
       html += '<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px">Aucune astreinte</div>';
     } else {
+      // Grouper par semaine (lundi→dimanche de début)
+      const semaines = {};
       monthAstr.forEach(a => {
-        const s = astrTypeStyle(a.type);
-        const d1 = new Date(a.debut), d2 = new Date(a.fin);
-        const startDay = Math.max(1, d1.getMonth() === m && d1.getFullYear() === astrCurrentYear ? d1.getDate() : 1);
-        const endDay = Math.min(daysInMonth, d2.getMonth() === m && d2.getFullYear() === astrCurrentYear ? d2.getDate() : daysInMonth);
-        html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:5px 8px;margin-bottom:4px;cursor:pointer" onclick="openAstrModal('${a.id}')">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
-            <span style="font-size:11px;font-weight:700;color:${s.color}">${s.icon} ${a.nom}</span>
-            <span style="font-size:10px;color:${s.color};opacity:0.8;flex-shrink:0">${startDay}→${endDay}</span>
-          </div>
-          ${a.tel ? `<div style="font-size:10px;color:var(--text2);margin-top:2px">📞 ${a.tel}</div>` : ''}
-        </div>`;
+        const d1 = new Date(a.debut);
+        // Trouver le lundi de la semaine de début
+        const dow = d1.getDay() === 0 ? 6 : d1.getDay() - 1; // 0=lun
+        const lundi = new Date(d1); lundi.setDate(d1.getDate() - dow);
+        const key = lundi.toISOString().slice(0,10);
+        if (!semaines[key]) semaines[key] = { lundi, astreintes: [] };
+        semaines[key].astreintes.push(a);
+      });
+
+      Object.entries(semaines).sort(([a],[b]) => a.localeCompare(b)).forEach(([key, sem], si) => {
+        const lundi = sem.lundi;
+        const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
+        const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        const getWeekNum = d => {
+          const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+          const dayNum = d2.getUTCDay() || 7;
+          d2.setUTCDate(d2.getUTCDate() + 4 - dayNum);
+          const yearStart = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+          return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
+        };
+        const semNum = getWeekNum(lundi);
+        html += `<div style="margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+            Semaine ${semNum} · ${fmt(lundi)} → ${fmt(dimanche)}
+          </div>`;
+        sem.astreintes.forEach(a => {
+          const s = astrTypeStyle(a.type);
+          html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:5px 8px;margin-bottom:3px;cursor:pointer" onclick="openAstrModal('${a.id}')">
+            <div style="font-size:10px;color:${s.color};font-weight:700;margin-bottom:1px">${s.icon} ${a.type}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${a.nom}</div>
+            ${a.tel ? `<div style="font-size:10px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+          </div>`;
+        });
+        html += '</div>';
       });
     }
     html += '</div></div>';
@@ -8933,27 +9182,16 @@ function renderAstrCalendar(astreintes, container) {
 function renderAstrStats(astreintes) {
   const statsEl = document.getElementById('astr-stats-row');
   if (!statsEl) return;
-  const nbIDEC = astreintes.filter(a => a.type === 'IDEC').length;
-  const nbDir = astreintes.filter(a => a.type === 'Directeur').length;
-  const nbAutre = astreintes.filter(a => a.type === 'Astreinte commune').length;
-  const namesIDEC = [...new Set(astreintes.filter(a => a.type === 'IDEC').map(a => a.nom))];
-  const namesDir = [...new Set(astreintes.filter(a => a.type === 'Directeur').map(a => a.nom))];
-  statsEl.innerHTML = `
-    <div class="stat-card blue">
-      <div class="stat-label">Périodes IDEC</div>
-      <div class="stat-value">${nbIDEC}</div>
-      <div class="stat-sub">${namesIDEC.length} personnes distinctes</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">Périodes Directeur</div>
-      <div class="stat-value">${nbDir}</div>
-      <div class="stat-sub">${namesDir.length} personnes distinctes</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">Astreintes communes</div>
-      <div class="stat-value">${nbAutre}</div>
-      <div class="stat-sub">Total : ${nbIDEC+nbDir+nbAutre} périodes</div>
-    </div>`;
+  const types = ['Direction', 'Organisation et Soins', 'Technique'];
+  const counts = types.map(t => astreintes.filter(a => a.type === t || (t==='Direction'&&a.type==='Directeur') || (t==='Organisation et Soins'&&a.type==='IDEC')).length);
+  const names = types.map(t => [...new Set(astreintes.filter(a => a.type === t || (t==='Direction'&&a.type==='Directeur') || (t==='Organisation et Soins'&&a.type==='IDEC')).map(a => a.nom))]);
+  const colors = ['blue','green','orange'];
+  statsEl.innerHTML = types.map((t,i) => `
+    <div class="stat-card ${colors[i]}">
+      <div class="stat-label">${t}</div>
+      <div class="stat-value">${counts[i]}</div>
+      <div class="stat-sub">${names[i].length} personne${names[i].length>1?'s':''} · Total: ${counts.reduce((a,b)=>a+b,0)}</div>
+    </div>`).join('');
 }
 
 function importAstreinteExcel(event) {
