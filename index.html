@@ -368,15 +368,17 @@ body {
 .planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 20; }
 .agent-cell {
   padding: 5px 8px; background: var(--bg2);
-  position: sticky; left: 0; z-index: 5;
+  position: sticky; left: 0; z-index: 6;
   min-width: 60px; max-width: 60px; width: 60px;
   border-right: 1px solid var(--border);
+  overflow: hidden;
 }
 .agent-cell-poste {
   padding: 5px 8px; background: var(--bg2);
-  position: sticky; left: 60px; z-index: 5;
+  position: sticky; left: 60px; z-index: 6;
   min-width: 150px; max-width: 150px; width: 150px;
   border-right: 1px solid var(--border);
+  overflow: hidden;
 }
 .agent-cell-name { font-weight: 700; color: var(--text); font-size: 12px; }
 .agent-cell-info { font-size: 10px; color: var(--text2); margin-top: 1px; }
@@ -1087,6 +1089,9 @@ table input:focus { border-color: var(--accent); }
       <span class="etab-badge-icon">🏥</span>
       <div class="etab-name" id="sb-etab-name">Établissement</div>
       <div class="etab-role" id="sb-user-name">Utilisateur</div>
+      <div id="online-users-bar" style="display:none;margin-top:6px;padding:4px 8px;background:rgba(56,217,169,0.1);border:1px solid rgba(56,217,169,0.25);border-radius:6px;font-size:10px;color:#38d9a9">
+        <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Planning</div>
@@ -1287,27 +1292,28 @@ table input:focus { border-color: var(--accent); }
       <!-- Légende impression (masquée à l'écran) -->
       <div id="print-legend" style="display:none"></div>
 
+      <!-- Astreintes de la semaine — AU DESSUS DU PLANNING -->
+      <div id="planning-astreintes-banner" style="display:none;margin-bottom:6px;border:1px solid #f59e0b44;border-radius:8px;background:var(--card);overflow:hidden">
+        <div style="padding:5px 14px;background:#f59e0b14;border-bottom:1px solid #f59e0b33;font-size:11px;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:8px">
+          🔔 Astreintes — semaine en cours
+        </div>
+        <div id="planning-astreintes-content" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
       <!-- Légende horaires + planning -->
       <div class="card" style="padding:0;overflow:hidden">
         <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
         <div class="planning-wrap" id="planning-container" style="overflow:auto;width:100%;max-height:70vh"></div>
       </div>
-      <!-- Totaux secteurs — scroll synchronisé avec le planning -->
-      <div id="sector-daily-totals" style="overflow-x:auto;width:100%;margin-top:4px"></div>
-      <!-- Astreintes de la semaine -->
-      <div id="planning-astreintes-banner" style="display:none;margin-top:4px;border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden">
-        <div style="padding:6px 14px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:8px">
-          🔔 Astreintes — semaine en cours
-        </div>
-        <div id="planning-astreintes-content" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
-      <!-- Vacataires disponibles ce mois -->
-      <div id="planning-vac-section" style="margin-top:4px;border:1px solid var(--border);border-radius:8px;background:var(--card);overflow:hidden;display:none">
-        <div style="padding:6px 10px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:8px">
+      <!-- Totaux secteurs (maintenant en tfoot dans le même tableau) -->
+      <div id="sector-daily-totals" style="display:none"></div>
+      <!-- Vacataires disponibles ce mois — injectés dans le même scroll que le planning -->
+      <div id="planning-vac-section" style="display:none">
+        <div style="padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:11px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:8px">
           <span>👥 Vacataires disponibles ce mois</span>
           <span id="planning-vac-badge" style="background:var(--accent2);color:#0f1117;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px"></span>
         </div>
-        <div style="overflow-x:auto;width:100%" id="planning-vac-scroll">
+        <div style="overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
           <div id="planning-vac-container"></div>
         </div>
       </div>
@@ -3178,6 +3184,43 @@ function initApp() {
   updateFilterSecteur();
   updateFilterSpec();
   updateAgentSpecTabs();
+
+  // Présence en ligne — Supabase Realtime
+  initPresence();
+}
+
+let _presenceChannel = null;
+function initPresence() {
+  if (_presenceChannel) { try { supa.removeChannel(_presenceChannel); } catch(e) {} }
+  const etabId = DB.currentEtab || ETAB_ID;
+  const userName = DB.currentUser ? DB.currentUser.nom : 'Inconnu';
+  const bar = document.getElementById('online-users-bar');
+  const list = document.getElementById('online-users-list');
+  if (!bar || !list) return;
+
+  bar.style.display = 'block';
+  list.textContent = 'Connexion…';
+
+  try {
+    _presenceChannel = supa.channel('presence:' + etabId, { config: { presence: { key: userName } } });
+    _presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = _presenceChannel.presenceState();
+        const users = Object.keys(state).filter(k => k !== userName);
+        if (users.length === 0) {
+          list.textContent = 'Vous seul';
+        } else {
+          list.textContent = users.length + ' autre(s) : ' + users.join(', ');
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await _presenceChannel.track({ name: userName, at: new Date().toISOString() });
+        }
+      });
+  } catch(e) {
+    bar.style.display = 'none';
+  }
 }
 
 // ============================================================
@@ -3232,8 +3275,7 @@ function renderDashAstreintes() {
 
   const today = new Date();
   const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const lundi = new Date(today); lundi.setDate(today.getDate() - dow + _dashAstrWeekOffset * 7);
-  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
+  const lundiBase = new Date(today); lundiBase.setDate(today.getDate() - dow);
 
   const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   const getWeekNum = d => {
@@ -3244,11 +3286,13 @@ function renderDashAstreintes() {
     return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
   };
 
+  // Semaine ciblée par navigation
+  const lundi = new Date(lundiBase); lundi.setDate(lundiBase.getDate() + _dashAstrWeekOffset * 7);
+  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
   const wn = getWeekNum(lundi);
   const isCurrent = _dashAstrWeekOffset === 0;
   labelEl.textContent = `S${wn} · ${fmt(lundi)} – ${fmt(dimanche)}`;
-  if (isCurrent) labelEl.style.color = 'var(--accent)';
-  else labelEl.style.color = 'var(--text2)';
+  labelEl.style.color = isCurrent ? 'var(--accent)' : 'var(--text2)';
 
   const astreintes = etab ? (etab.astreintes || []) : [];
   const lundiStr = lundi.toISOString().slice(0,10);
@@ -3261,30 +3305,32 @@ function renderDashAstreintes() {
   }
 
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
-  const typeColors = {
-    'Direction': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' },
-    'Organisation et Soins': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
-    'Technique': { color:'var(--accent3)', bg:'rgba(247,169,79,0.12)', border:'rgba(247,169,79,0.3)', icon:'🔧' }
+  const typeStyles = {
+    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.12)',  border:'rgba(99,102,241,0.3)',  icon:'🏛️' },
+    'Organisation et Soins': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
+    'Technique':             { color:'var(--accent3)', bg:'rgba(247,169,79,0.12)', border:'rgba(247,169,79,0.3)', icon:'🔧' },
+    'IDEC':      { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
+    'Directeur': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' }
   };
 
-  // Grouper par type dans l'ordre
-  const cards = typeOrder.map(type => {
-    const list = actives.filter(a => a.type === type || (type==='Direction'&&a.type==='Directeur') || (type==='Organisation et Soins'&&a.type==='IDEC'));
-    if (list.length === 0) return '';
-    const s = typeColors[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
-    return list.map(a => {
-      const d1str = fmt(new Date(a.debut + 'T00:00:00'));
-      const d2str = fmt(new Date(a.fin + 'T00:00:00'));
-      return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
-        <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px;display:flex;align-items:center;gap:4px">
-          <span>${s.icon}</span> ${type}
-        </div>
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px">${a.nom}</div>
-        ${a.tel ? `<div style="font-size:11px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
-        <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
-      </div>`;
-    }).join('');
-  }).filter(Boolean).join('');
+  // Trier par typeOrder puis afficher côte à côte (groupé par semaine = déjà filtré sur cette semaine)
+  const sorted = [...actives].sort((a,b) => {
+    const ia = typeOrder.indexOf(a.type) !== -1 ? typeOrder.indexOf(a.type) : 99;
+    const ib = typeOrder.indexOf(b.type) !== -1 ? typeOrder.indexOf(b.type) : 99;
+    return ia - ib;
+  });
+
+  const cards = sorted.map(a => {
+    const s = typeStyles[a.type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
+    const d1str = fmt(new Date(a.debut + 'T00:00:00'));
+    const d2str = fmt(new Date(a.fin + 'T00:00:00'));
+    return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${a.type}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px">${a.nom}</div>
+      ${a.tel ? `<div style="font-size:11px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
+      <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
+    </div>`;
+  }).join('');
 
   contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards}</div>`;
 }
@@ -3747,19 +3793,19 @@ function renderPlanning() {
 
       html += '<tr style="background:' + rowBgLine + '">' +
         // Colonne Poste
-        '<td class="agent-cell" style="' + cellStyle + ';text-align:center;vertical-align:middle">' +
+        '<td class="agent-cell" style="background:var(--bg2);text-align:center;vertical-align:middle;box-shadow:1px 0 0 var(--border)">' +
           (isFixe ? '<span class="agent-fixe-badge" title="Poste fixe">★</span><br>' : '') +
           '<span style="font-size:10px;font-weight:700;color:var(--text2)">' + (agent.id||'') + '</span>' +
         '</td>' +
         // Colonne Nom+Info
-        '<td class="agent-cell-poste" style="background:' + rowBgLine + ';border-right:3px solid var(--accent)">' +
-          '<div style="font-weight:700;font-size:12px;color:var(--text)"><strong>' + agent.nom + '</strong> ' + (agent.prenom||'') + '</div>' +
-          '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + agent.spec + ' · ' + agent.taux + '%' +
+        '<td class="agent-cell-poste" style="background:var(--bg2);border-right:3px solid var(--accent)">' +
+          '<div style="font-weight:700;font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>' + agent.nom + '</strong> ' + (agent.prenom||'') + '</div>' +
+          '<div style="font-size:9px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + agent.spec + ' · ' + agent.taux + '%' +
             (agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : '') +
-            (agent.groupeRot ? ' · <span style="color:var(--accent3)">Groupe ' + agent.groupeRot + '</span>' : '') +
+            (agent.groupeRot ? ' · <span style="color:var(--accent3)">Gr.' + agent.groupeRot + '</span>' : '') +
             (agent.posteNomme ? ' · <span style="color:var(--accent2)">' + agent.posteNomme + '</span>' : '') +
           '</div>' +
-          '<span class="agent-cell-sector" style="background:' + sectColor + '28;color:' + sectColor + ';border:1px solid ' + sectColor + '44">' +
+          '<span class="agent-cell-sector" style="background:' + sectColor + '28;color:' + sectColor + ';border:1px solid ' + sectColor + '44;max-width:140px;overflow:hidden;text-overflow:ellipsis">' +
             secteurMois +
           '</span>' +
         '</td>';
@@ -4821,22 +4867,30 @@ function repondreConge(index, statut) {
   d.reponduPar = DB.currentUser ? DB.currentUser.nom : 'Cadre';
   d.reponduAt = new Date().toISOString();
 
-  // Si accepté → appliquer sur le planning
+  // Si accepté → appliquer sur le planning, seulement les jours travaillés
   if (statut === 'accepte') {
     const debut = new Date(d.debut);
     const fin = new Date(d.fin);
+    const codesWork = ['M','S','J','NU','N'];
+    let joursAppliques = 0;
     for (let dt = new Date(debut); dt <= fin; dt.setDate(dt.getDate() + 1)) {
       const y = dt.getFullYear(), m = dt.getMonth(), day = dt.getDate();
       if (!etab.planning[y]) etab.planning[y] = {};
       if (!etab.planning[y][m]) etab.planning[y][m] = {};
       if (!etab.planning[y][m][d.agentId]) etab.planning[y][m][d.agentId] = {};
-      etab.planning[y][m][d.agentId][day] = d.type;
+      const shiftActuel = etab.planning[y][m][d.agentId][day] || '';
+      // Ne remplacer QUE si le jour est travaillé (M/S/J/NU/N)
+      if (codesWork.includes(shiftActuel)) {
+        etab.planning[y][m][d.agentId][day] = d.type;
+        joursAppliques++;
+      }
+      // Sinon on laisse R/RC/vide tel quel
     }
-    pushHistory(`Congé accepté : ${d.agentNom} · ${d.type} · ${d.debut} → ${d.fin}`, {
+    pushHistory(`Congé accepté : ${d.agentNom} · ${d.type} · ${d.debut} → ${d.fin} (${joursAppliques}j travaillés remplacés)`, {
       year: currentYear, month: currentMonth,
       planning: JSON.parse(JSON.stringify((etab.planning[currentYear]||{})[currentMonth]||{}))
     });
-    showToast(`Congé de ${d.agentNom} appliqué sur le planning`, 'success');
+    showToast(`Congé de ${d.agentNom} appliqué sur ${joursAppliques} jour(s) travaillé(s)`, 'success');
   } else {
     showToast(`Demande de ${d.agentNom} refusée`, 'info');
   }
