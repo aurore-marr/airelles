@@ -1290,7 +1290,7 @@ table input:focus { border-color: var(--accent); }
       <!-- Légende horaires + planning -->
       <div class="card" style="padding:0;overflow:hidden">
         <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
-        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%"></div>
+        <div class="planning-wrap" id="planning-container" style="overflow:auto;width:100%;max-height:70vh"></div>
       </div>
       <!-- Totaux secteurs — scroll synchronisé avec le planning -->
       <div id="sector-daily-totals" style="overflow-x:auto;width:100%;margin-top:4px"></div>
@@ -1839,9 +1839,9 @@ table input:focus { border-color: var(--accent); }
 
       <!-- Légende types -->
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent)">🩺 IDEC</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(56,217,169,0.15);border:1px solid rgba(56,217,169,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent2)">🏥 Directeur</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(247,169,79,0.15);border:1px solid rgba(247,169,79,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent3)">🔄 Astreinte commune</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:#6366f1">🏛️ Direction</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent)">🩺 Organisation et Soins</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(247,169,79,0.15);border:1px solid rgba(247,169,79,0.3);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--accent3)">🔧 Technique</span>
       </div>
 
       <!-- Vue calendrier annuel -->
@@ -2187,6 +2187,21 @@ table input:focus { border-color: var(--accent); }
     <div style="margin-bottom:16px">
       <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🕐 Horaires de travail</div>
       <div id="shift-travail-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- REPOS / RESET -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:#8892aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌙 Repos</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="selectShiftCode('R',this)" data-code="R"
+          style="padding:10px 16px;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
+          <div>R</div><div style="font-size:9px;opacity:0.7;font-weight:400">Repos</div>
+        </button>
+        <button onclick="selectShiftCode('RC',this)" data-code="RC"
+          style="padding:10px 16px;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
+          <div>RC</div><div style="font-size:9px;opacity:0.7;font-weight:400">Repos Comp.</div>
+        </button>
+      </div>
     </div>
 
     <!-- JOUR DE REPOS TRAVAILLÉ (HS) -->
@@ -3215,7 +3230,6 @@ function renderDashAstreintes() {
   const contentEl = document.getElementById('dash-astr-content');
   if (!labelEl || !contentEl) return;
 
-  // Calculer la date de la semaine visée
   const today = new Date();
   const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const lundi = new Date(today); lundi.setDate(today.getDate() - dow + _dashAstrWeekOffset * 7);
@@ -3231,36 +3245,48 @@ function renderDashAstreintes() {
   };
 
   const wn = getWeekNum(lundi);
-  const labelTxt = _dashAstrWeekOffset === 0 ? `S${wn} — Cette sem.` : `S${wn} · ${fmt(lundi)}-${fmt(dimanche)}`;
-  labelEl.textContent = labelTxt;
+  const isCurrent = _dashAstrWeekOffset === 0;
+  labelEl.textContent = `S${wn} · ${fmt(lundi)} – ${fmt(dimanche)}`;
+  if (isCurrent) labelEl.style.color = 'var(--accent)';
+  else labelEl.style.color = 'var(--text2)';
 
-  const astreintes = (etab ? etab.astreintes || [] : []);
+  const astreintes = etab ? (etab.astreintes || []) : [];
   const lundiStr = lundi.toISOString().slice(0,10);
   const dimStr = dimanche.toISOString().slice(0,10);
   const actives = astreintes.filter(a => a.debut <= dimStr && a.fin >= lundiStr);
 
   if (actives.length === 0) {
-    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:8px 0">Aucune astreinte cette semaine</p>';
+    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:12px 0">Aucune astreinte cette semaine</p>';
     return;
   }
 
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
-  const sorted = [...actives].sort((a,b) => {
-    const ia = typeOrder.indexOf(a.type), ib = typeOrder.indexOf(b.type);
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-  });
+  const typeColors = {
+    'Direction': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' },
+    'Organisation et Soins': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
+    'Technique': { color:'var(--accent3)', bg:'rgba(247,169,79,0.12)', border:'rgba(247,169,79,0.3)', icon:'🔧' }
+  };
 
-  contentEl.innerHTML = sorted.map(a => {
-    const s = astrTypeStyle(a.type);
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)22">
-      <span style="font-size:13px">${s.icon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;color:${s.color};font-weight:700">${a.type}</div>
-        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nom}</div>
-        ${a.tel ? `<div style="font-size:11px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  // Grouper par type dans l'ordre
+  const cards = typeOrder.map(type => {
+    const list = actives.filter(a => a.type === type || (type==='Direction'&&a.type==='Directeur') || (type==='Organisation et Soins'&&a.type==='IDEC'));
+    if (list.length === 0) return '';
+    const s = typeColors[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
+    return list.map(a => {
+      const d1str = fmt(new Date(a.debut + 'T00:00:00'));
+      const d2str = fmt(new Date(a.fin + 'T00:00:00'));
+      return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px;display:flex;align-items:center;gap:4px">
+          <span>${s.icon}</span> ${type}
+        </div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px">${a.nom}</div>
+        ${a.tel ? `<div style="font-size:11px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
+        <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
+      </div>`;
+    }).join('');
+  }).filter(Boolean).join('');
+
+  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards}</div>`;
 }
 
 function renderDashboard() {
@@ -3602,8 +3628,8 @@ function renderPlanning() {
   if (!planning[currentYear][currentMonth]) planning[currentYear][currentMonth] = {};
   const planMonth = planning[currentYear][currentMonth];
 
-  // Header row
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*38}px"><thead><tr>
+  // Header row — thead sticky
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
@@ -3818,24 +3844,16 @@ function renderPlanning() {
   html += '</tbody></table>';
   document.getElementById('planning-container').innerHTML = html;
 
-  // Synchroniser scroll planning ↔ totaux
+  // Synchroniser scroll vacataires avec planning
   const planWrap = document.getElementById('planning-container');
-  const totWrap = document.getElementById('sector-daily-totals');
   const vacWrap = document.getElementById('planning-vac-scroll');
-  if (planWrap && totWrap) {
-    planWrap.onscroll = function() {
-      totWrap.scrollLeft = planWrap.scrollLeft;
-      if (vacWrap) vacWrap.scrollLeft = planWrap.scrollLeft;
-    };
-    totWrap.onscroll  = function() {
-      planWrap.scrollLeft = totWrap.scrollLeft;
-      if (vacWrap) vacWrap.scrollLeft = totWrap.scrollLeft;
-    };
-    if (vacWrap) vacWrap.onscroll = function() {
-      planWrap.scrollLeft = vacWrap.scrollLeft;
-      totWrap.scrollLeft = vacWrap.scrollLeft;
-    };
+  if (planWrap && vacWrap) {
+    planWrap.onscroll = function() { vacWrap.scrollLeft = planWrap.scrollLeft; };
+    vacWrap.onscroll = function() { planWrap.scrollLeft = vacWrap.scrollLeft; };
   }
+  // Cacher l'ancien conteneur totaux (maintenant dans le tableau)
+  const totWrap = document.getElementById('sector-daily-totals');
+  if (totWrap) totWrap.style.display = 'none';
 
   renderPlanningVacataires(daysInMonth, etab);
 
@@ -3880,57 +3898,46 @@ function renderAstreintesBanner(etab) {
   const astreintes = etab.astreintes || [];
   if (astreintes.length === 0) { banner.style.display = 'none'; return; }
 
-  // Trouver les astreintes actives cette semaine (semaine du mois affiché contenant aujourd'hui, ou début du mois)
   const today = new Date();
-  // Utiliser le lundi de la semaine courante si on est dans le mois affiché, sinon le 1er du mois
   let refDate = new Date(currentYear, currentMonth, 1);
-  if (today.getFullYear() === currentYear && today.getMonth() === currentMonth) {
-    refDate = new Date(today);
-  }
+  if (today.getFullYear() === currentYear && today.getMonth() === currentMonth) refDate = new Date(today);
   const refStr = refDate.toISOString().slice(0, 10);
-
-  // Astreintes qui couvrent cette date
   const actives = astreintes.filter(a => a.debut <= refStr && a.fin >= refStr);
 
-  if (actives.length === 0) {
-    banner.style.display = 'none';
-    return;
-  }
-
+  if (actives.length === 0) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
 
-  // Grouper par type
-  const typeColors = { 'Direction': '#6366f1', 'Organisation et Soins': '#38d9a9', 'Technique': '#f7a94f', 'IDEC': '#38d9a9', 'Cadre': '#4f8ef7' };
-  const grouped = {};
-  actives.forEach(a => {
-    const t = a.type || 'Autre';
-    if (!grouped[t]) grouped[t] = [];
-    grouped[t].push(a);
-  });
-
-  // Label semaine
-  const debutSem = actives[0] ? actives[0].debut : refStr;
-  const finSem = actives[0] ? actives[0].fin : refStr;
+  const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
+  const typeStyles = {
+    'Direction': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' },
+    'Organisation et Soins': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
+    'Technique': { color:'var(--accent3)', bg:'rgba(247,169,79,0.12)', border:'rgba(247,169,79,0.3)', icon:'🔧' },
+    'IDEC': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
+    'Directeur': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' }
+  };
   const fmtDate = s => { if (!s) return ''; const [y,m,d] = s.split('-'); return `${d}/${m}`; };
 
-  content.innerHTML = Object.entries(grouped).map(([type, list]) => {
-    const col = typeColors[type] || '#8892aa';
+  const cards = typeOrder.map(type => {
+    const list = actives.filter(a => a.type === type || (type==='Direction'&&a.type==='Directeur') || (type==='Organisation et Soins'&&a.type==='IDEC'));
+    if (list.length === 0) return '';
+    const s = typeStyles[type];
     return list.map(a => `
-      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:${col}18;border:1px solid ${col}44">
-        <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0"></span>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:${col}">${type}</div>
-          <div style="font-size:12px;font-weight:600;color:var(--text)">${a.nom}</div>
-          ${a.tel ? `<div style="font-size:11px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
-          <div style="font-size:10px;color:var(--text3)">${fmtDate(a.debut)} → ${fmtDate(a.fin)}</div>
-        </div>
+      <div style="flex:1;min-width:140px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:8px 12px">
+        <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:3px">${s.icon} ${type}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${a.nom}</div>
+        ${a.tel ? `<div style="font-size:11px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+        <div style="font-size:10px;color:var(--text3)">${fmtDate(a.debut)} → ${fmtDate(a.fin)}</div>
       </div>`).join('');
-  }).join('');
+  }).filter(Boolean).join('');
+
+  content.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards}</div>`;
+}
 }
 
 function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
-  const el = document.getElementById('sector-daily-totals');
-  if (!el) return;
+  // Injecter les totaux comme <tfoot> dans le tableau du planning
+  const planTable = document.querySelector('#planning-container table');
+  if (!planTable) return;
 
   const codesWork = ['M','S','J','NU','N'];
   const secteurs = etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG'));
@@ -3955,53 +3962,43 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
   function makeCell(val, color, bgCell, isMon, isToday, req) {
     const alertCol = val>0&&req>0&&val<req ? '#f76f6f' : val>0&&req>0&&val>req*1.5 ? '#f7a94f' : val>0 ? color : '#2a3350';
     const bg = isToday ? 'rgba(79,142,247,0.2)' : bgCell;
-    return '<td style="text-align:center;padding:2px 0;min-width:46px;width:46px;max-width:46px;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
+    return '<td style="text-align:center;padding:2px 0;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
   }
 
-  // Header row
-  let headerRow = '<tr style="background:#131928">';
-  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:210px;width:210px;font-size:9px;color:#9aaabf;border-right:3px solid var(--accent);box-sizing:border-box;white-space:nowrap"></th>';
-  for (let d=1;d<=daysInMonth;d++) {
-    const date = new Date(currentYear,currentMonth,d);
-    const dow = date.getDay();
-    const isWE = dow===0||dow===6;
-    const isToday2 = date.toDateString()===today.toDateString();
-    const isMon = dow===1;
-    const dowStr = ['Di','Lu','Ma','Me','Je','Ve','Sa'][dow];
-    headerRow += '<th style="text-align:center;padding:2px 0;min-width:46px;width:46px;max-width:46px;font-size:9px;font-weight:600;color:' + (isToday2?'#4f8ef7':isWE?'#f7a94f':'#6b7fa8') + ';background:#131928;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '"><div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div></th>';
-  }
-  headerRow += '</tr>';
+  let tfoot = '<tfoot style="position:sticky;bottom:0;z-index:15">';
 
-  let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px"><tbody>';
-  html += headerRow;
+  // Séparateur
+  tfoot += '<tr style="height:3px;background:#1a2035"><td colspan="' + (daysInMonth+2) + '" style="background:#1a2035;border-top:2px solid var(--accent)"></td></tr>';
 
   // Lignes M/S/J globales
   codesPrésents.forEach(h => {
     const color = h.couleur || '#888';
     const rowBg = color + '22';
     const labelBg = color + '30';
-    html += '<tr style="border-bottom:1px solid #2a335033">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    tfoot += '<tr style="border-bottom:1px solid #2a335033">';
+    tfoot += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 8px;border-right:1px solid var(--border)33;white-space:nowrap;font-size:10px"><span style="color:#8892aa;opacity:0.7">Poste</span></td>';
+    tfoot += '<td style="position:sticky;left:60px;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:' + color + ';display:inline-block"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const cnt = totalByCode[h.code][d]||0;
       const date = new Date(currentYear,currentMonth,d);
       const isMon = date.getDay()===1;
       const isToday2 = date.toDateString()===today.toDateString();
-      html += makeCell(cnt, color, cnt>0?rowBg:'transparent', isMon, isToday2, 0);
+      tfoot += makeCell(cnt, color, cnt>0?rowBg:'transparent', isMon, isToday2, 0);
     }
-    html += '</tr>';
+    tfoot += '</tr>';
   });
 
-  // Séparateur
-  html += '<tr style="height:4px;background:#0f1117"><td colspan="' + (daysInMonth+1) + '"></td></tr>';
+  // Séparateur secteurs
+  tfoot += '<tr style="height:3px;background:#131928"><td colspan="' + (daysInMonth+2) + '"></td></tr>';
 
   // Lignes secteurs
   secteurs.forEach(sect => {
     const sectColor = secteurCouleurCSS(sect);
     const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
-    html += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    tfoot += '<tr style="border-top:1px solid ' + rawBg + '44">';
+    tfoot += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '18;padding:2px 8px;border-right:1px solid var(--border)33;font-size:9px;color:#8892aa">Poste</td>';
+    tfoot += '<td style="position:sticky;left:60px;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±' + req + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const date = new Date(currentYear,currentMonth,d);
@@ -4009,16 +4006,20 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
       const isWE = date.getDay()===0||date.getDay()===6;
       const isToday2 = date.toDateString()===today.toDateString();
       const bg = isToday2?'rgba(79,142,247,0.2)':isWE?rawBg+'12':rawBg+'18';
-      html += makeCell(tot, sectColor, bg, isMon, isToday2, req);
+      tfoot += makeCell(tot, sectColor, bg, isMon, isToday2, req);
     }
-    html += '</tr>';
+    tfoot += '</tr>';
   });
 
-  html += '</tbody></table>';
-  html += '<div style="padding:4px 8px;font-size:10px;color:#5a6480;background:#0f1117;display:flex;gap:12px"><span style="color:#f76f6f">▲ Sous-effectif</span><span>·</span><span style="color:#f7a94f">▲ Sureffectif</span></div>';
+  // Légende
+  tfoot += '<tr style="background:#0f1117"><td colspan="' + (daysInMonth+2) + '" style="padding:3px 8px;font-size:10px;color:#5a6480"><span style="color:#f76f6f">▲ Sous-effectif</span> · <span style="color:#f7a94f">▲ Sureffectif</span></td></tr>';
 
-  el.innerHTML = html;
-  el.style.cssText = 'overflow-x:auto;width:100%;margin-top:4px;border-radius:0 0 8px 8px;border:1px solid #2a3350;border-top:none';
+  tfoot += '</tfoot>';
+
+  // Supprimer ancien tfoot si présent
+  const oldTfoot = planTable.querySelector('tfoot');
+  if (oldTfoot) oldTfoot.remove();
+  planTable.insertAdjacentHTML('beforeend', tfoot);
 }
 
 // ============================================================
@@ -4402,7 +4403,7 @@ function openShiftPicker(agentId, day) {
 function selectShiftCode(code, el) {
   selectedShiftCode = code;
   // Reset all buttons highlight
-  const allBtns = document.querySelectorAll('#shift-travail-btns button, #shift-hs-repos-btns button, #shift-conge-btns button, #shift-absence-btns button');
+  const allBtns = document.querySelectorAll('#shift-travail-btns button, #shift-hs-repos-btns button, #shift-conge-btns button, #shift-absence-btns button, [data-code="R"], [data-code="RC"]');
   allBtns.forEach(b => {
     const c = b.style.color;
     b.style.borderColor = c + '44';
@@ -6639,6 +6640,14 @@ function submitQRConge() {
     });
     // Mettre à jour DB local avec données fraîches mergées
     DB.etablissements[_qrEtabId] = dataToSave;
+    // Sauvegarder backup local des demandes de cet agent
+    try {
+      var backupKey = 'qr_demandes_' + _qrAgentId;
+      var existing = JSON.parse(localStorage.getItem(backupKey) || '[]');
+      var already = existing.some(function(x){ return x.id === newDemande.id; });
+      if (!already) existing.push(newDemande);
+      localStorage.setItem(backupKey, JSON.stringify(existing));
+    } catch(e) {}
     return supa.from('horizon_data').upsert({
       etab_id: _qrEtabId, data: dataToSave, updated_at: new Date().toISOString()
     }, { onConflict: 'etab_id' });
@@ -6738,18 +6747,43 @@ function qrGetDateVal(p) {
 function qrRenderCongeList() {
   var etab = DB.etablissements[_qrEtabId];
   var el = document.getElementById('qr-conge-list');
-  if (!el || !etab) return;
-  var demandes = (etab.demandesConges || []).filter(function(d){ return d.agentId===_qrAgentId; });
+  if (!el) return;
+
+  // Fusionner les demandes Supabase + backup local (pour survivre aux actualisations)
+  var fromServer = etab ? (etab.demandesConges || []).filter(function(d){ return d.agentId===_qrAgentId; }) : [];
+  var fromLocal = [];
+  try {
+    fromLocal = JSON.parse(localStorage.getItem('qr_demandes_' + _qrAgentId) || '[]');
+  } catch(e) {}
+  // Merger : local prime si id absent du serveur
+  var merged = fromServer.slice();
+  fromLocal.forEach(function(ld) {
+    if (!merged.find(function(sd){ return sd.id === ld.id; })) {
+      merged.push(ld);
+    } else {
+      // Mettre à jour le statut depuis le serveur
+      var srv = merged.find(function(sd){ return sd.id === ld.id; });
+      if (srv && srv.statut !== 'en_attente') {
+        // Statut mis à jour côté cadre → mettre à jour backup local
+        ld.statut = srv.statut;
+      }
+    }
+  });
+  // Mettre à jour le backup local avec les statuts à jour
+  try { localStorage.setItem('qr_demandes_' + _qrAgentId, JSON.stringify(merged.filter(function(d){ return d.statut !== 'refuse'; }))); } catch(e) {}
+
+  var demandes = merged;
   if (demandes.length === 0) { el.innerHTML = '<p style="color:#475569;font-size:12px;text-align:center;padding:12px">Aucune demande</p>'; return; }
   var statutColors = { en_attente:'#f59e0b', accepte:'#22c55e', refuse:'#ef4444' };
   var statutLabels = { en_attente:'En attente', accepte:'Accepté ✓', refuse:'Refusé ✗' };
-  el.innerHTML = demandes.slice().reverse().map(function(d){
+  el.innerHTML = demandes.slice().sort(function(a,b){ return b.createdAt.localeCompare(a.createdAt); }).map(function(d){
     var col = statutColors[d.statut] || '#6b7fa8';
     return '<div style="padding:10px 12px;border-radius:10px;background:#161b27;border:1px solid #1e3050;margin-bottom:8px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center">' +
         '<span style="font-size:12px;font-weight:700;color:#e8ecf4">' + d.type + ' · ' + d.debut + ' → ' + d.fin + '</span>' +
         '<span style="font-size:10px;font-weight:700;color:' + col + ';padding:3px 8px;border-radius:10px;background:' + col + '20">' + (statutLabels[d.statut]||d.statut) + '</span>' +
       '</div>' +
+      (d.joursTravailles !== undefined ? '<div style="font-size:11px;color:#38bdf8;margin-top:3px">✓ ' + d.joursTravailles + 'j travaillés</div>' : '') +
       (d.motif ? '<div style="font-size:11px;color:#6b7fa8;margin-top:4px">' + d.motif + '</div>' : '') +
     '</div>';
   }).join('');
