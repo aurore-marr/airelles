@@ -922,11 +922,13 @@ table input:focus { border-color: var(--accent); }
 .cal-day-selected.am-selected { background: rgba(148,163,184,0.85) !important; border-color: #94a3b8 !important; }
 .cal-day-already { font-style: italic; opacity: 0.6; }
 .cal-day .cal-shift-badge {
-  font-size: 8px;
-  font-weight: 700;
-  margin-top: 1px;
-  opacity: 0.8;
+  font-size: 9px;
+  font-weight: 800;
+  margin-top: 2px;
   font-family: 'DM Mono', monospace;
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.4;
 }
 .cal-day-today { outline: 2px solid var(--accent); outline-offset: 1px; }
 .cal-summary {
@@ -2708,8 +2710,10 @@ function checkQRView() {
     _qrSpecFilter = specFilter;
     _qrPinBuffer = '';
     updatePinDots();
-    document.getElementById('qr-name-section').style.display = 'none';
-    document.getElementById('qr-pin-error').style.display = 'none';
+    const _qrNameSec = document.getElementById('qr-name-section');
+    if (_qrNameSec) _qrNameSec.style.display = 'none';
+    const _qrPinErr = document.getElementById('qr-pin-error');
+    if (_qrPinErr) _qrPinErr.style.display = 'none';
 
     qrPopulateAgentSelect(etab, specFilter);
   });
@@ -3594,16 +3598,15 @@ function renderPlanning() {
         };
         let rgb;
         try { rgb = hexToRgb(scColor); } catch(e) { rgb = [100,116,128]; }
-        const rowBg   = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`;
-        const fixeBg  = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.32)`;
+        const rowBg   = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.13)`;
+        const fixeBg  = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.25)`;
         const sectBorder = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.45)`;
 
         let cellBg, badgeStyle;
 
         if (isTravail) {
           cellBg = isFixe ? fixeBg : rowBg;
-          const horColor = hor ? (hor.couleur || scColor) : scColor;
-          badgeStyle = `background:${horColor}30;color:${horColor};font-weight:800;border:1px solid ${horColor}70;border-radius:5px`;
+          badgeStyle = `background:transparent;color:${scColor};font-weight:800;border:1px solid ${sectBorder}`;
         } else if (isAbsence) {
           const horColor = hor ? hor.couleur : '#f76f6f';
           cellBg = isWE ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.06)` : rowBg;
@@ -4323,14 +4326,14 @@ function renderCalGrid() {
     const bgStyle = isSel
       ? `background:${codeColor}`
       : travaille
-        ? isWE ? 'background:rgba(247,169,79,0.08)' : 'background:var(--bg3)'
+        ? `background:${horColor}35;border-color:${horColor}80`
         : '';
 
     const onclick = travaille ? `onclick="calToggleDay(${d})"` : '';
 
     html += `<div class="${cls}" ${onclick} style="${bgStyle}" title="${travaille ? shift + ' — cliquer pour sélectionner' : 'Repos — non éligible'}">
       <span>${d}</span>
-      ${shift && !isSel ? `<span class="cal-shift-badge" style="color:${horColor}">${shift}</span>` : ''}
+      ${shift && !isSel ? `<span class="cal-shift-badge" style="color:${horColor};background:${horColor}25;padding:1px 5px;border-radius:3px;font-size:9px">${shift}</span>` : ''}
     </div>`;
   }
 
