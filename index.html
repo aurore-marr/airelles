@@ -276,7 +276,7 @@ body {
 
 .planning-wrap { overflow-x: auto; }
 .planning-table {
-  border-collapse: collapse; width: 100%;
+  border-collapse: collapse; width: max-content;
   min-width: 900px;
   font-size: 12px;
 }
@@ -301,7 +301,7 @@ body {
 .agent-cell-poste {
   padding: 5px 8px; background: var(--bg2);
   position: sticky; left: 60px; z-index: 5;
-  min-width: 160px; max-width: 200px;
+  min-width: 120px; max-width: 150px;
   border-right: 1px solid var(--border);
 }
 .agent-cell-name { font-weight: 700; color: var(--text); font-size: 12px; }
@@ -319,7 +319,7 @@ body {
   background: var(--accent4); color: #fff;
 }
 
-.day-header { cursor: default; }
+.day-header { cursor: default; min-width:38px; width:38px; max-width:38px; }
 .day-header.weekend { background: rgba(247,169,79,0.1) !important; }
 .day-header.today { background: rgba(79,142,247,0.15) !important; color: var(--accent) !important; }
 
@@ -3192,9 +3192,9 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row
-  let html = `<table class="planning-table" style="min-width:${260 + daysInMonth*38}px"><thead><tr>
+  let html = `<table class="planning-table" style="min-width:${180 + daysInMonth*38}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:160px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
+    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:120px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -3370,15 +3370,23 @@ function renderPlanning() {
 
         const todayStyle = isToday ? ';outline:2px solid var(--accent);outline-offset:-2px;z-index:1;position:relative' : '';
 
+        // Vérifier si retard sur ce jour
+        const dk_retard = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        const retardEntry = ((etab.retards||{})[agent.id]||[]).find(e => e.date === dk_retard);
+        const retardHTML = retardEntry
+          ? `<span style="position:absolute;bottom:1px;right:1px;background:#f76f6f;color:#fff;font-size:8px;font-weight:800;border-radius:3px;padding:0 3px;line-height:14px;font-family:'DM Mono',monospace">-${retardEntry.heures}h</span>`
+          : '';
+
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="background:' + cellBg + todayStyle + '"' +
+          ' style="background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
             ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>'
             : (shift ? '<span class="shift-badge" style="' + badgeStyle + '">' + shift + '</span>' : '<span style="color:var(--text3);font-size:10px;opacity:0.15">·</span>')) +
+          retardHTML +
           '</td>';
       }
       html += '</tr>';
@@ -3475,7 +3483,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
 
   // Header row
   let headerRow = '<tr style="background:#131928">';
-  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:220px;width:220px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
+  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:180px;width:180px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
   for (let d=1;d<=daysInMonth;d++) {
     const date = new Date(currentYear,currentMonth,d);
     const dow = date.getDay();
@@ -3496,7 +3504,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rowBg = color + '22';
     const labelBg = color + '30';
     html += '<tr style="border-bottom:1px solid #2a335033">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:180px;width:180px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const cnt = totalByCode[h.code][d]||0;
       const date = new Date(currentYear,currentMonth,d);
@@ -3516,7 +3524,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
     html += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:220px;width:220px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:180px;width:180px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const date = new Date(currentYear,currentMonth,d);
@@ -5000,6 +5008,8 @@ function toggleDispo(vacId, dateKey) {
   saveToStorage();
   renderDispoGrid();
   updateVacBadge();
+  // Mettre à jour la section vacataires sous le planning
+  renderPlanning();
 }
 
 function updateVacBadge() {
@@ -5232,7 +5242,7 @@ function renderQRPage() {
         <span style="font-weight:400;color:var(--text3)">Les agents scannent le QR de leur spécialité, saisissent leur PIN (numéro de poste sur 4 chiffres) et voient leur planning.</span>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;max-width:100%">
       ${specs.map(spec => {
         const color = specColors[spec] || '#4f8ef7';
         const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
@@ -5280,7 +5290,7 @@ function renderQRPage() {
         <span style="font-size:11px;font-weight:600;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:10px">${vacs.length} vacataire${vacs.length>1?'s':''}</span>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Chaque vacataire a son QR personnel. Il le scanne pour renseigner ses dispos et consulter son planning si affecté.</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
         ${vacs.map(v => {
           const url = `${baseUrl}?vac=${encodeURIComponent(v.id)}&etab=${DB.currentEtab || ETAB_ID}`;
           const specColor = '#f7a94f';
@@ -7011,10 +7021,13 @@ function handleImportFile(file) {
         });
 
         // Ajouter les codes absence standards
-        ['R','CA','CF','AM','CP','GR'].forEach(code => {
-          const labels = { R:'Repos', CA:'Congé annuel', CF:'Congé formation', AM:'Arrêt maladie', CP:'Congé parental', GR:'Grève' };
-          const durees = { R:0, CA:10, CF:10, AM:0, CP:0, GR:0 };
-          horairesMap[code] = { code, label: labels[code], debut:'', fin:'', duree: durees[code], couleur: horColors[code] };
+        ['R','RC','CA','CF','AM','CP','GR','MO','EM','AT','FO'].forEach(code => {
+          const labels = { R:'Repos', RC:'Repos compensateur', CA:'Congé annuel', CF:'Congé formation', AM:'Arrêt maladie', CP:'Congé parental', GR:'Grève', MO:'Maladie ordinaire', EM:'Evénement familial', AT:'Accident travail', FO:'Formation' };
+          const durees = { R:0, RC:0, CA:10, CF:7, AM:0, CP:0, GR:0, MO:0, EM:0, AT:0, FO:7 };
+          const colors = { R:'#5a6480', RC:'#5a6480', CA:'#f76f6f', CF:'#f76f6f', AM:'#8892aa', CP:'#f76f6f', GR:'#8892aa', MO:'#8892aa', EM:'#f7a94f', AT:'#f76f6f', FO:'#a07ee8' };
+          if (!horairesMap[code]) {
+            horairesMap[code] = { code, label: labels[code], debut:'', fin:'', duree: durees[code], couleur: colors[code] || '#8892aa', comptage: 'absent' };
+          }
         });
 
         if (specs.length > 0) {
@@ -7218,7 +7231,7 @@ function handleImportFile(file) {
 
           if (!ligneCode) return; // skip entêtes, lignes vides
 
-          const validCodes = ['M','S','J','NU','R','RC','CA','CF','MO','EM','AT','FO','GR'];
+          const validCodes = ['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP'];
           const shifts = [];
           for (let c = 2; c <= 43; c++) {
             const v = (row[c] || 'R').toString().trim().toUpperCase();
