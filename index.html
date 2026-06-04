@@ -1189,6 +1189,13 @@ table input:focus { border-color: var(--accent); }
           <div class="card-header"><span class="card-title">👥 Dispos vacataires/agents (7 jours)</span><span id="dash-dispos-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">0</span></div>
           <div id="dash-vac-dispos"></div>
         </div>
+        <div class="card" style="cursor:pointer" onclick="openCongesValidation()">
+          <div class="card-header">
+            <span class="card-title">🌴 Demandes de congés</span>
+            <span id="dash-conges-badge" style="display:none;background:var(--accent4);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px">0</span>
+          </div>
+          <div id="dash-conges-list" style="font-size:12px;color:var(--text2)">Aucune demande en attente</div>
+        </div>
       </div>
     </div>
 
@@ -3406,6 +3413,38 @@ function renderDashboard() {
     if (totalDispos > 0) { badgeEl.style.display = 'inline'; badgeEl.textContent = totalDispos; }
     else badgeEl.style.display = 'none';
   }
+
+  // Card congés en attente
+  const congesEl = document.getElementById('dash-conges-list');
+  const congesBadgeEl = document.getElementById('dash-conges-badge');
+  const pending = (etab.demandesConges || []).filter(d => d.statut === 'en_attente');
+  if (congesBadgeEl) {
+    congesBadgeEl.textContent = pending.length;
+    congesBadgeEl.style.display = pending.length > 0 ? 'inline' : 'none';
+  }
+  if (congesEl) {
+    if (pending.length === 0) {
+      congesEl.innerHTML = '<p style="color:var(--text2);font-size:12px">Aucune demande en attente</p>';
+    } else {
+      // Grouper par spécialité
+      const bySpec = {};
+      pending.forEach(d => {
+        const ag = etab.agents.find(a => a.id === d.agentId);
+        const spec = ag ? ag.spec : '—';
+        if (!bySpec[spec]) bySpec[spec] = [];
+        bySpec[spec].push(d);
+      });
+      congesEl.innerHTML = Object.entries(bySpec).map(([spec, list]) =>
+        `<div style="margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase">${spec} · ${list.length} demande${list.length>1?'s':''}</div>
+          ${list.map(d => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)33">
+            <span style="font-size:12px;color:var(--text);font-weight:600">${d.agentNom}</span>
+            <span style="font-size:11px;color:var(--text2)">${d.type} · ${d.debut} → ${d.fin}</span>
+          </div>`).join('')}
+        </div>`
+      ).join('');
+    }
+  }
 }
 
 // ============================================================
@@ -4482,46 +4521,111 @@ function updateCongesBadge() {
     badge.textContent = pending;
     badge.style.display = pending > 0 ? 'inline' : 'none';
   }
+  const dashBadge = document.getElementById('dash-conges-badge');
+  if (dashBadge) {
+    dashBadge.textContent = pending;
+    dashBadge.style.display = pending > 0 ? 'inline' : 'none';
+  }
 }
 
-function openCongesValidation() {
+let _congesSpecFilter = '';
+
+function openCongesValidation(specFilter) {
+  if (specFilter !== undefined) _congesSpecFilter = specFilter;
   const etab = getEtab();
   if (!etab) return;
-  const demandes = (etab.demandesConges || []).slice().reverse();
+
+  const listEl = document.getElementById('conges-list');
+  listEl.innerHTML = '<p style="color:var(--text2);text-align:center;padding:16px">⏳ Actualisation…</p>';
+  openModal('modal-conges');
+
+  // Refresh depuis Supabase avant d'afficher
+  const etabId = DB.currentEtab || ETAB_ID;
+  supaLoadEtab(etabId).then(function(fresh) {
+    if (fresh) {
+      DB.etablissements[etabId] = fresh;
+      saveToStorage();
+      updateCongesBadge();
+    }
+    _renderCongesModal();
+  }).catch(function() { _renderCongesModal(); });
+}
+
+function _renderCongesModal() {
+  const etab = getEtab();
+  if (!etab) return;
   const listEl = document.getElementById('conges-list');
 
-  if (demandes.length === 0) {
-    listEl.innerHTML = '<p style="color:var(--text2);text-align:center;padding:24px">Aucune demande de congé</p>';
-  } else {
-    const statutColors = { en_attente:'#f59e0b', accepte:'#22c55e', refuse:'#ef4444' };
-    const statutLabels = { en_attente:'En attente', accepte:'Accepté', refuse:'Refusé' };
-    listEl.innerHTML = demandes.map((d, i) => {
-      const col = statutColors[d.statut] || '#6b7fa8';
-      const idx = (etab.demandesConges.length - 1) - i;
-      const nbJours = Math.ceil((new Date(d.fin) - new Date(d.debut)) / 86400000) + 1;
-      return `<div style="padding:14px;border-radius:12px;background:var(--bg3);margin-bottom:10px;border:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--text)">${d.agentNom}</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:2px">
-              <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${nbJours}j</strong>
-            </div>
-            ${d.motif ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic">"${d.motif}"</div>` : ''}
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">${new Date(d.createdAt).toLocaleString('fr-FR')}</div>
-          </div>
-          <span style="font-size:10px;font-weight:700;color:${col};padding:4px 10px;border-radius:10px;background:${col}20;flex-shrink:0">${statutLabels[d.statut]||d.statut}</span>
-        </div>
-        ${d.statut === 'en_attente' ? `
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-sm" onclick="repondreConge(${idx},'accepte')"
-            style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;flex:1">✓ Accepter</button>
-          <button class="btn btn-sm" onclick="repondreConge(${idx},'refuse')"
-            style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;flex:1">✗ Refuser</button>
-        </div>` : ''}
-      </div>`;
+  // Barre de filtres spécialité
+  const specs = [...new Set((etab.demandesConges || []).map(d => {
+    const ag = etab.agents.find(a => a.id === d.agentId);
+    return ag ? ag.spec : null;
+  }).filter(Boolean))].sort();
+
+  let filterBar = '';
+  if (specs.length > 1) {
+    const btns = [''].concat(specs).map(s => {
+      const active = _congesSpecFilter === s;
+      const pendingCount = (etab.demandesConges || []).filter(d => {
+        if (d.statut !== 'en_attente') return false;
+        if (!s) return true;
+        const ag = etab.agents.find(a => a.id === d.agentId);
+        return ag && ag.spec === s;
+      }).length;
+      return `<button onclick="_congesSpecFilter='${s}';_renderCongesModal()"
+        style="padding:5px 12px;border-radius:20px;border:1.5px solid ${active?'var(--accent)':'var(--border)'};
+        background:${active?'var(--accent)':'transparent'};color:${active?'#fff':'var(--text2)'};
+        font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">
+        ${s===''?'Toutes':s}${pendingCount>0?' <span style="background:#f76f6f;color:#fff;font-size:9px;padding:0 5px;border-radius:8px;font-weight:700">'+pendingCount+'</span>':''}
+      </button>`;
     }).join('');
+    filterBar = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${btns}</div>`;
   }
-  openModal('modal-conges');
+
+  let demandes = (etab.demandesConges || []).slice().reverse();
+  if (_congesSpecFilter) {
+    demandes = demandes.filter(d => {
+      const ag = etab.agents.find(a => a.id === d.agentId);
+      return ag && ag.spec === _congesSpecFilter;
+    });
+  }
+
+  if (demandes.length === 0) {
+    listEl.innerHTML = filterBar + '<p style="color:var(--text2);text-align:center;padding:24px">Aucune demande de congé</p>';
+    return;
+  }
+
+  const statutColors = { en_attente:'#f59e0b', accepte:'#22c55e', refuse:'#ef4444' };
+  const statutLabels = { en_attente:'En attente', accepte:'Accepté', refuse:'Refusé' };
+  const cards = demandes.map((d) => {
+    const idx = etab.demandesConges.indexOf(d);
+    const col = statutColors[d.statut] || '#6b7fa8';
+    const nbJours = Math.ceil((new Date(d.fin) - new Date(d.debut)) / 86400000) + 1;
+    const ag = etab.agents.find(a => a.id === d.agentId);
+    const specLabel = ag ? `<span style="font-size:10px;color:var(--accent);font-weight:700;margin-left:6px">${ag.spec}</span>` : '';
+    return `<div style="padding:14px;border-radius:12px;background:var(--bg3);margin-bottom:10px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${d.agentNom}${specLabel}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">
+            <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${nbJours}j</strong>
+          </div>
+          ${d.motif ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic">"${d.motif}"</div>` : ''}
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">${new Date(d.createdAt).toLocaleString('fr-FR')}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;color:${col};padding:4px 10px;border-radius:10px;background:${col}20;flex-shrink:0">${statutLabels[d.statut]||d.statut}</span>
+      </div>
+      ${d.statut === 'en_attente' ? `
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-sm" onclick="repondreConge(${idx},'accepte')"
+          style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;flex:1">✓ Accepter</button>
+        <button class="btn btn-sm" onclick="repondreConge(${idx},'refuse')"
+          style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;flex:1">✗ Refuser</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  listEl.innerHTML = filterBar + cards;
 }
 
 function repondreConge(index, statut) {
@@ -4557,7 +4661,7 @@ function repondreConge(index, statut) {
   renderPlanning();
   renderComptage();
   updateCongesBadge();
-  openCongesValidation(); // refresh
+  _renderCongesModal(); // refresh sans re-fetch Supabase
 }
 
 // ============================================================
