@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PlanniCare — Planning Établissements de Santé</title>
+<title>Horizon Planning — Planning Établissements de Santé</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1913,12 +1913,6 @@ table input:focus { border-color: var(--accent); }
     </div>
     <p style="color:#8892aa;font-size:12px;margin-bottom:12px" id="shift-modal-info"></p>
 
-    <!-- ABSENCES & CONGÉS DU MOIS -->
-    <div id="shift-absences-mois" style="margin-bottom:14px;display:none">
-      <div style="font-size:10px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Absences & Congés ce mois</div>
-      <div id="shift-absences-content" style="display:flex;flex-wrap:wrap;gap:4px"></div>
-    </div>
-
     <!-- SECTEUR CE JOUR -->
     <div id="shift-secteur-section" style="margin-bottom:16px;display:none">
       <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Secteur ce jour</div>
@@ -3278,10 +3272,6 @@ function renderPlanning() {
         '<div style="font-size:10px;display:flex;flex-wrap:wrap;gap:12px">' + alertesGroupe.join(' &nbsp;|&nbsp; ') + '</div></td></tr>';
     }
 
-    // Séparer équipe (L1) et contre-équipe (L2+) par ligneRoulement
-    const lignes = [...new Set(gAgents.map(a => a.ligneRoulement || 'L1'))].sort();
-    const hasMultiLignes = lignes.length > 1;
-
     // Fonction qui render les agents d'une sous-liste
     function renderAgentsList(agentsList) {
     agentsList.forEach(agent => {
@@ -3395,23 +3385,7 @@ function renderPlanning() {
     });
     } // fin renderAgentsList
 
-    if (hasMultiLignes) {
-      // Afficher une sous-section par ligne de roulement (équipe / contre-équipe)
-      lignes.forEach(function(ligne) {
-        const ligneAgents = gAgents.filter(a => (a.ligneRoulement || 'L1') === ligne);
-        if (ligneAgents.length === 0) return;
-        const isContreEquipe = ligne !== 'L1';
-        const ligneLabel = isContreEquipe ? 'Contre-équipe · ' + ligne : 'Équipe · ' + ligne;
-        const ligneBg = isContreEquipe ? 'rgba(247,169,79,0.07)' : 'rgba(79,142,247,0.06)';
-        const ligneColor = isContreEquipe ? 'var(--accent3)' : 'var(--accent)';
-        html += '<tr><td colspan="' + (daysInMonth + 3) + '" style="padding:3px 10px 3px 20px;background:' + ligneBg + ';border-top:1px solid var(--border)">' +
-          '<span style="font-size:10px;font-weight:700;color:' + ligneColor + ';letter-spacing:0.5px">' + ligneLabel + ' — ' + ligneAgents.length + ' agent' + (ligneAgents.length>1?'s':'') + '</span>' +
-          '</td></tr>';
-        renderAgentsList(ligneAgents);
-      });
-    } else {
-      renderAgentsList(gAgents);
-    }
+    renderAgentsList(gAgents);
   });
 
   html += '</tbody></table>';
@@ -3929,54 +3903,6 @@ function openShiftPicker(agentId, day) {
   openModal('modal-shift');
   resetSessionTimer();
 
-  // === ABSENCES & CONGÉS DU MOIS ===
-  const absSection = document.getElementById('shift-absences-mois');
-  const absContent = document.getElementById('shift-absences-content');
-  if (absSection && absContent && agent) {
-    const agPlanM = planMonth[agentId] || {};
-    // Codes absences/congés dynamiques depuis etab.horaires (tous sauf comptage=travail/repos pur)
-    const absHorMap = {};
-    (etab.horaires || []).forEach(h => {
-      if (h.comptage !== 'travail' && h.code !== 'R') {
-        absHorMap[h.code] = h.couleur || '#8892aa';
-      }
-    });
-    // Fallback codes fixes si non dans horaires
-    const absCodesLabel = absHorMap;
-    const absCouleurs = absHorMap;
-    // Grouper par code
-    const absByCode = {};
-    const daysInM = new Date(currentYear, currentMonth+1, 0).getDate();
-    for (let d2 = 1; d2 <= daysInM; d2++) {
-      const sh2 = agPlanM[d2] || '';
-      if (absHorMap[sh2]) {
-        if (!absByCode[sh2]) absByCode[sh2] = [];
-        absByCode[sh2].push(d2);
-      }
-    }
-    const entries = Object.entries(absByCode);
-    if (entries.length > 0) {
-      absContent.innerHTML = entries.map(([code, days]) => {
-        const col = absCouleurs[code] || '#888';
-        const ranges = [];
-        let start = days[0], prev = days[0];
-        for (let i = 1; i <= days.length; i++) {
-          if (i === days.length || days[i] !== prev + 1) {
-            ranges.push(start === prev ? start + '' : start + '→' + prev);
-            start = days[i]; prev = days[i];
-          } else { prev = days[i]; }
-        }
-        const absHor = (etab.horaires||[]).find(h => h.code === code);
-        const col2 = absHor ? (absHor.couleur || '#888') : '#888';
-        return '<span style="background:' + col2 + '22;color:' + col2 + ';border:1px solid ' + col2 + '55;border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;font-family:\'DM Mono\',monospace">' +
-          code + ' <span style="font-weight:400;font-size:10px">' + ranges.join(', ') + '</span>' +
-          '</span>';
-      }).join('');
-      absSection.style.display = 'block';
-    } else {
-      absSection.style.display = 'none';
-    }
-  }
 }
 
 function selectShiftCode(code, el) {
@@ -4829,30 +4755,28 @@ function renderAgents() {
     return;
   }
 
-  // Sinon → grouper par spécialité
-  const specOrder = (etab.specialites || []);
-  const bySpec = {};
+  // Sinon → grouper par Groupe (groupeRot), puis dans chaque groupe par spécialité
+  const byGroupe = {};
   agents.forEach(a => {
-    const sp = a.spec || '—';
-    if (!bySpec[sp]) bySpec[sp] = [];
-    bySpec[sp].push(a);
+    const g = a.groupeRot ? 'Groupe ' + a.groupeRot : 'Sans groupe';
+    if (!byGroupe[g]) byGroupe[g] = [];
+    byGroupe[g].push(a);
   });
 
-  // Ordre : spécialités dans l'ordre de etab.specialites, puis les autres
-  const specKeys = [
-    ...specOrder.filter(s => bySpec[s]),
-    ...Object.keys(bySpec).filter(s => !specOrder.includes(s)).sort()
-  ];
+  const groupeKeys = Object.keys(byGroupe).sort((a, b) => {
+    const na = parseInt(a.replace('Groupe ', '')) || 9999;
+    const nb = parseInt(b.replace('Groupe ', '')) || 9999;
+    return na - nb;
+  });
 
   let html = '';
-  specKeys.forEach(spec => {
-    const list = bySpec[spec];
+  groupeKeys.forEach(grp => {
+    const list = byGroupe[grp];
     if (!list || list.length === 0) return;
-    const specColor = getSpecColor(spec);
     html += `<div class="agent-spec-group">
       <div class="agent-spec-group-header">
-        <span style="width:12px;height:12px;border-radius:3px;background:${specColor};display:inline-block;flex-shrink:0"></span>
-        <span class="agent-spec-group-title" style="color:${specColor}">${spec}</span>
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block;flex-shrink:0"></span>
+        <span class="agent-spec-group-title" style="color:var(--accent)">${grp}</span>
         <span class="agent-spec-group-count">${list.length} agent${list.length>1?'s':''}</span>
       </div>
       <div class="agents-grid">
