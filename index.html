@@ -301,7 +301,7 @@ body {
 .agent-cell-poste {
   padding: 5px 8px; background: var(--bg2);
   position: sticky; left: 60px; z-index: 5;
-  min-width: 120px; max-width: 150px;
+  min-width: 150px; max-width: 150px; width: 150px;
   border-right: 1px solid var(--border);
 }
 .agent-cell-name { font-weight: 700; color: var(--text); font-size: 12px; }
@@ -2650,6 +2650,28 @@ function loadTheme() {
 
 // saveToStorage définie plus haut — version unique avec sync Supabase automatique
 
+function ensureDefaultHoraires(etab) {
+  if (!etab) return;
+  const DEFAULT_HORAIRES = [
+    { code: 'R',  label: 'Repos',            debut: '', fin: '', duree: 0,  presence: 0,  couleur: '#5a6480', comptage: 'repos' },
+    { code: 'RC', label: 'Repos Compens.',   debut: '', fin: '', duree: 0,  presence: 0,  couleur: '#4a5568', comptage: 'repos' },
+    { code: 'CA', label: 'Congé Annuel',     debut: '', fin: '', duree: 0,  presence: 10, couleur: '#f76f6f', comptage: 'presence', isConge: true },
+    { code: 'CF', label: 'Congé Fract.',     debut: '', fin: '', duree: 7,  presence: 7,  couleur: '#e879f9', comptage: 'presence', isConge: true },
+    { code: 'MO', label: 'Maladie Ord.',     debut: '', fin: '', duree: 0,  presence: 0,  couleur: '#94a3b8', comptage: 'absent' },
+    { code: 'EM', label: 'Enfant Malade',    debut: '', fin: '', duree: -7, presence: 0,  couleur: '#fb923c', comptage: 'absent', impactNegatif: true },
+    { code: 'AT', label: 'Accident Trav.',   debut: '', fin: '', duree: 0,  presence: 10, couleur: '#f59e0b', comptage: 'presence' },
+    { code: 'FO', label: 'Formation',        debut: '', fin: '', duree: 7,  presence: 7,  couleur: '#34d399', comptage: 'travail' },
+    { code: 'GR', label: 'Grève',            debut: '', fin: '', duree: 0,  presence: 0,  couleur: '#6b7280', comptage: 'absent' },
+  ];
+  if (!etab.horaires) etab.horaires = [];
+  DEFAULT_HORAIRES.forEach(def => {
+    if (!etab.horaires.find(h => h.code === def.code)) {
+      etab.horaires.push(def);
+    }
+  });
+  if (!etab.specRegles) etab.specRegles = {};
+}
+
 function getEtab() {
   if (DB.currentEtab && DB.etablissements[DB.currentEtab]) {
     return DB.etablissements[DB.currentEtab];
@@ -2698,8 +2720,15 @@ async function doLogin() {
   try {
     const fresh = await supaLoadEtab(etabId);
     if (fresh) {
+      // Préserver les specRegles locaux si plus récents (évite la perte après sync)
+      const localEtab = DB.etablissements[etabId];
+      if (localEtab && localEtab.specRegles && Object.keys(localEtab.specRegles).length > 0 &&
+          (!fresh.specRegles || Object.keys(fresh.specRegles).length === 0)) {
+        fresh.specRegles = localEtab.specRegles;
+      }
       DB.etablissements[etabId] = fresh;
       etab = fresh;
+      ensureDefaultHoraires(etab);
       saveToStorage();
       populateLoginEtabs();
       document.getElementById('login-etab').value = etabId;
@@ -3192,9 +3221,9 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row
-  let html = `<table class="planning-table" style="min-width:${180 + daysInMonth*38}px"><thead><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*38}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:120px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
+    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -3483,7 +3512,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
 
   // Header row
   let headerRow = '<tr style="background:#131928">';
-  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:180px;width:180px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
+  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:210px;width:210px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
   for (let d=1;d<=daysInMonth;d++) {
     const date = new Date(currentYear,currentMonth,d);
     const dow = date.getDay();
@@ -3504,7 +3533,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rowBg = color + '22';
     const labelBg = color + '30';
     html += '<tr style="border-bottom:1px solid #2a335033">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:180px;width:180px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const cnt = totalByCode[h.code][d]||0;
       const date = new Date(currentYear,currentMonth,d);
@@ -3524,7 +3553,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
     html += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:180px;width:180px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const date = new Date(currentYear,currentMonth,d);
@@ -3575,7 +3604,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   const today = new Date();
   const colWidth = 38;
-  const nameWidth = 220;
+  const nameWidth = 210;
 
   // Header row (aligned with planning columns)
   let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
@@ -5225,6 +5254,8 @@ function renderAffectationsList() {
 // ============================================================
 // QR CODES
 // ============================================================
+function generateAllQR() { renderQRPage(); showToast('QR codes générés ✓', 'success'); }
+
 function renderQRPage() {
   const etab = getEtab();
   if (!etab) return;
