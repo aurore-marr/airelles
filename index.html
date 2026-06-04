@@ -3221,9 +3221,9 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*38}px"><thead><tr>
+  let html = `<table class="planning-table" style="min-width:${218 + daysInMonth*38}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:1px solid var(--border)">Nom</th>`;
+    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -3336,7 +3336,7 @@ function renderPlanning() {
           '<span style="font-size:10px;font-weight:700;color:var(--text2)">' + (agent.id||'') + '</span>' +
         '</td>' +
         // Colonne Nom+Info
-        '<td class="agent-cell-poste" style="background:' + rowBgLine + ';border-right:1px solid var(--border)">' +
+        '<td class="agent-cell-poste" style="background:' + rowBgLine + ';border-right:3px solid var(--accent)">' +
           '<div style="font-weight:700;font-size:12px;color:var(--text)"><strong>' + agent.nom + '</strong> ' + (agent.prenom||'') + '</div>' +
           '<div style="font-size:10px;color:var(--text2);margin-top:1px">' + agent.spec + ' · ' + agent.taux + '%' +
             (agent.ligneRoulement ? ' · <span style="font-family:\'DM Mono\',monospace;color:var(--accent2)">' + agent.ligneRoulement + '</span>' : '') +
@@ -3512,7 +3512,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
 
   // Header row
   let headerRow = '<tr style="background:#131928">';
-  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:210px;width:210px;font-size:9px;color:#9aaabf;border-right:1px solid #2a3350;box-sizing:border-box;white-space:nowrap"></th>';
+  headerRow += '<th style="position:sticky;left:0;z-index:10;background:#131928;padding:3px 8px;text-align:left;min-width:218px;width:218px;font-size:9px;color:#9aaabf;border-right:3px solid var(--accent);box-sizing:border-box;white-space:nowrap"></th>';
   for (let d=1;d<=daysInMonth;d++) {
     const date = new Date(currentYear,currentMonth,d);
     const dow = date.getDay();
@@ -3533,7 +3533,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rowBg = color + '22';
     const labelBg = color + '30';
     html += '<tr style="border-bottom:1px solid #2a335033">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:218px;width:218px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:' + color + ';display:inline-block;flex-shrink:0"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const cnt = totalByCode[h.code][d]||0;
       const date = new Date(currentYear,currentMonth,d);
@@ -3553,7 +3553,7 @@ function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
     const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
     const req = sect.agentsRequisJour || 3;
     html += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:1px solid #2a3350;white-space:nowrap;min-width:210px;width:210px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
+    html += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;min-width:218px;width:218px;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±1 ±' + req + '</span></span></td>';
     for (let d=1;d<=daysInMonth;d++) {
       const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
       const date = new Date(currentYear,currentMonth,d);
@@ -3604,12 +3604,12 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   const today = new Date();
   const colWidth = 38;
-  const nameWidth = 210;
+  const nameWidth = 218;
 
   // Header row (aligned with planning columns)
   let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
   html += '<thead><tr>';
-  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:1px solid var(--border)">Vacataire</th>';
+  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -3630,7 +3630,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   vacDispo.forEach(vac => {
     const specColor = getSpecColor(vac.spec);
     html += '<tr style="background:var(--card)">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 10px;border-right:1px solid var(--border);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;border-bottom:1px solid var(--border)">';
+    html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;border-bottom:1px solid var(--border)">';
     html += '<div style="display:flex;align-items:center;gap:6px">';
     html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + (vac.prenom||'') + ' ' + vac.nom + '</span>';
     html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
@@ -5262,49 +5262,105 @@ function renderQRPage() {
   if (!etab) return;
   const grid = document.getElementById('qr-agents-grid');
 
-  // Un QR par spécialité
   const specs = etab.specialites || [];
   const baseUrl = window.location.href.split('?')[0];
   const specColors = { AS:'#4f8ef7', IDE:'#38d9a9', AMP:'#f7a94f', ASH:'#a07ee8', Nuit:'#6366f1', AUX:'#f76f6f' };
 
+  // URL universelle — pas de filtre spec, l'agent filtre lui-même sur la page
+  const universalUrl = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
+
   grid.innerHTML = `
-    <div style="margin-bottom:20px;padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border)">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">
-        ℹ️ Chaque QR code donne accès au planning de la spécialité correspondante.<br>
-        <span style="font-weight:400;color:var(--text3)">Les agents scannent le QR de leur spécialité, saisissent leur PIN (numéro de poste sur 4 chiffres) et voient leur planning.</span>
+    <div style="margin-bottom:24px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <span style="width:28px;height:28px;border-radius:8px;background:var(--accent)22;color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:16px">🔗</span>
+        QR Code Universel — À afficher pour tout le personnel
+      </div>
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+        <div style="background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(79,142,247,0.15)">
+          <div id="qr-universal" style="margin:0 auto 12px;width:180px;height:180px"></div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:12px;word-break:break-all;padding:0 4px;max-width:180px">${universalUrl}</div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="btn btn-primary btn-sm" onclick="downloadUniversalQR()">⬇️ Télécharger</button>
+            <button class="btn btn-secondary btn-sm" onclick="printUniversalQR()">🖨️ Imprimer</button>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">ℹ️ Comment ça marche</div>
+            <ol style="padding-left:18px;font-size:12px;color:var(--text2);line-height:1.8">
+              <li>L'agent scanne ce QR code avec son téléphone</li>
+              <li>Il choisit sa spécialité dans les filtres</li>
+              <li>Il sélectionne son nom dans la liste</li>
+              <li>Il saisit son PIN (numéro de poste sur 4 chiffres)</li>
+              <li>Il voit son planning du mois</li>
+            </ol>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Agents par spécialité</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${specs.map(spec => {
+                const color = specColors[spec] || '#4f8ef7';
+                const cnt = etab.agents.filter(a => a.actif && a.spec === spec).length;
+                return `<span style="display:inline-flex;align-items:center;gap:5px;background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:4px 10px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>
+                  <span style="font-weight:700;color:${color};font-size:12px">${spec}</span>
+                  <span style="font-size:11px;color:var(--text2)">${cnt} agent${cnt>1?'s':''}</span>
+                </span>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-width:100%">
-      ${specs.map(spec => {
-        const color = specColors[spec] || '#4f8ef7';
-        const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
-        const agentCount = etab.agents.filter(a => a.actif && a.spec === spec).length;
-        return `<div class="card" style="text-align:center;border-top:3px solid ${color}">
-          <div style="width:48px;height:48px;border-radius:14px;background:${color}22;color:${color};
-            display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;margin:0 auto 10px">
-            ${spec[0]}
-          </div>
-          <div style="font-weight:800;font-size:15px;color:var(--text)">${spec}</div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:12px">${agentCount} agent${agentCount>1?'s':''}</div>
-          <div id="qr-spec-${spec.replace(/\s/g,'_')}" style="margin:0 auto 12px;width:140px;height:140px"></div>
-          <div style="font-size:9px;color:var(--text3);margin-bottom:10px;word-break:break-all;padding:0 4px">${url}</div>
-          <div style="display:flex;gap:6px;justify-content:center">
-            <button class="btn btn-primary btn-sm" onclick="downloadSpecQR('${spec}')">⬇️ Télécharger</button>
-            <button class="btn btn-secondary btn-sm" onclick="printSpecQR('${spec}')">🖨️ Imprimer</button>
-          </div>
-        </div>`;
-      }).join('')}
+
+    <!-- QR par spécialité (optionnels, pour impression ciblée) -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <span>QR par spécialité</span>
+        <span style="font-size:10px;font-weight:400;color:var(--text3)">(optionnel — si vous souhaitez afficher un QR par service)</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-width:100%">
+        ${specs.map(spec => {
+          const color = specColors[spec] || '#4f8ef7';
+          const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
+          const agentCount = etab.agents.filter(a => a.actif && a.spec === spec).length;
+          return `<div class="card" style="text-align:center;border-top:3px solid ${color}">
+            <div style="width:40px;height:40px;border-radius:12px;background:${color}22;color:${color};
+              display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;margin:0 auto 8px">
+              ${spec[0]}
+            </div>
+            <div style="font-weight:800;font-size:14px;color:var(--text)">${spec}</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${agentCount} agent${agentCount>1?'s':''}</div>
+            <div id="qr-spec-${spec.replace(/\s/g,'_')}" style="margin:0 auto 10px;width:120px;height:120px"></div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:8px;word-break:break-all;padding:0 4px">${url}</div>
+            <div style="display:flex;gap:6px;justify-content:center">
+              <button class="btn btn-primary btn-sm" onclick="downloadSpecQR('${spec}')">⬇️</button>
+              <button class="btn btn-secondary btn-sm" onclick="printSpecQR('${spec}')">🖨️</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
 
-  // Générer les QR codes spécialités
+  // Générer le QR universel
   setTimeout(() => {
+    const uContainer = document.getElementById('qr-universal');
+    if (uContainer) {
+      uContainer.innerHTML = '';
+      try {
+        new QRCode(uContainer, { text: universalUrl, width: 180, height: 180, colorDark: '#0f1117', colorLight: '#ffffff' });
+      } catch(e) {
+        uContainer.innerHTML = `<div style="font-size:9px;color:var(--text2);padding:8px;word-break:break-all">${universalUrl}</div>`;
+      }
+    }
+    // Générer les QR spécialités
     specs.forEach(spec => {
       const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
       const container = document.getElementById('qr-spec-' + spec.replace(/\s/g,'_'));
       if (!container) return;
       container.innerHTML = '';
       try {
-        new QRCode(container, { text: url, width: 140, height: 140, colorDark: '#0f1117', colorLight: '#ffffff' });
+        new QRCode(container, { text: url, width: 120, height: 120, colorDark: '#0f1117', colorLight: '#ffffff' });
       } catch(e) {
         container.innerHTML = `<div style="font-size:9px;color:var(--text2);padding:8px;word-break:break-all">${url}</div>`;
       }
@@ -5356,6 +5412,36 @@ function renderQRPage() {
       }
     });
   }, 200);
+}
+
+function downloadUniversalQR() {
+  const container = document.getElementById('qr-universal');
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const etab = getEtab();
+  const a = document.createElement('a');
+  a.download = `QR_Planning_${etab?.nom || 'Universal'}.png`;
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+function printUniversalQR() {
+  const container = document.getElementById('qr-universal');
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const img = canvas.toDataURL();
+  const etab = getEtab();
+  const url = window.location.href.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
+    <h2>Planning — ${etab?.nom || ''}</h2>
+    <img src="${img}" style="width:240px;height:240px"><br>
+    <p style="font-size:13px;color:#333;margin-top:16px"><strong>Scannez ce QR code</strong> pour accéder à votre planning</p>
+    <p style="font-size:11px;color:#666;margin-top:6px">Choisissez votre spécialité, sélectionnez votre nom et saisissez votre PIN</p>
+    <p style="font-size:9px;color:#999;margin-top:12px">${url}</p>
+    <script>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
 }
 
 function downloadSpecQR(spec) {
