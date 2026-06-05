@@ -365,8 +365,7 @@ body {
   position: sticky; top: 0; z-index: 10;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-/* Sticky coin NOM+POSTE dans le thead : z-index plus élevé que les day-headers (10) */
-.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 30; background: var(--bg3); }
+.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 32; background: var(--bg3); }
 .agent-cell {
   padding: 5px 8px; background: var(--bg2);
   position: sticky; left: 0; z-index: 15;
@@ -994,6 +993,14 @@ table input:focus { border-color: var(--accent); }
 }
 .toast.show { display: flex; align-items: center; gap: 10px; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Details/Summary in dark shift modal */
+#modal-shift details { border:1px solid #2a3350; border-radius:8px; padding:4px 12px; background:#0f1117; }
+#modal-shift details[open] { padding-bottom:10px; }
+#modal-shift summary { list-style:none; outline:none; }
+#modal-shift summary::-webkit-details-marker { display:none; }
+#modal-shift summary::after { content:" ▸"; font-size:9px; }
+#modal-shift details[open] summary::after { content:" ▾"; }
 </style>
 </head>
 <body>
@@ -1247,13 +1254,6 @@ table input:focus { border-color: var(--accent); }
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(-1)">◀</button>
           <span class="month-label" id="month-label">—</span>
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(1)">▶</button>
-        </div>
-        <div style="width:1px;height:24px;background:var(--border)"></div>
-        <!-- Toggle vue quinzaine -->
-        <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
-          <button id="view-btn-mois" onclick="setPlanningView('mois')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s">Mois</button>
-          <button id="view-btn-q1" onclick="setPlanningView('q1')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.15s">1–15</button>
-          <button id="view-btn-q2" onclick="setPlanningView('q2')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.15s">16–fin</button>
         </div>
         <div style="width:1px;height:24px;background:var(--border)"></div>
         <!-- Filtres spécialité -->
@@ -1585,9 +1585,14 @@ table input:focus { border-color: var(--accent); }
             <button class="btn btn-primary btn-sm" onclick="saveSpecRegles()">💾 Enregistrer les règles spécialités</button>
           </div>
           <div class="config-section">
-            <div class="config-section-title">📅 Codes absences &amp; congés</div>
-            <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Les codes absence et congés sont gérés dans l'onglet <strong>Horaires</strong> — section « Codes absences &amp; congés ». Ils sont communs à tous vos établissements.</p>
-            <button class="btn btn-secondary btn-sm" onclick="switchConfigTab('horaires')">→ Aller à l'onglet Horaires</button>
+            <div class="config-section-title">📅 Codes d'absence</div>
+            <div id="absence-codes-list"></div>
+            <div class="flex gap-2 mt-2">
+              <input type="text" id="new-abs-code" placeholder="Code (ex: AM)" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
+              <input type="text" id="new-abs-label" placeholder="Libellé" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
+              <input type="number" id="new-abs-heures" placeholder="h" style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
+              <button class="btn btn-secondary btn-sm" onclick="addAbsCode()">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1655,8 +1660,7 @@ table input:focus { border-color: var(--accent); }
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div>
                 <div class="config-section-title" style="margin-bottom:2px">📅 Codes absences & congés</div>
-                <p style="font-size:11px;color:var(--text2);margin:0 0 4px 0">Ces codes remplacent un jour de travail par une absence. Paramétrable : nombre d'heures comptées, impact RH. <strong style="color:var(--accent)">CF = Congé de Fractionnement</strong> (pas Formation — la Formation est FO).</p>
-                <p style="font-size:11px;color:var(--accent3);margin:0;font-weight:600">⚠️ Ces codes sont communs à tous vos établissements du groupe Horizon Studio.</p>
+                <p style="font-size:11px;color:var(--text2);margin:0">Ces codes remplacent un jour de travail par une absence. Paramétrable : nombre d'heures comptées, impact RH. <strong style="color:var(--accent)">CF = Congé de Fractionnement</strong> (pas Formation — la Formation est FO).</p>
               </div>
             </div>
             <div id="cfg-absence-codes-list"></div>
@@ -2208,102 +2212,111 @@ table input:focus { border-color: var(--accent); }
       <span class="modal-title" id="shift-modal-title" style="color:#e8ecf4">Modifier le poste</span>
       <button class="modal-close" onclick="closeModal('modal-shift')" style="color:#8892aa">✕</button>
     </div>
-    <p style="color:#8892aa;font-size:12px;margin-bottom:12px" id="shift-modal-info"></p>
-
-    <!-- SECTEUR CE JOUR -->
-    <div id="shift-secteur-section" style="margin-bottom:16px;display:none">
-      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Secteur ce jour</div>
-      <div id="shift-secteur-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    </div>
+    <p style="color:#8892aa;font-size:12px;margin:0 0 14px 0" id="shift-modal-info"></p>
 
     <!-- HORAIRES DE TRAVAIL -->
-    <div style="margin-bottom:16px">
+    <div style="margin-bottom:14px">
       <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🕐 Horaires de travail</div>
       <div id="shift-travail-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
-    <!-- REPOS / RESET -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:#8892aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌙 Repos</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <!-- CONGÉS & DROITS -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Droits</div>
+      <div id="shift-conge-btns" style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px"></div>
+      <p style="font-size:10px;color:#5a6480;margin:8px 0 0 0">📅 Les jours fériés sont détectés automatiquement — pas besoin de saisir FE manuellement.</p>
+    </div>
+
+    <!-- ABSENCES -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:#8892aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🩺 Absences</div>
+      <div id="shift-absence-btns" style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px"></div>
+    </div>
+
+    <!-- REPOS -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:#5a6480;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌙 Repos</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px">
         <button onclick="selectShiftCode('R',this)" data-code="R"
-          style="padding:10px 16px;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
+          style="padding:10px 0;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:center;width:80px">
           <div>R</div><div style="font-size:9px;opacity:0.7;font-weight:400">Repos</div>
         </button>
         <button onclick="selectShiftCode('RC',this)" data-code="RC"
-          style="padding:10px 16px;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
-          <div>RC</div><div style="font-size:9px;opacity:0.7;font-weight:400">Repos Comp.</div>
+          style="padding:10px 0;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:center;width:80px">
+          <div>RC</div><div style="font-size:9px;opacity:0.7;font-weight:400">Récup.</div>
         </button>
       </div>
     </div>
 
-    <!-- JOUR DE REPOS TRAVAILLÉ (HS) -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚡ Jour de repos travaillé (HS)</div>
-      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">L'agent vient travailler sur son jour de repos.</div>
-      <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    </div>
-
-    <!-- MODIFICATEUR HORAIRE -->
-    <div style="margin-bottom:16px" id="shift-modificateur-section">
-      <div style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚡ Modificateur horaire</div>
-      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">Sur un jour travaillé normal — ajuste les heures comptées.</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div id="shift-mod-hs-wrap">
-          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:left;padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
-            <span>⚡</span> HEURES SUP
-          </button>
-          <div id="hs-hours-input" style="display:none;margin-top:6px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
-            <div style="font-size:11px;color:#8892aa;margin-bottom:6px">Dans quel horaire ?</div>
-            <div id="hs-horaire-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:12px;color:#8892aa">Heures sup :</span>
-              <select id="hs-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-                <option value="0.5">30 min</option><option value="1" selected>1h</option><option value="1.5">1h30</option>
-                <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-                <option value="3.5">3h30</option><option value="4">4h</option><option value="5">5h</option>
-                <option value="6">6h</option><option value="7">7h</option><option value="8">8h</option>
-              </select>
-              <span style="font-size:12px;color:#8892aa">en plus</span>
+    <!-- HS + MODIFICATEURS (section repliable) -->
+    <details style="margin-bottom:14px">
+      <summary style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;cursor:pointer;user-select:none;padding:6px 0">⚡ HS &amp; Modificateurs horaires</summary>
+      <div style="padding-top:10px">
+        <!-- JOUR DE REPOS TRAVAILLÉ (HS) -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Agent vient travailler sur son jour de repos :</div>
+          <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+        <!-- MODIFICATEUR HORAIRE -->
+        <div id="shift-modificateur-section">
+          <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Sur un jour travaillé — ajuste les heures comptées :</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div id="shift-mod-hs-wrap">
+              <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:left;padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
+                <span>⚡</span> HEURES SUP
+              </button>
+              <div id="hs-hours-input" style="display:none;margin-top:6px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+                <div style="font-size:11px;color:#8892aa;margin-bottom:6px">Dans quel horaire ?</div>
+                <div id="hs-horaire-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:12px;color:#8892aa">Heures sup :</span>
+                  <select id="hs-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                    <option value="0.5">30 min</option><option value="1" selected>1h</option><option value="1.5">1h30</option>
+                    <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+                    <option value="3.5">3h30</option><option value="4">4h</option><option value="5">5h</option>
+                    <option value="6">6h</option><option value="7">7h</option><option value="8">8h</option>
+                  </select>
+                  <span style="font-size:12px;color:#8892aa">en plus</span>
+                </div>
+              </div>
             </div>
+            <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+              <span>🏃</span> Départ anticipé
+            </button>
+            <div id="depart-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:12px;color:#8892aa">Heures retirées :</span>
+                <select id="depart-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                  <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
+                  <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+                  <option value="3.5">3h30</option><option value="4">4h</option>
+                </select>
+              </div>
+            </div>
+            <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+              <span>⏰</span> Retard
+            </button>
+            <div id="retard-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:12px;color:#8892aa">Durée retard :</span>
+                <select id="retard-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                  <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
+                  <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+                </select>
+              </div>
+            </div>
+            <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">
+              ✓ AUCUN MODIFICATEUR
+            </button>
           </div>
         </div>
-        <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
-          <span>🏃</span> Départ anticipé
-        </button>
-        <div id="depart-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350;display:none">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:12px;color:#8892aa">Heures retirées :</span>
-            <select id="depart-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-              <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
-              <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-              <option value="3.5">3h30</option><option value="4">4h</option>
-            </select>
-          </div>
-        </div>
-        <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
-          <span>⏰</span> Retard
-        </button>
-        <div id="retard-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350;display:none">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:12px;color:#8892aa">Durée retard :</span>
-            <select id="retard-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-              <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
-              <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-            </select>
-          </div>
-        </div>
-        <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">
-          ✓ AUCUN MODIFICATEUR
-        </button>
       </div>
-    </div>
+    </details>
 
-    <!-- CONGÉS & ABSENCES (regroupés) -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Absences</div>
-      <div id="shift-conge-btns" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"></div>
-      <div id="shift-absence-btns" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <!-- SECTEUR CE JOUR -->
+    <div id="shift-secteur-section" style="margin-bottom:14px;display:none">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Secteur ce jour</div>
+      <div id="shift-secteur-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
     <div class="flex gap-2 mt-4">
@@ -2541,7 +2554,6 @@ let DB = {
 
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let planningViewMode = 'mois'; // 'mois' | 'q1' (1-15) | 'q2' (16-fin)
 let currentVacWeek = new Date();
 let editingAgentId = null;
 let editingVacId = null;
@@ -3326,9 +3338,6 @@ function renderDashAstreintes() {
   if (!labelEl || !contentEl) return;
 
   const today = new Date();
-  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-  const lundiBase = new Date(today); lundiBase.setDate(today.getDate() - dow);
-
   const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   const getWeekNum = d => {
     const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -3338,21 +3347,25 @@ function renderDashAstreintes() {
     return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
   };
 
-  // Semaine ciblée par navigation
-  const lundi = new Date(lundiBase); lundi.setDate(lundiBase.getDate() + _dashAstrWeekOffset * 7);
-  const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
-  const wn = getWeekNum(lundi);
+  // Quinzaine : J0 = aujourd'hui, navigation par blocs de 15 jours
+  const debutBase = new Date(today);
+  debutBase.setDate(today.getDate() + _dashAstrWeekOffset * 15);
+  const finPeriode = new Date(debutBase);
+  finPeriode.setDate(debutBase.getDate() + 14);
+  const wn = getWeekNum(debutBase);
+  const wn2 = getWeekNum(finPeriode);
   const isCurrent = _dashAstrWeekOffset === 0;
-  labelEl.textContent = `S${wn} · ${fmt(lundi)} – ${fmt(dimanche)}`;
+  const wnLabel = wn === wn2 ? `S${wn}` : `S${wn}–${wn2}`;
+  labelEl.textContent = `${wnLabel} · ${fmt(debutBase)} – ${fmt(finPeriode)}`;
   labelEl.style.color = isCurrent ? 'var(--accent)' : 'var(--text2)';
 
   const astreintes = etab ? (etab.astreintes || []) : [];
-  const lundiStr = lundi.toISOString().slice(0,10);
-  const dimStr = dimanche.toISOString().slice(0,10);
-  const actives = astreintes.filter(a => a.debut <= dimStr && a.fin >= lundiStr);
+  const debutStr = debutBase.toISOString().slice(0,10);
+  const finStr = finPeriode.toISOString().slice(0,10);
+  const actives = astreintes.filter(a => a.debut <= finStr && a.fin >= debutStr);
 
   if (actives.length === 0) {
-    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:12px 0">Aucune astreinte cette semaine</p>';
+    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:12px 0">Aucune astreinte sur cette période</p>';
     return;
   }
 
@@ -3362,15 +3375,14 @@ function renderDashAstreintes() {
     'Organisation et Soins': 'Organisation et Soins', 'IDEC': 'Organisation et Soins',
     'Technique': 'Technique'
   };
+  // Couleurs originales (fond très légèrement teinté, comme image de référence)
   const typeStyles = {
-    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.12)',  border:'rgba(99,102,241,0.3)',  icon:'🏛️' },
-    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
-    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.12)',  border:'rgba(247,169,79,0.3)',  icon:'🔧' }
+    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.10)',  border:'rgba(99,102,241,0.25)',  icon:'🏛️' },
+    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.10)',  border:'rgba(79,142,247,0.25)',  icon:'🩺' },
+    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.10)',  border:'rgba(247,169,79,0.25)',  icon:'🔧' }
   };
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
 
-  // Grouper par type canonique — préférer l'astreinte qui démarre dans la semaine
-  // (pas celle qui finit juste le lundi = semaine précédente chevauchante)
   const byCanonical = {};
   actives.forEach(a => {
     const canon = canonicalType[a.type] || a.type;
@@ -3378,14 +3390,11 @@ function renderDashAstreintes() {
     if (!existing) {
       byCanonical[canon] = a;
     } else {
-      // Préférer celle dont le début est dans la semaine courante
-      const aStartsInWeek = a.debut >= lundiStr;
-      const existingStartsInWeek = existing.debut >= lundiStr;
-      if (aStartsInWeek && !existingStartsInWeek) {
-        byCanonical[canon] = a; // la nouvelle commence cette semaine → priorité
-      }
-      // Si les deux commencent cette semaine, garder la plus récente
-      else if (aStartsInWeek && existingStartsInWeek && a.debut > existing.debut) {
+      const aStartsInPeriod = a.debut >= debutStr;
+      const existingStartsInPeriod = existing.debut >= debutStr;
+      if (aStartsInPeriod && !existingStartsInPeriod) {
+        byCanonical[canon] = a;
+      } else if (aStartsInPeriod && existingStartsInPeriod && a.debut > existing.debut) {
         byCanonical[canon] = a;
       }
     }
@@ -3394,7 +3403,7 @@ function renderDashAstreintes() {
   const cards = typeOrder.map(type => {
     const a = byCanonical[type];
     if (!a) return '';
-    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
+    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.08)', border:'rgba(128,128,128,0.18)', icon:'🔔' };
     const d1str = fmt(new Date(a.debut + 'T00:00:00'));
     const d2str = fmt(new Date(a.fin + 'T00:00:00'));
     return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
@@ -3405,7 +3414,7 @@ function renderDashAstreintes() {
     </div>`;
   }).filter(Boolean).join('');
 
-  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucun</p>'}</div>`;
+  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucune astreinte</p>'}</div>`;
 }
 
 function renderDashboard() {
@@ -3795,8 +3804,6 @@ function renderPlanning() {
   document.getElementById('month-label-2').textContent = getMonthLabel();
 
   const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
-  const { startDay, endDay } = getPlanningDayRange();
-  const nbDaysShown = endDay - startDay + 1;
   const filterSect = document.getElementById('filter-secteur')?.value || '';
   const filterTxt = (document.getElementById('filter-agent')?.value || '').toLowerCase();
   const today = new Date();
@@ -3812,10 +3819,10 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + nbDaysShown*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
-  for (let d = startDay; d <= endDay; d++) {
+  for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
     const isWE = dow === 0 || dow === 6;
@@ -3849,8 +3856,8 @@ function renderPlanning() {
     const gAgents = groupes[gKey];
     // Séparateur de groupe principal
     const nbActifsGroupe = gAgents.filter(a => a.actif).length;
-    html += '<tr style="position:relative">' +
-      '<td colspan="2" style="position:sticky;left:0;z-index:8;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap">' +
+    html += '<tr>' +
+      '<td colspan="2" style="position:sticky;left:0;z-index:20;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap"> +
         '<span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ' + gKey + ' — ' + nbActifsGroupe + ' agent' + (nbActifsGroupe>1?'s':'') + '</span>' +
       '</td>' +
       '<td colspan="' + (daysInMonth + 1) + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
@@ -3953,7 +3960,7 @@ function renderPlanning() {
           '</span>' +
         '</td>';
 
-      for (let d = startDay; d <= endDay; d++) {
+      for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYear, currentMonth, d);
         const dow = date.getDay();
         const isWE = dow === 0 || dow === 6;
@@ -4050,7 +4057,7 @@ function renderPlanning() {
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
     const horPart = etab.horaires
-      .filter(h => h.comptage === 'travail' && !['AT','FO','FO2'].includes(h.code) && !h.isConge)
+      .filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
       .map(h => {
         const pauses = h.pauses || [];
         const totalPause = pauses.reduce((s,p) => s+(parseFloat(p.duree)||0), 0);
@@ -4168,8 +4175,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
   html += '<thead><tr>';
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
-  const { startDay: vsD, endDay: veD } = getPlanningDayRange();
-  for (let d = vsD; d <= veD; d++) {
+  for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
     const isWE = dow === 0 || dow === 6;
@@ -4196,7 +4202,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
     html += '</div></td>';
 
     let nbDispo = 0;
-    for (let d = vsD; d <= veD; d++) {
+    for (let d = 1; d <= daysInMonth; d++) {
       const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       const st = (etab.vacDispos[vac.id]||{})[dk];
       const date = new Date(currentYear, currentMonth, d);
@@ -4269,29 +4275,6 @@ function changeMonth(delta) {
   autoFillIfEmpty();
   renderPlanning();
   renderComptage();
-}
-
-function setPlanningView(mode) {
-  planningViewMode = mode;
-  ['mois','q1','q2'].forEach(m => {
-    const btn = document.getElementById('view-btn-' + m);
-    if (!btn) return;
-    if (m === mode) {
-      btn.style.background = 'var(--accent)';
-      btn.style.color = '#fff';
-    } else {
-      btn.style.background = 'transparent';
-      btn.style.color = 'var(--text2)';
-    }
-  });
-  renderPlanning();
-}
-
-function getPlanningDayRange() {
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  if (planningViewMode === 'q1') return { startDay: 1, endDay: 15 };
-  if (planningViewMode === 'q2') return { startDay: 16, endDay: daysInMonth };
-  return { startDay: 1, endDay: daysInMonth };
 }
 
 function autoFillIfEmpty() {
@@ -4449,7 +4432,7 @@ function openShiftPicker(agentId, day) {
 
   // === HORAIRES DE TRAVAIL ===
   const travailCodes = etab.horaires.filter(h => 
-    h.comptage === 'travail' && !h.isConge && !['CA','CF','FO','AT','GR','RC','MO','EM','AM','CP'].includes(h.code)
+    h.comptage === 'travail' || ['M','S','J','NU','N'].includes(h.code)
   ).filter(h => !h.code.startsWith('HS'));
   const travailBtns = document.getElementById('shift-travail-btns');
   travailBtns.innerHTML = travailCodes.map(h => {
@@ -4482,12 +4465,13 @@ function openShiftPicker(agentId, day) {
   const congeBtns = document.getElementById('shift-conge-btns');
   congeBtns.innerHTML = congesCodes.map(h => {
     const isActive = currentShift === h.code;
+    const shortLabel = (h.label||'').replace('Congé ','').replace('Congé','').trim().toUpperCase().slice(0,6);
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
       style="padding:10px 0;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
       background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
-      font-size:13px;font-weight:800;cursor:pointer;width:80px;min-width:80px;max-width:80px;text-align:center;box-sizing:border-box">
+      font-size:14px;font-weight:800;cursor:pointer;width:80px;text-align:center;box-sizing:border-box">
       <div>${h.code}</div>
-      <div style="font-size:9px;opacity:0.7;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px">${h.label||''}</div>
+      <div style="font-size:9px;font-weight:600;opacity:0.85;margin-top:2px">${shortLabel}</div>
     </button>`;
   }).join('');
 
@@ -4507,12 +4491,13 @@ function openShiftPicker(agentId, day) {
   absenceBtns.innerHTML = [...absenceCodes, ...absenceCodesExtra].map(h => {
     const isActive = currentShift === h.code;
     const col = h.couleur || '#8892aa';
+    const shortLabel = (h.label||'').split(' ').slice(0,2).join(' ').toUpperCase().slice(0,8);
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
-      style="padding:10px 14px;border-radius:8px;border:2px solid ${isActive ? col : col+'44'};
+      style="padding:10px 0;border-radius:8px;border:2px solid ${isActive ? col : col+'44'};
       background:${isActive ? col+'22' : '#1e2538'};color:${col};
-      font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center;min-width:80px">
-      <div style="font-size:13px;font-weight:800">${h.code}</div>
-      <div style="font-size:9px;opacity:0.8">${h.label||''}</div>
+      font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;text-align:center;width:80px;box-sizing:border-box">
+      <div>${h.code}</div>
+      <div style="font-size:9px;font-weight:600;opacity:0.85;margin-top:2px">${shortLabel}</div>
     </button>`;
   }).join('');
 
