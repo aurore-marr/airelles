@@ -396,8 +396,10 @@ body {
 }
 
 .day-header { cursor: default; min-width:46px; width:46px; max-width:46px; }
-.day-header.weekend { background: rgba(247,169,79,0.1) !important; }
-.day-header.today { background: rgba(79,142,247,0.15) !important; color: var(--accent) !important; }
+.day-header.weekend { background: var(--bg3) !important; border-bottom: 3px solid rgba(247,169,79,0.55) !important; }
+.day-header.today { background: var(--bg3) !important; border-bottom: 3px solid var(--accent) !important; color: var(--accent) !important; }
+.light .day-header.weekend { background: #fef9f0 !important; border-bottom: 3px solid rgba(217,119,6,0.45) !important; }
+.light .day-header.today { background: #eff6ff !important; border-bottom: 3px solid var(--accent) !important; }
 
 .shift-cell {
   width: 46px; min-width: 46px; max-width: 46px;
@@ -2204,7 +2206,7 @@ table input:focus { border-color: var(--accent); }
       <span class="modal-title" id="shift-modal-title" style="color:#e8ecf4">Modifier le poste</span>
       <button class="modal-close" onclick="closeModal('modal-shift')" style="color:#8892aa">✕</button>
     </div>
-    <p style="color:#8892aa;font-size:12px;margin:0 0 14px 0" id="shift-modal-info"></p>
+    <p style="color:#8892aa;font-size:12px;margin:0 0 12px 0" id="shift-modal-info"></p>
 
     <!-- HORAIRES DE TRAVAIL -->
     <div style="margin-bottom:14px">
@@ -2212,11 +2214,11 @@ table input:focus { border-color: var(--accent); }
       <div id="shift-travail-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
-    <!-- CONGES & DROITS -->
+    <!-- CONGÉS & DROITS -->
     <div style="margin-bottom:14px">
       <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés &amp; Droits</div>
       <div id="shift-conge-btns" style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px"></div>
-      <p style="font-size:10px;color:#5a6480;margin:8px 0 0 0">📅 Les jours fériés sont détectés automatiquement.</p>
+      <p style="font-size:10px;color:#5a6480;margin:6px 0 0 0">📅 Les jours fériés sont détectés automatiquement — pas besoin de saisir FE manuellement.</p>
     </div>
 
     <!-- ABSENCES -->
@@ -2225,95 +2227,84 @@ table input:focus { border-color: var(--accent); }
       <div id="shift-absence-btns" style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px"></div>
     </div>
 
-    <!-- REPOS -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:10px;font-weight:700;color:#5a6480;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌙 Repos</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px">
-        <button onclick="selectShiftCode('R',this)" data-code="R"
-          style="padding:10px 0;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:center;width:80px">
-          <div>R</div><div style="font-size:9px;opacity:0.7;font-weight:400">Repos</div>
-        </button>
-        <button onclick="selectShiftCode('RC',this)" data-code="RC"
-          style="padding:10px 0;border-radius:8px;border:2px solid #2a335044;background:#1e2538;color:#8892aa;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:center;width:80px">
-          <div>RC</div><div style="font-size:9px;opacity:0.7;font-weight:400">Récup.</div>
-        </button>
-      </div>
-    </div>
-
-    <!-- HS + MODIFICATEURS (section repliable) -->
-    <details style="margin-bottom:14px;border:1px solid #2a3350;border-radius:8px;padding:4px 12px;background:#0f1117">
-      <summary style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;cursor:pointer;user-select:none;padding:6px 0;list-style:none;outline:none">⚡ HS &amp; Modificateurs horaires ▸</summary>
-      <div style="padding-top:10px">
-        <div style="margin-bottom:12px">
-          <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Agent vient travailler sur son jour de repos :</div>
-          <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-        </div>
-        <div id="shift-modificateur-section">
-          <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Sur un jour travaillé — ajuste les heures comptées :</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div id="shift-mod-hs-wrap">
-              <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:left;padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">
-                <span>⚡</span> HEURES SUP
-              </button>
-              <div id="hs-hours-input" style="display:none;margin-top:6px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
-                <div style="font-size:11px;color:#8892aa;margin-bottom:6px">Dans quel horaire ?</div>
-                <div id="hs-horaire-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-size:12px;color:#8892aa">Heures sup :</span>
-                  <select id="hs-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-                    <option value="0.5">30 min</option><option value="1" selected>1h</option><option value="1.5">1h30</option>
-                    <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-                    <option value="3.5">3h30</option><option value="4">4h</option><option value="5">5h</option>
-                    <option value="6">6h</option><option value="7">7h</option><option value="8">8h</option>
-                  </select>
-                  <span style="font-size:12px;color:#8892aa">en plus</span>
-                </div>
-              </div>
-            </div>
-            <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
-              <span>🏃</span> Départ anticipé
-            </button>
-            <div id="depart-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:12px;color:#8892aa">Heures retirées :</span>
-                <select id="depart-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-                  <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
-                  <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-                  <option value="3.5">3h30</option><option value="4">4h</option>
-                </select>
-              </div>
-            </div>
-            <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
-              <span>⏰</span> Retard
-            </button>
-            <div id="retard-hours-input" style="display:none;margin-top:4px;padding:10px 14px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:12px;color:#8892aa">Durée retard :</span>
-                <select id="retard-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
-                  <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
-                  <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
-                </select>
-              </div>
-            </div>
-            <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">
-              ✓ AUCUN MODIFICATEUR
-            </button>
-          </div>
-        </div>
-      </div>
-    </details>
-
     <!-- SECTEUR CE JOUR -->
     <div id="shift-secteur-section" style="margin-bottom:14px;display:none">
       <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📍 Secteur ce jour</div>
       <div id="shift-secteur-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
+    <!-- MODIFICATEUR HORAIRE (HS / départ / retard) — section complète -->
+    <div style="margin-bottom:14px;border:1px solid #2a3350;border-radius:10px;padding:10px 12px;background:#0a0e1a" id="shift-modificateur-section">
+      <div style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">⚡ Modificateur horaire (HS / départ anticipé / retard)</div>
+      <div style="font-size:10px;color:#5a6480;margin-bottom:10px">S'ajoute ou se retire des heures calculées du code sélectionné.</div>
+
+      <!-- HS REPOS TRAVAILLÉ -->
+      <div style="margin-bottom:10px">
+        <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- BOUTONS MODIFICATEUR -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <div id="shift-mod-hs-wrap" style="flex:1;min-width:120px">
+          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #38d9a944;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+            + HEURES SUP
+          </button>
+          <div id="hs-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+            <div style="font-size:11px;color:#8892aa;margin-bottom:6px">Dans quel horaire ?</div>
+            <div id="hs-horaire-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:#8892aa">Durée :</span>
+              <select id="hs-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                <option value="0.5">30 min</option><option value="1" selected>1h</option><option value="1.5">1h30</option>
+                <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+                <option value="3.5">3h30</option><option value="4">4h</option><option value="5">5h</option>
+                <option value="6">6h</option><option value="7">7h</option><option value="8">8h</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+            DÉPART ANTICIPÉ
+          </button>
+          <div id="depart-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:#8892aa">Retirer :</span>
+              <select id="depart-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
+                <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+                <option value="3.5">3h30</option><option value="4">4h</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+            RETARD
+          </button>
+          <div id="retard-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:#8892aa">Durée :</span>
+              <select id="retard-nb-heures" style="background:#0f1117;border:1px solid #2a3350;border-radius:6px;padding:6px 10px;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none">
+                <option value="0.5">30 min</option><option value="1">1h</option><option value="1.5">1h30</option>
+                <option value="2">2h</option><option value="2.5">2h30</option><option value="3">3h</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+            AUCUN
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="flex gap-2 mt-4">
-      <button class="btn btn-danger btn-sm" onclick="clearShiftDay()" style="background:#1e2538;color:#f76f6f;border:1px solid #f76f6f44">— Effacer ce jour —</button>
+      <button class="btn btn-danger btn-sm" onclick="clearShiftDay()" style="background:#1e2538;color:#f76f6f;border:1px solid #f76f6f44">— EFFACER CE JOUR —</button>
       <div style="flex:1"></div>
-      <button class="btn btn-secondary" onclick="closeModal('modal-shift')" style="background:#1e2538;border-color:#2a3350;color:#8892aa">✕ Fermer</button>
-      <button class="btn btn-primary" onclick="applyShift()" style="background:linear-gradient(135deg,#4f8ef7,#38d9a9);color:#fff;border:none;font-weight:700">✓ Valider</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-shift')" style="background:#1e2538;border-color:#2a3350;color:#8892aa">✕ FERMER</button>
+      <button class="btn btn-primary" onclick="applyShift()" style="background:linear-gradient(135deg,#4f8ef7,#38d9a9);color:#fff;border:none;font-weight:700">✓ VALIDER</button>
     </div>
   </div>
 </div>
@@ -2672,7 +2663,7 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 
 window.onload = async function() {
   loadTheme();
-  if (checkQRView()) return; // Vue QR : ne pas continuer vers l'écran de login
+  if (checkQRView()) return;
 
   // ── Afficher un indicateur de chargement dans le dropdown ──
   const sel = document.getElementById('login-etab');
@@ -2860,7 +2851,7 @@ function checkQRView() {
 
     qrPopulateAgentSelect(etab, specFilter);
   });
-  return true; // indique à window.onload qu'on est en mode QR
+  return true;
 }
 
 // ── Charger un établissement depuis Supabase ──
@@ -3312,7 +3303,7 @@ function secteurCouleurCSS(sect) {
 // ============================================================
 // DASHBOARD
 // ============================================================
-let _dashAstrWeekOffset = 0; // 0 = période courante, ±N = N quinzaines
+let _dashAstrWeekOffset = 0; // 0 = semaine courante
 
 function dashAstrNav(delta) {
   _dashAstrWeekOffset += delta;
@@ -3328,6 +3319,9 @@ function renderDashAstreintes() {
   if (!labelEl || !contentEl) return;
 
   const today = new Date();
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const lundiBase = new Date(today); lundiBase.setDate(today.getDate() - dow);
+
   const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   const getWeekNum = d => {
     const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -3337,25 +3331,22 @@ function renderDashAstreintes() {
     return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
   };
 
-  // Quinzaine : navigation par blocs de 15 jours depuis aujourd'hui
-  const debutBase = new Date(today);
-  debutBase.setDate(today.getDate() + _dashAstrWeekOffset * 15);
-  const finPeriode = new Date(debutBase);
-  finPeriode.setDate(debutBase.getDate() + 14);
-  const wn = getWeekNum(debutBase);
-  const wn2 = getWeekNum(finPeriode);
+  // 2 semaines : semaine S + semaine S+1, navigation par offset
+  const lundi = new Date(lundiBase); lundi.setDate(lundiBase.getDate() + _dashAstrWeekOffset * 7);
+  const dimanche2 = new Date(lundi); dimanche2.setDate(lundi.getDate() + 13); // +13 = 2 semaines
+  const wn = getWeekNum(lundi);
+  const wn2 = getWeekNum(dimanche2);
   const isCurrent = _dashAstrWeekOffset === 0;
-  const wnLabel = wn === wn2 ? `S${wn}` : `S${wn}–${wn2}`;
-  labelEl.textContent = `${wnLabel} · ${fmt(debutBase)} – ${fmt(finPeriode)}`;
+  labelEl.textContent = `S${wn}–S${wn2} · ${fmt(lundi)} – ${fmt(dimanche2)}`;
   labelEl.style.color = isCurrent ? 'var(--accent)' : 'var(--text2)';
 
   const astreintes = etab ? (etab.astreintes || []) : [];
-  const debutStr = debutBase.toISOString().slice(0,10);
-  const finStr = finPeriode.toISOString().slice(0,10);
-  const actives = astreintes.filter(a => a.debut <= finStr && a.fin >= debutStr);
+  const lundiStr = lundi.toISOString().slice(0,10);
+  const dimStr = dimanche2.toISOString().slice(0,10);
+  const actives = astreintes.filter(a => a.debut <= dimStr && a.fin >= lundiStr);
 
   if (actives.length === 0) {
-    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:12px 0">Aucune astreinte sur cette période</p>';
+    contentEl.innerHTML = '<p style="color:var(--text3);font-size:11px;text-align:center;padding:12px 0">Aucune astreinte sur ces 2 semaines</p>';
     return;
   }
 
@@ -3372,7 +3363,7 @@ function renderDashAstreintes() {
   };
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
 
-  // Grouper par type canonique — préférer l'astreinte qui démarre dans la période
+  // Grouper par type canonique
   const byCanonical = {};
   actives.forEach(a => {
     const canon = canonicalType[a.type] || a.type;
@@ -3380,8 +3371,8 @@ function renderDashAstreintes() {
     if (!existing) {
       byCanonical[canon] = a;
     } else {
-      const aStartsInPeriod = a.debut >= debutStr;
-      const existingStartsInPeriod = existing.debut >= debutStr;
+      const aStartsInPeriod = a.debut >= lundiStr;
+      const existingStartsInPeriod = existing.debut >= lundiStr;
       if (aStartsInPeriod && !existingStartsInPeriod) {
         byCanonical[canon] = a;
       } else if (aStartsInPeriod && existingStartsInPeriod && a.debut > existing.debut) {
@@ -3439,50 +3430,12 @@ function renderDashboard() {
   const specList = etab.specialites || [];
   const agentsActifs = etab.agents.filter(a => a.actif);
   const todayD = today.getDate();
-
-  // Agents actifs par spécialité
-  const specAgentsCount = {};
-  agentsActifs.forEach(a => { specAgentsCount[a.spec] = (specAgentsCount[a.spec]||0) + 1; });
-  const agentsSpecHTML = specList.map(sp => {
-    const cnt = specAgentsCount[sp] || 0;
-    return `<span style="font-size:11px;color:var(--text2)">${sp} <strong style="color:var(--text)">${cnt}</strong></span>`;
-  }).join('<span style="color:var(--border);margin:0 4px">·</span>');
-
-  // Présents par spécialité
-  const specPresentCount = {};
-  agentsActifs.forEach(a => {
-    const sh = (planMonth[a.id]||{})[todayD]||'';
-    if (_codesWork.includes(sh)) specPresentCount[a.spec] = (specPresentCount[a.spec]||0) + 1;
-  });
-  const presentSpecHTML = specList.map(sp => {
-    const cnt = specPresentCount[sp] || 0;
-    if (cnt === 0) return `<span style="font-size:11px;color:var(--text3)">${sp} <strong>0</strong></span>`;
-    return `<span style="font-size:11px;color:var(--text2)">${sp} <strong style="color:var(--text)">${cnt}</strong></span>`;
-  }).join('<span style="color:var(--border);margin:0 4px">·</span>');
-
-  // Absents par spécialité
-  const specAbsCount = {};
-  agentsActifs.forEach(a => {
-    const sh = (planMonth[a.id]||{})[todayD]||'';
-    if (_codesAbs.includes(sh)) specAbsCount[a.spec] = (specAbsCount[a.spec]||0) + 1;
-  });
-  const absSpecHTML = specList.map(sp => {
-    const cnt = specAbsCount[sp] || 0;
-    if (cnt === 0) return '';
-    return `<span style="font-size:11px;color:var(--text3)">${sp} <strong style="color:var(--accent4)">${cnt}</strong></span>`;
-  }).filter(Boolean).join('<span style="color:var(--border);margin:0 4px">·</span>') || '<span style="font-size:11px;color:var(--text3)">—</span>';
-
-  // Repos par spécialité
-  const specReposCount = {};
-  agentsActifs.forEach(a => {
-    const sh = (planMonth[a.id]||{})[todayD]||'';
-    if (sh === 'R' || sh === 'RC' || sh === '') specReposCount[a.spec] = (specReposCount[a.spec]||0) + 1;
-  });
-  const reposSpecHTML = specList.map(sp => {
-    const cnt = specReposCount[sp] || 0;
-    if (cnt === 0) return '';
-    return `<span style="font-size:11px;color:var(--text3)">${sp} <strong>${cnt}</strong></span>`;
-  }).filter(Boolean).join('<span style="color:var(--border);margin:0 4px">·</span>') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+  const mkSpecLine = (countFn) => specList.map(sp => {
+    const cnt = agentsActifs.filter(a => a.spec === sp && countFn(a)).length;
+    return cnt > 0
+      ? `<span style="font-size:11px;color:var(--text2)">${sp} <strong style="color:var(--text)">${cnt}</strong></span>`
+      : `<span style="font-size:11px;color:var(--text3)">${sp} <strong>0</strong></span>`;
+  }).join('<span style="color:var(--border);margin:0 3px">·</span>');
 
   const reposTotal = agentsActifs.filter(a => { const sh=(planMonth[a.id]||{})[todayD]||''; return sh==='R'||sh==='RC'||sh===''; }).length;
 
@@ -3490,29 +3443,29 @@ function renderDashboard() {
     <div class="stat-card blue">
       <div class="stat-label">Agents actifs</div>
       <div class="stat-value">${totalAgents}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${agentsSpecHTML}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${mkSpecLine(()=>true)}</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Présents aujourd'hui</div>
       <div class="stat-value">${presentToday}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${presentSpecHTML}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${mkSpecLine(a => _codesWork.includes((planMonth[a.id]||{})[todayD]||''))}</div>
     </div>
     <div class="stat-card orange">
       <div class="stat-label">Absences aujourd'hui</div>
       <div class="stat-value">${_totalAbs}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${absSpecHTML}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${mkSpecLine(a => _codesAbs.includes((planMonth[a.id]||{})[todayD]||''))}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${
         Object.entries(_absMap).map(([k,v]) => {
           const _h = etab.horaires.find(h=>h.code===k);
           const _c = _h ? _h.couleur : '#888';
-          return '<span style="background:'+_c+'20;color:'+_c+';border:1px solid '+_c+'40;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+k+' <span style="font-size:10px;opacity:0.8">'+v+'</span></span>';
+          return '<span style="background:'+_c+'20;color:'+_c+';border:1px solid '+_c+'40;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+k+' '+v+'</span>';
         }).join('')
       }</div>
     </div>
     <div class="stat-card red">
       <div class="stat-label">En repos aujourd'hui</div>
       <div class="stat-value">${reposTotal}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${reposSpecHTML}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${mkSpecLine(a => { const sh=(planMonth[a.id]||{})[todayD]||''; return sh==='R'||sh==='RC'||sh===''; })}</div>
     </div>
   `;
 
@@ -4214,7 +4167,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   const nameWidth = 210;
 
   // Header row (aligned with planning columns)
-  let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
+  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
   html += '<thead><tr>';
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
   for (let d = 1; d <= daysInMonth; d++) {
@@ -9092,7 +9045,10 @@ function autoFillMonth() {
         shift = alts[0] || 'R';
       }
 
-      planMonth[agent.id][d] = shift;
+      // Ne pas écraser les jours déjà saisis manuellement
+      if (!planMonth[agent.id][d]) {
+        planMonth[agent.id][d] = shift;
+      }
     }
   });
 
@@ -9100,7 +9056,7 @@ function autoFillMonth() {
   renderPlanning();
   renderComptage();
   renderDashboard();
-  showToast('Planning généré — rotation sectorielle appliquée', 'success');
+  showToast('Planning généré — les saisies manuelles existantes ont été préservées', 'success');
 }
 
 // ============================================================
