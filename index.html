@@ -261,6 +261,9 @@ body {
 .sidebar.collapsed .etab-badge .etab-role { display: none; }
 .etab-badge-icon { display: none; font-size: 16px; }
 .sidebar.collapsed .etab-badge-icon { display: block; }
+.user-initials-badge { display: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
+.sidebar.collapsed .user-initials-badge { display: flex; }
+.sidebar.collapsed .etab-badge { flex-direction: column; gap: 4px; }
 
 .nav-section { padding: 0 12px; margin-bottom: 4px; }
 .sidebar.collapsed .nav-section { padding: 0 6px; }
@@ -1092,6 +1095,7 @@ table input:focus { border-color: var(--accent); }
       <span class="etab-badge-icon">🏥</span>
       <div class="etab-name" id="sb-etab-name">Établissement</div>
       <div class="etab-role" id="sb-user-name">Utilisateur</div>
+      <div class="user-initials-badge" id="sb-user-initials" title="Connecté">?</div>
       <div id="online-users-bar" style="display:none;margin-top:6px;padding:4px 8px;background:rgba(56,217,169,0.1);border:1px solid rgba(56,217,169,0.25);border-radius:6px;font-size:10px;color:#38d9a9">
         <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
       </div>
@@ -1305,7 +1309,7 @@ table input:focus { border-color: var(--accent); }
           <span>👥 Vacataires disponibles ce mois</span>
           <span id="planning-vac-badge" style="background:var(--accent2);color:#0f1117;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px"></span>
         </div>
-        <div style="overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
+        <div style="overflow-x:hidden;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
           <div id="planning-vac-container"></div>
         </div>
       </div>
@@ -2178,12 +2182,17 @@ table input:focus { border-color: var(--accent); }
 
 <!-- Modal Demandes de congés -->
 <div class="modal-backdrop" id="modal-conges">
-  <div class="modal" style="max-width:600px">
+  <div class="modal" style="max-width:700px">
     <div class="modal-header">
       <span class="modal-title">🌴 Demandes de congés</span>
       <button class="modal-close" onclick="closeModal('modal-conges')">✕</button>
     </div>
-    <div id="conges-list" style="max-height:450px;overflow-y:auto"></div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">
+      <button id="conges-tab-liste" class="tab active" onclick="switchCongesTab('liste')" style="font-size:12px;padding:5px 14px">📋 Liste</button>
+      <button id="conges-tab-calendrier" class="tab" onclick="switchCongesTab('calendrier')" style="font-size:12px;padding:5px 14px">📅 Vue par mois</button>
+    </div>
+    <div id="conges-list" style="max-height:480px;overflow-y:auto"></div>
+    <div id="conges-calendrier" style="max-height:480px;overflow-y:auto;display:none"></div>
     <div class="flex gap-2 mt-3">
       <button class="btn btn-secondary" onclick="closeModal('modal-conges')">Fermer</button>
     </div>
@@ -2732,6 +2741,9 @@ window.onload = async function() {
             document.getElementById('app').style.display = 'block';
             document.getElementById('sb-etab-name').textContent = etab.nom;
             document.getElementById('sb-user-name').textContent = loginOk.nom;
+            const _initials1 = ((loginOk.prenom||'')[0]||(loginOk.nom||'')[0]||'?').toUpperCase() + ((loginOk.nom||'')[0]||'').toUpperCase();
+            const _inEl1 = document.getElementById('sb-user-initials');
+            if (_inEl1) { _inEl1.textContent = _initials1; _inEl1.title = (loginOk.prenom||'') + ' ' + (loginOk.nom||''); }
             _sessionStart = sess.loginTime;
             _sessionWarningShown = false;
             _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
@@ -3104,6 +3116,9 @@ async function doLogin() {
 
   document.getElementById('sb-etab-name').textContent = etab.nom;
   document.getElementById('sb-user-name').textContent = login.nom;
+  const _initials2 = ((login.prenom||'')[0]||(login.nom||'')[0]||'?').toUpperCase() + ((login.nom||'')[0]||'').toUpperCase();
+  const _inEl2 = document.getElementById('sb-user-initials');
+  if (_inEl2) { _inEl2.textContent = _initials2; _inEl2.title = (login.prenom||'') + ' ' + (login.nom||''); }
 
   startSessionTimer();
   const _etabInit = getEtab();
@@ -4401,6 +4416,10 @@ function affecterVacataireJour(vacId, day, statut) {
     saveToStorage();
     showToast(`${vac.prenom||''} ${vac.nom} affecté(e) le ${day}/${currentMonth+1}`, 'success');
     renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
+    // Refresh aussi la vue Vacataires si elle est ouverte
+    if (document.getElementById('page-vacataires')?.classList.contains('active')) {
+      renderVacataires();
+    }
   }
 }
 
@@ -5065,6 +5084,124 @@ function openCongesValidation(specFilter) {
   }).catch(function() { _renderCongesModal(); });
 }
 
+
+let _congesActiveTab = 'liste';
+
+function switchCongesTab(tab) {
+  _congesActiveTab = tab;
+  document.getElementById('conges-tab-liste').className = 'tab' + (tab === 'liste' ? ' active' : '');
+  document.getElementById('conges-tab-calendrier').className = 'tab' + (tab === 'calendrier' ? ' active' : '');
+  document.getElementById('conges-list').style.display = tab === 'liste' ? 'block' : 'none';
+  document.getElementById('conges-calendrier').style.display = tab === 'calendrier' ? 'block' : 'none';
+  if (tab === 'calendrier') renderCongesCalendrier();
+}
+
+function renderCongesCalendrier() {
+  const etab = getEtab();
+  if (!etab) return;
+  const el = document.getElementById('conges-calendrier');
+  const demandes = (etab.demandesConges || []);
+  if (demandes.length === 0) {
+    el.innerHTML = '<p style="color:var(--text2);text-align:center;padding:24px">Aucune demande de congé</p>';
+    return;
+  }
+
+  // Grouper par mois (année-mois de début)
+  const byMonth = {};
+  demandes.forEach(d => {
+    const key = d.debut ? d.debut.substring(0, 7) : '?'; // YYYY-MM
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(d);
+  });
+
+  const monthKeys = Object.keys(byMonth).sort();
+  const statutColors = { en_attente: '#f59e0b', accepte: '#22c55e', refuse: '#ef4444' };
+  const statutLabels = { en_attente: '⏳', accepte: '✓', refuse: '✗' };
+  const fmtDate = s => s ? s.split('-').reverse().slice(0,2).join('/') : '?';
+  const fmtMonth = key => {
+    if (!key || key === '?') return 'Inconnu';
+    const [y, m] = key.split('-');
+    return new Date(y, parseInt(m)-1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  };
+
+  let html = '';
+  monthKeys.forEach(key => {
+    const items = byMonth[key];
+    const pending = items.filter(d => d.statut === 'en_attente').length;
+
+    // Regrouper agents pour ce mois
+    const agentMap = {};
+    items.forEach(d => {
+      const ag = etab.agents.find(a => a.id === d.agentId);
+      const spec = ag ? ag.spec : '?';
+      const agKey = d.agentId;
+      if (!agentMap[agKey]) agentMap[agKey] = { nom: d.agentNom, spec, demandes: [] };
+      agentMap[agKey].demandes.push(d);
+    });
+
+    html += `<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+        <span style="font-size:14px;font-weight:800;color:var(--accent)">📅 ${fmtMonth(key)}</span>
+        <span style="font-size:11px;color:var(--text2)">${items.length} demande${items.length>1?'s':''}</span>
+        ${pending > 0 ? `<span style="font-size:10px;font-weight:700;background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:6px">${pending} en attente</span>` : ''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--bg3)">
+            <th style="padding:6px 8px;text-align:left;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Agent</th>
+            <th style="padding:6px 8px;text-align:left;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Spéc.</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Période</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Type</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Jours</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Statut</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;text-transform:uppercase;color:var(--text2)">Demandé le</th>
+            <th style="padding:6px 8px;text-align:center;border:1px solid var(--border);font-size:10px;color:var(--text2)">Action</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    // Tri : en attente d'abord, puis par nom
+    const sortedItems = [...items].sort((a, b) => {
+      if (a.statut === 'en_attente' && b.statut !== 'en_attente') return -1;
+      if (b.statut === 'en_attente' && a.statut !== 'en_attente') return 1;
+      return (a.agentNom||'').localeCompare(b.agentNom||'');
+    });
+
+    sortedItems.forEach(d => {
+      const col = statutColors[d.statut] || '#6b7fa8';
+      const icon = statutLabels[d.statut] || '?';
+      const origIdx = etab.demandesConges.findIndex(x => x.id === d.id);
+      const nbJours = d.joursTravailles !== undefined ? d.joursTravailles
+        : (d.debut && d.fin ? Math.ceil((new Date(d.fin) - new Date(d.debut)) / 86400000) + 1 : '?');
+      const demandeLe = d.createdAt ? new Date(d.createdAt).toLocaleDateString('fr-FR') : '?';
+      const ag = etab.agents.find(a => a.id === d.agentId);
+      const spec = ag ? ag.spec : '?';
+      const specColor = { AS:'#4f8ef7', IDE:'#38d9a9', AUX:'#a78bfa', ASH:'#fb923c', AMP:'#f472b6' }[spec] || '#6b7fa8';
+
+      html += `<tr style="border-bottom:1px solid var(--border)22;background:${d.statut==='en_attente'?'rgba(245,158,11,0.04)':'transparent'}">
+        <td style="padding:6px 8px;border:1px solid var(--border);font-weight:700;color:var(--text)">${d.agentNom}</td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center"><span style="background:${specColor}22;color:${specColor};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${spec}</span></td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${fmtDate(d.debut)} → ${fmtDate(d.fin)}</td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-size:11px;font-weight:700;color:var(--accent4)">${d.type||'CA'}</td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-weight:800;color:var(--accent)">${nbJours}j</td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center"><span style="background:${col}22;color:${col};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">${icon} ${d.statut==='en_attente'?'Attente':d.statut==='accepte'?'Accepté':'Refusé'}</span></td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-size:10px;color:var(--text2)">${demandeLe}</td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center">
+          ${d.statut === 'en_attente' ? `
+          <div style="display:flex;gap:4px;justify-content:center">
+            <button onclick="repondreConge(${origIdx},'accepte');renderCongesCalendrier()" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:inherit">✓</button>
+            <button onclick="repondreConge(${origIdx},'refuse');renderCongesCalendrier()" style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:inherit">✗</button>
+          </div>` : '—'}
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  });
+
+  el.innerHTML = html;
+}
+
 function _renderCongesModal() {
   const etab = getEtab();
   if (!etab) return;
@@ -5713,8 +5850,10 @@ function renderAgents() {
         ${isInactifTab ? '<span class="tag tag-gray" style="margin-left:auto;flex-shrink:0">Inactif</span>' : ''}
       </div>
       <div class="agent-card-tags">
-        ${agent.secteurFixe ? `<span class="tag" style="background:${sectColor}22;color:${sectColor}">📍 ${agent.secteurFixe}</span>` : '<span class="tag tag-gray">Rotation</span>'}
-        ${agent.exclusHoraires?.length ? `<span class="tag tag-red">Excl. ${agent.exclusHoraires.join(',')}</span>` : ''}
+        ${agent.secteurFixe ? `<span class="tag" style="background:${sectColor}22;color:${sectColor}">📌 Fixe : ${agent.secteurFixe}</span>` : '<span class="tag tag-gray">🔄 Rotation</span>'}
+        ${agent.exclusHoraires?.length ? `<span class="tag tag-red">⛔ ${agent.exclusHoraires.join(',')}</span>` : ''}
+        ${(agent.exclusSecteurs||[]).length ? `<span class="tag" style="background:#f76f6f22;color:#f76f6f">🚫 ${agent.exclusSecteurs.join(',')}</span>` : ''}
+        ${(agent.joursOff||[]).length ? `<span class="tag" style="background:#8892aa22;color:#8892aa">🗓 ${(agent.joursOff||[]).map(j=>['Lu','Ma','Me','Je','Ve','Sa','Di'][j]).join(',')}</span>` : ''}
       </div>
       <div class="agent-card-stats">
         <div class="agent-stat-mini">
@@ -7743,10 +7882,10 @@ function renderConfigHoraires() {
         <div id="pauses-${i}" style="display:flex;flex-direction:column;gap:6px">
           ${pauses.map((p, pi) => `
             <div style="display:flex;align-items:center;gap:8px" data-pause="${pi}">
-              <input type="time" value="${p.debut||''}" onchange="updatePause(${i},${pi},'debut',this.value)"
+              <input type="time" value="${p.debut||''}" onblur="updatePause(${i},${pi},'debut',this.value)" onchange="updatePause(${i},${pi},'debut',this.value)"
                 style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">
               <span style="color:var(--text3);font-size:11px">→</span>
-              <input type="time" value="${p.fin||''}" onchange="updatePause(${i},${pi},'fin',this.value)"
+              <input type="time" value="${p.fin||''}" onblur="updatePause(${i},${pi},'fin',this.value)" onchange="updatePause(${i},${pi},'fin',this.value)"
                 style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">
               <input type="number" value="${p.duree||0}" min="0" max="12" step="0.5" onchange="updatePause(${i},${pi},'duree',parseFloat(String(this.value).replace(',','.')))"
                 style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;text-align:center">
@@ -7763,10 +7902,19 @@ function renderConfigHoraires() {
 
   el.innerHTML = html;
   el.querySelectorAll('.hor-edit').forEach(function(inp) {
-    inp.addEventListener('change', function() {
+    const evtType = inp.type === 'time' ? 'blur' : 'change';
+    inp.addEventListener(evtType, function() {
       updateHoraireField(parseInt(this.dataset.i), this.dataset.f,
         this.dataset.f === 'duree' ? parseFloat(this.value) : this.value);
     });
+    // Pour type=time, sauvegarder aussi sur change (quand la valeur complète HH:MM est entrée)
+    if (inp.type === 'time') {
+      inp.addEventListener('change', function() {
+        if (this.value && this.value.length === 5) {
+          updateHoraireField(parseInt(this.dataset.i), this.dataset.f, this.value);
+        }
+      });
+    }
   });
 }
 
@@ -7783,7 +7931,7 @@ function removePause(horIdx, pauseIdx) {
   saveToStorage(); renderConfigHoraires();
 }
 
-function updatePause(horIdx, pauseIdx, field, val) {
+function updatePause(horIdx, pauseIdx, field, val, noRerender) {
   const etab = getEtab();
   if (!etab.horaires[horIdx].pauses) etab.horaires[horIdx].pauses = [];
   const pause = etab.horaires[horIdx].pauses[pauseIdx];
@@ -7803,7 +7951,9 @@ function updatePause(horIdx, pauseIdx, field, val) {
   const h = etab.horaires[horIdx];
   const totalPause = (h.pauses||[]).reduce((s,p) => s + (parseFloat(p.duree)||0), 0);
   h.dureePresence = (parseFloat(h.duree)||0) + totalPause;
-  saveToStorage(); renderConfigHoraires();
+  saveToStorage();
+  // Re-render uniquement si ce n'est pas un champ time en cours de saisie
+  if (!noRerender) renderConfigHoraires();
 }
 
 function updateHoraireField(idx, field, val) {
@@ -8962,9 +9112,12 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
     if (!shift) continue;
     shifts[shift] = (shifts[shift] || 0) + 1;
 
-    const hor = etab.horaires.find(h => h.code === shift);
-    const duree   = (hor && hor.duree > 0) ? hor.duree : (_durDefaut[shift] !== undefined ? _durDefaut[shift] : (cfg.travailH || 10));
-    const type    = hor && hor.comptage ? hor.comptage : (_typeDef[shift] || 'repos');
+    // Gérer les shifts HS-repos travaillé (HSM, HSS, HSJ, HSNU...)
+    const isHSShift = shift.startsWith('HS') && shift.length > 2;
+    const baseCode = isHSShift ? shift.substring(2) : shift;
+    const hor = etab.horaires.find(h => h.code === (isHSShift ? baseCode : shift));
+    const duree   = (hor && hor.duree > 0) ? hor.duree : (_durDefaut[isHSShift ? baseCode : shift] !== undefined ? _durDefaut[isHSShift ? baseCode : shift] : (cfg.travailH || 10));
+    const type    = isHSShift ? 'travail' : (hor && hor.comptage ? hor.comptage : (_typeDef[shift] || 'repos'));
     const presence = (hor && hor.presence) ? hor.presence : duree;
 
     if (type === 'travail') {
