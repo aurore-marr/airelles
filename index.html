@@ -726,7 +726,8 @@ body {
 .sector-item-name { font-weight: 600; font-size: 13px; flex: 1; }
 .sector-item-info { font-size: 11px; color: var(--text2); }
 
-.horaire-list { display: flex; flex-direction: column; gap: 6px; }
+.horaire-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 900px) { .horaire-list { grid-template-columns: 1fr; } }
 .horaire-item {
   display: grid; grid-template-columns: 60px 1fr 1fr 60px auto;
   align-items: center; gap: 8px;
@@ -1578,16 +1579,6 @@ table input:focus { border-color: var(--accent); }
             <div id="spec-regles-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
             <button class="btn btn-primary btn-sm" onclick="saveSpecRegles()">💾 Enregistrer les règles spécialités</button>
           </div>
-          <div class="config-section">
-            <div class="config-section-title">📅 Codes d'absence</div>
-            <div id="absence-codes-list"></div>
-            <div class="flex gap-2 mt-2">
-              <input type="text" id="new-abs-code" placeholder="Code (ex: AM)" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <input type="text" id="new-abs-label" placeholder="Libellé" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <input type="number" id="new-abs-heures" placeholder="h" style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <button class="btn btn-secondary btn-sm" onclick="addAbsCode()">+</button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1619,7 +1610,7 @@ table input:focus { border-color: var(--accent); }
       </div>
 
       <div id="config-tab-horaires" class="hidden">
-        <div class="config-section" style="max-width:800px">
+        <div class="config-section" style="max-width:1100px">
           <!-- SECTION 1: Codes travaillés -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div>
@@ -7776,19 +7767,7 @@ function renderAbsenceCodes() {
   const etab = getEtab();
   if (!etab) return;
   // Old list (kept for compatibility with rules tab)
-  const el = document.getElementById('absence-codes-list');
-  if (el) {
-    el.innerHTML = etab.absenceCodes.map((a, i) => `
-      <div class="flex items-center gap-2 mb-2">
-        <span class="font-mono" style="width:40px;font-weight:700;color:var(--accent)">${a.code}</span>
-        <span style="flex:1">${a.label}</span>
-        <span class="text-muted text-sm">${a.heures}h</span>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="removeAbsCode(${i})">×</button>
-      </div>`
-    ).join('');
-  }
-
-  // New combined list in horaires tab
+  // Codes absences — uniquement dans l'onglet Horaires
   const el2 = document.getElementById('cfg-absence-codes-list');
   if (!el2) return;
   const impactLabels = { presence:'🌴 Présence', travail:'⚙️ Travail', absent:'❌ Absent', repos:'💤 Repos' };
@@ -7826,17 +7805,6 @@ function updateAbsCode(idx, field, val) {
   saveToStorage(); renderAbsenceCodes();
 }
 
-function addAbsCode() {
-  const code = document.getElementById('new-abs-code').value.trim().toUpperCase();
-  const label = document.getElementById('new-abs-label').value.trim();
-  const heures = parseFloat(document.getElementById('new-abs-heures').value) || 0;
-  if (!code || !label) return;
-  const etab = getEtab();
-  etab.absenceCodes.push({ code, label, heures });
-  saveToStorage(); renderAbsenceCodes();
-  document.getElementById('new-abs-code').value = '';
-  document.getElementById('new-abs-label').value = '';
-}
 
 function removeAbsCode(idx) {
   const etab = getEtab();
