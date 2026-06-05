@@ -261,7 +261,7 @@ body {
 .sidebar.collapsed .etab-badge .etab-role { display: none; }
 .etab-badge-icon { display: none; font-size: 16px; }
 .sidebar.collapsed .etab-badge-icon { display: block; }
-.user-initials-badge { display: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
+.user-initials-badge { display: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent2); color: #0f1117; font-size: 12px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 .sidebar.collapsed .user-initials-badge { display: flex; }
 .sidebar.collapsed .etab-badge { flex-direction: column; gap: 4px; }
 
@@ -710,6 +710,7 @@ body {
 .dispo-cell.dispo-oui { background: rgba(56,217,169,0.2); color: #38d9a9; border-color: rgba(56,217,169,0.3); }
 .dispo-cell.dispo-non { background: rgba(247,111,111,0.1); color: #f76f6f; border-color: rgba(247,111,111,0.2); }
 .dispo-cell.dispo-hs { background: rgba(247,169,79,0.2); color: #f7a94f; border-color: rgba(247,169,79,0.3); }
+.dispo-cell.dispo-affecte { background: rgba(79,142,247,0.25); color: #4f8ef7; border-color: rgba(79,142,247,0.4); font-weight:800; }
 
 /* ========== CONFIG ========== */
 .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -1095,7 +1096,7 @@ table input:focus { border-color: var(--accent); }
       <span class="etab-badge-icon">🏥</span>
       <div class="etab-name" id="sb-etab-name">Établissement</div>
       <div class="etab-role" id="sb-user-name">Utilisateur</div>
-      <div class="user-initials-badge" id="sb-user-initials" title="Connecté">?</div>
+      <div class="user-initials-badge" id="sb-user-initials" title="Utilisateurs connectés">1</div>
       <div id="online-users-bar" style="display:none;margin-top:6px;padding:4px 8px;background:rgba(56,217,169,0.1);border:1px solid rgba(56,217,169,0.25);border-radius:6px;font-size:10px;color:#38d9a9">
         <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
       </div>
@@ -2741,9 +2742,8 @@ window.onload = async function() {
             document.getElementById('app').style.display = 'block';
             document.getElementById('sb-etab-name').textContent = etab.nom;
             document.getElementById('sb-user-name').textContent = loginOk.nom;
-            const _initials1 = ((loginOk.prenom||'')[0]||(loginOk.nom||'')[0]||'?').toUpperCase() + ((loginOk.nom||'')[0]||'').toUpperCase();
             const _inEl1 = document.getElementById('sb-user-initials');
-            if (_inEl1) { _inEl1.textContent = _initials1; _inEl1.title = (loginOk.prenom||'') + ' ' + (loginOk.nom||''); }
+            if (_inEl1) { _inEl1.textContent = '1'; _inEl1.title = 'Utilisateurs connectés'; }
             _sessionStart = sess.loginTime;
             _sessionWarningShown = false;
             _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
@@ -3116,9 +3116,8 @@ async function doLogin() {
 
   document.getElementById('sb-etab-name').textContent = etab.nom;
   document.getElementById('sb-user-name').textContent = login.nom;
-  const _initials2 = ((login.prenom||'')[0]||(login.nom||'')[0]||'?').toUpperCase() + ((login.nom||'')[0]||'').toUpperCase();
   const _inEl2 = document.getElementById('sb-user-initials');
-  if (_inEl2) { _inEl2.textContent = _initials2; _inEl2.title = (login.prenom||'') + ' ' + (login.nom||''); }
+  if (_inEl2) { _inEl2.textContent = '1'; _inEl2.title = 'Utilisateurs connectés'; }
 
   startSessionTimer();
   const _etabInit = getEtab();
@@ -3331,6 +3330,9 @@ function initPresence() {
       .on('presence', { event: 'sync' }, () => {
         const state = _presenceChannel.presenceState();
         const users = Object.keys(state).filter(k => k !== userName);
+        const totalConnected = users.length + 1; // soi + autres
+        const badge = document.getElementById('sb-user-initials');
+        if (badge) { badge.textContent = totalConnected; badge.title = totalConnected + ' utilisateur(s) connecté(s)'; }
         if (users.length === 0) {
           list.textContent = 'Vous seul';
         } else {
@@ -4171,12 +4173,14 @@ function renderPlanning() {
   html += '</tbody></table>';
   document.getElementById('planning-container').innerHTML = html;
 
-  // Synchroniser scroll vacataires avec planning
+  // Synchroniser scroll vacataires avec planning via translateX (overflow:hidden bloque scrollLeft)
   const planWrap = document.getElementById('planning-container');
   const vacWrap = document.getElementById('planning-vac-scroll');
   if (planWrap && vacWrap) {
-    planWrap.onscroll = function() { vacWrap.scrollLeft = planWrap.scrollLeft; };
-    vacWrap.onscroll = function() { planWrap.scrollLeft = vacWrap.scrollLeft; };
+    planWrap.onscroll = function() {
+      const inner = document.getElementById('planning-vac-container');
+      if (inner) inner.style.transform = 'translateX(-' + planWrap.scrollLeft + 'px)';
+    };
   }
   // Cacher l'ancien conteneur totaux (maintenant dans le tableau)
   const totWrap = document.getElementById('sector-daily-totals');
@@ -4398,28 +4402,69 @@ function affecterVacataireJour(vacId, day, statut) {
   const vac = (etab.vacataires||[]).find(v => v.id === vacId);
   if (!vac) return;
 
-  // Ouvre le modal shift picker pour choisir l'affectation (ou note directe)
+  const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
-  const msg = `Affecter ${vac.prenom||''} ${vac.nom} (${vac.spec}) le ${dateLabel} ?\n` +
-    `Statut dispo: ${statut === 'hs' ? 'HS (Heure Sup)' : 'Disponible'}`;
-  if (confirm(msg)) {
-    // Enregistrer dans etab.affectationsVac
-    if (!etab.affectationsVac) etab.affectationsVac = {};
-    const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-    if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
-    // Retirer si déjà présent
-    etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
-    etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, affecteLe: new Date().toISOString() });
-    // Marquer comme affecté dans vacDispos pour que la cellule reflète l'état
-    if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
-    etab.vacDispos[vacId][dk] = 'affecte';
-    saveToStorage();
-    showToast(`${vac.prenom||''} ${vac.nom} affecté(e) le ${day}/${currentMonth+1}`, 'success');
-    renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
-    // Refresh aussi la vue Vacataires si elle est ouverte
-    if (document.getElementById('page-vacataires')?.classList.contains('active')) {
-      renderVacataires();
-    }
+
+  // Détecter les postes manquants ce jour (shifts M/S/J sous la cible)
+  const planMonth = ((etab.planning[currentYear]||{})[currentMonth]||{});
+  const cibleM = etab.config.cibleM || 3;
+  const cibleS = etab.config.cibleS || 3;
+  const cibleJ = etab.config.cibleJ || 3;
+  let countM = 0, countS = 0, countJ = 0;
+  etab.agents.filter(a=>a.actif).forEach(a => {
+    const sh = (planMonth[a.id]||{})[day]||'';
+    if (sh==='M'||sh==='HSM') countM++;
+    if (sh==='S'||sh==='HSS') countS++;
+    if (sh==='J'||sh==='HSJ') countJ++;
+  });
+  // Vacataires déjà affectés ce jour
+  const affAuj = (etab.affectationsVac||{})[dk] || [];
+  affAuj.forEach(a => {
+    if (a.shift==='M') countM++;
+    if (a.shift==='S') countS++;
+    if (a.shift==='J') countJ++;
+  });
+  const manquants = [];
+  if (countM < cibleM) manquants.push({ code:'M', manque: cibleM - countM });
+  if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
+  if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
+
+  let shiftFinal;
+  if (manquants.length === 0) {
+    // Couverture atteinte — demander quand même
+    const raw = window.prompt(
+      `Affecter ${vac.prenom||''} ${vac.nom} (${vac.spec})\nle ${dateLabel}\n\n✔️ Couverture 3×3×3 atteinte.\nCode shift à affecter (M/S/J) :`, 'M');
+    if (!raw) return;
+    shiftFinal = raw.trim().toUpperCase();
+  } else if (manquants.length === 1) {
+    const ok = window.confirm(
+      `Affecter ${vac.prenom||''} ${vac.nom} (${vac.spec})\nle ${dateLabel}\n\n📋 Poste manquant → ${manquants[0].code} (-${manquants[0].manque})\n\nConfirmer affectation sur ${manquants[0].code} ?`);
+    if (!ok) return;
+    shiftFinal = manquants[0].code;
+  } else {
+    const raw = window.prompt(
+      `Affecter ${vac.prenom||''} ${vac.nom} (${vac.spec})\nle ${dateLabel}\n\n📋 Postes manquants :\n` +
+      manquants.map(m=>`  • ${m.code} (-${m.manque})`).join('\n') +
+      `\n\nCode shift à affecter (${manquants.map(m=>m.code).join('/')}) :`,
+      manquants[0].code);
+    if (!raw) return;
+    shiftFinal = raw.trim().toUpperCase();
+  }
+  if (!shiftFinal) return;
+
+  // Enregistrer dans etab.affectationsVac
+  if (!etab.affectationsVac) etab.affectationsVac = {};
+  if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
+  etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
+  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, shift: shiftFinal, affecteLe: new Date().toISOString() });
+  // Marquer comme affecté dans vacDispos
+  if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
+  etab.vacDispos[vacId][dk] = 'affecte';
+  saveToStorage();
+  showToast(`${vac.prenom||''} ${vac.nom} → ${shiftFinal} le ${day}/${currentMonth+1}`, 'success');
+  renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
+  if (document.getElementById('page-vacataires')?.classList.contains('active')) {
+    renderVacataires();
   }
 }
 
@@ -5698,7 +5743,10 @@ function renderComptage() {
         <td class="comptage-num" style="color:${cpt.joursEM > 0 ? '#fb923c' : 'var(--text3)'}">${cpt.joursEM > 0 ? cpt.joursEM : '<span style="opacity:0.3">0</span>'}</td>
         <td class="comptage-num" style="color:${cpt.nbDimFeries >= (etab.config.seuilDimFeries||10) ? 'var(--accent3)' : 'var(--text2)'}">${cpt.nbDimFeries}</td>
         <td class="comptage-num" style="font-weight:700;color:var(--text2)">${cpt.baseH}h</td>
-        <td class="comptage-num" style="font-weight:700;color:var(--accent)">${cpt.heuresTravaillees}h</td>
+        <td class="comptage-num" style="font-weight:700;color:var(--accent)">
+          ${cpt.heuresTravaillees}h
+          ${cpt.joursHSRepos > 0 ? `<div style="font-size:9px;color:#a78bfa;font-weight:600;margin-top:1px">dont ${cpt.joursHSRepos}j HS-repos (+${cpt.heuresHSRepos}h)</div>` : ''}
+        </td>
         <td class="comptage-num" style="color:${hsVal ? '#38d9a9' : 'var(--text3)'};font-weight:${hsVal?'700':'400'}">${hsVal ? '+' + cpt.heuresSupMois + 'h' : '<span style="opacity:0.25">—</span>'}</td>
         <td class="comptage-num" style="color:${daVal ? '#f7a94f' : 'var(--text3)'};font-weight:${daVal?'700':'400'}">${daVal ? '−' + cpt.heuresDA + 'h<br><span style="font-size:9px;opacity:0.7">' + cpt.nbDA + 'x</span>' : '<span style="opacity:0.25">—</span>'}</td>
         <td class="comptage-num" style="color:${retVal ? '#f76f6f' : 'var(--text3)'};font-weight:${retVal?'700':'400'}">${retVal ? '−' + cpt.heuresRetard + 'h<br><span style="font-size:9px;opacity:0.7">' + cpt.nbRetard + 'x</span>' : '<span style="opacity:0.25">—</span>'}</td>
@@ -6107,8 +6155,8 @@ function renderDispoGrid() {
     days.forEach(d => {
       const k = dateStr(d);
       const st = (etab.vacDispos[vac.id] || {})[k] || '';
-      const cls = st === 'oui' ? 'dispo-oui' : st === 'hs' ? 'dispo-hs' : st === 'non' ? 'dispo-non' : '';
-      const lbl = st === 'oui' ? 'DISPO' : st === 'hs' ? 'HS' : st === 'non' ? 'NON' : '';
+      const cls = st === 'oui' ? 'dispo-oui' : st === 'hs' ? 'dispo-hs' : st === 'non' ? 'dispo-non' : st === 'affecte' ? 'dispo-affecte' : '';
+      const lbl = st === 'oui' ? 'DISPO' : st === 'hs' ? 'HS' : st === 'non' ? 'NON' : st === 'affecte' ? 'AFF✓' : '';
       html += `<div class="dispo-cell ${cls}" onclick="toggleDispo('${vac.id}','${k}')">${lbl}</div>`;
     });
   });
@@ -7902,17 +7950,15 @@ function renderConfigHoraires() {
 
   el.innerHTML = html;
   el.querySelectorAll('.hor-edit').forEach(function(inp) {
-    const evtType = inp.type === 'time' ? 'blur' : 'change';
-    inp.addEventListener(evtType, function() {
-      updateHoraireField(parseInt(this.dataset.i), this.dataset.f,
-        this.dataset.f === 'duree' ? parseFloat(this.value) : this.value);
-    });
-    // Pour type=time, sauvegarder aussi sur change (quand la valeur complète HH:MM est entrée)
     if (inp.type === 'time') {
+      // Uniquement sur blur pour éviter le re-render pendant la saisie (ex: 11h30)
+      inp.addEventListener('blur', function() {
+        updateHoraireField(parseInt(this.dataset.i), this.dataset.f, this.value);
+      });
+    } else {
       inp.addEventListener('change', function() {
-        if (this.value && this.value.length === 5) {
-          updateHoraireField(parseInt(this.dataset.i), this.dataset.f, this.value);
-        }
+        updateHoraireField(parseInt(this.dataset.i), this.dataset.f,
+          this.dataset.f === 'duree' ? parseFloat(this.value) : this.value);
       });
     }
   });
@@ -9105,6 +9151,7 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
   let heuresPresence    = 0;
   let joursCA = 0, joursCF = 0, joursMO = 0, joursEM = 0, joursGR = 0;
   let joursTravailles = 0, nbDimFeries = 0, impactNegatif = 0;
+  let joursHSRepos = 0, heuresHSRepos = 0;
   const shifts = {};
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -9124,6 +9171,7 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
       heuresTravaillees += duree;
       heuresPresence    += duree;
       joursTravailles++;
+      if (isHSShift) { joursHSRepos++; heuresHSRepos += duree; }
     } else if (type === 'presence') {
       heuresPresence += presence;
       if (shift === 'CA') joursCA++;
@@ -9181,7 +9229,8 @@ function calcComptageAgent(agent, planMonth, etab, year, month) {
     joursCA, joursCF, joursMO, joursEM, joursGR,
     joursTravailles, nbDimFeries, reposDimFeries, impactNegatif, shifts,
     heuresSupMois, heuresDA, heuresRetard,
-    nbDA: daEntries.length, nbRetard: retardEntries.length
+    nbDA: daEntries.length, nbRetard: retardEntries.length,
+    joursHSRepos, heuresHSRepos
   };
 }
 
