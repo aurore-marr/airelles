@@ -3790,76 +3790,91 @@ function renderDashAbsences() {
   if (!el || !etab) return;
 
   const y = currentYear, m = currentMonth;
-  const agents = etab.agents.filter(a => a.actif);
+  const agents = etab.agents.filter(function(a) { return a.actif; });
   const absCodesTrack = ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'];
   const absCouleurs = { CA:'#f76f6f', CF:'#e879f9', MO:'#94a3b8', AM:'#94a3b8', EM:'#fb923c', AT:'#f59e0b', FO:'#34d399', GR:'#6b7280', CP:'#f76f6f', RC:'#4a5568' };
   const daysInMonth = new Date(y, m+1, 0).getDate();
 
-  // Construire les comptes global + par spec
-  const allSpecs = [...new Set(agents.map(a => a.spec).filter(Boolean))].sort();
-  if (!window._dashAbsSpecFilter) window._dashAbsSpecFilter = '';
+  // Spécialités présentes
+  const allSpecs = [...new Set(agents.map(function(a) { return a.spec; }).filter(Boolean))].sort();
 
-  const calcCounts = (agentList) => {
-    const counts = {};
-    absCodesTrack.forEach(c => { counts[c] = 0; });
-    const agentsEnCA = new Set();
-    agentList.forEach(ag => {
-      const plan = ((etab.planning[y]||{})[m]||{})[ag.id]||{};
-      for (let d=1; d<=daysInMonth; d++) {
-        const sh = plan[d]||'';
-        if (absCodesTrack.includes(sh)) {
-          counts[sh] = (counts[sh]||0) + 1;
-          if (sh === 'CA') agentsEnCA.add(ag.id);
-        }
-      }
-    });
-    return { counts, agentsEnCA };
-  };
+  // Filtre persistant (réinitialisé si la spéc n'existe plus)
+  if (typeof window._dashAbsSpecFilter === 'undefined') window._dashAbsSpecFilter = '';
+  if (window._dashAbsSpecFilter && !allSpecs.includes(window._dashAbsSpecFilter)) window._dashAbsSpecFilter = '';
 
   const filteredAgents = window._dashAbsSpecFilter
-    ? agents.filter(a => a.spec === window._dashAbsSpecFilter)
+    ? agents.filter(function(a) { return a.spec === window._dashAbsSpecFilter; })
     : agents;
-  const { counts, agentsEnCA } = calcCounts(filteredAgents);
-  const totalJours = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  // Comptage
+  const counts = {};
+  absCodesTrack.forEach(function(c) { counts[c] = 0; });
+  const agentsEnCA = new Set();
+  filteredAgents.forEach(function(ag) {
+    const plan = ((etab.planning[y]||{})[m]||{})[ag.id]||{};
+    for (let d = 1; d <= daysInMonth; d++) {
+      const sh = plan[d] || '';
+      if (absCodesTrack.includes(sh)) {
+        counts[sh] = (counts[sh]||0) + 1;
+        if (sh === 'CA') agentsEnCA.add(ag.id);
+      }
+    }
+  });
+
+  const totalJours = Object.values(counts).reduce(function(a,b){ return a+b; }, 0);
 
   const codesPrimaires = ['CA','CF','MO','AM','AT','EM'];
-  const codesSecondaires = absCodesTrack.filter(c => !codesPrimaires.includes(c) && counts[c]>0);
-  const allCodes = [...codesPrimaires, ...codesSecondaires];
+  const codesSecondaires = absCodesTrack.filter(function(c) { return !codesPrimaires.includes(c) && counts[c] > 0; });
+  const allCodes = codesPrimaires.concat(codesSecondaires);
 
-  // Onglets spécialité
-  const specTabsHtml = allSpecs.length > 1 ? `
-    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
-      ${['', ...allSpecs].map(s => {
-        const active = window._dashAbsSpecFilter === s;
-        return `<button onclick="window._dashAbsSpecFilter='${s}';renderDashAbsences()"
-          style="padding:3px 10px;border-radius:14px;border:1.5px solid ${active?'var(--accent3)':'var(--border)'};
-          background:${active?'var(--accent3)22':'transparent'};color:${active?'var(--accent3)':'var(--text3)'};
-          font-family:inherit;font-size:10px;font-weight:700;cursor:pointer">${s===''?'Tous':s}</button>`;
-      }).join('')}
-    </div>` : '';
+  // ── Onglets spécialité ──
+  let specTabsHtml = '';
+  if (allSpecs.length > 1) {
+    let btns = '';
+    [''].concat(allSpecs).forEach(function(s) {
+      const active = window._dashAbsSpecFilter === s;
+      const label = s === '' ? 'Tous' : s;
+      const borderCol = active ? 'var(--accent3)' : 'var(--border)';
+      const bgCol = active ? 'rgba(251,146,60,0.15)' : 'transparent';
+      const txtCol = active ? 'var(--accent3)' : 'var(--text3)';
+      btns += '<button onclick="window._dashAbsSpecFilter=\'' + s + '\';renderDashAbsences()"'
+            + ' style="padding:3px 10px;border-radius:14px;border:1.5px solid ' + borderCol + ';'
+            + 'background:' + bgCol + ';color:' + txtCol + ';'
+            + 'font-family:inherit;font-size:10px;font-weight:700;cursor:pointer">'
+            + label + '</button>';
+    });
+    specTabsHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">' + btns + '</div>';
+  }
 
-  const getLabel = code => {
-    const found = etab.absenceCodes ? etab.absenceCodes.find(a => a.code === code) : null;
-    return found ? found.label : code;
-  };
+  // ── Grille codes ──
+  let codesHtml = '';
+  allCodes.forEach(function(code) {
+    const n = counts[code] || 0;
+    const col = absCouleurs[code] || '#888';
+    const bg = n > 0 ? col + '18' : 'var(--bg3)';
+    const border = n > 0 ? col + '44' : 'var(--border)';
+    const textCol = n > 0 ? col : 'var(--text3)';
+    codesHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;'
+              + 'background:' + bg + ';border-radius:6px;border:1px solid ' + border + '">'
+              + '<span style="font-weight:800;font-size:11px;color:' + textCol + ';font-family:monospace">' + code + '</span>'
+              + '<span style="font-size:12px;font-weight:700;color:' + textCol + '">' + n + 'j</span>'
+              + '</div>';
+  });
 
-  el.innerHTML = specTabsHtml + `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
-      <span style="font-size:28px;font-weight:900;color:var(--accent3)">${totalJours}</span>
-      <span style="font-size:12px;color:var(--text2)">jours ce mois${window._dashAbsSpecFilter ? ' · ' + window._dashAbsSpecFilter : ''}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
-      ${allCodes.map(code => {
-        const n = counts[code]||0;
-        const col = absCouleurs[code]||'#888';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:${n>0?col+'18':'var(--bg3)'};border-radius:6px;border:1px solid ${n>0?col+'44':'var(--border)'}">
-          <span style="font-weight:800;font-size:11px;color:${n>0?col:'var(--text3)'};font-family:monospace">${code}</span>
-          <span style="font-size:12px;font-weight:700;color:${n>0?col:'var(--text3)'}">${n}j</span>
-        </div>`;
-      }).join('')}
-    </div>
-    ${agentsEnCA.size > 0 ? `<div style="font-size:10px;color:var(--text2)">${agentsEnCA.size} agent${agentsEnCA.size>1?'s':''} en CA</div>` : '<div style="font-size:10px;color:var(--text3)">0 agent en CA</div>'}
-  `;
+  const specSuffix = window._dashAbsSpecFilter ? ' \u00b7 ' + window._dashAbsSpecFilter : '';
+  const caFooter = agentsEnCA.size > 0
+    ? '<div style="font-size:10px;color:var(--text2)">' + agentsEnCA.size + ' agent' + (agentsEnCA.size > 1 ? 's' : '') + ' en CA</div>'
+    : '<div style="font-size:10px;color:var(--text3)">0 agent en CA</div>';
+
+  el.innerHTML = specTabsHtml
+    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">'
+    + '<span style="font-size:28px;font-weight:900;color:var(--accent3)">' + totalJours + '</span>'
+    + '<span style="font-size:12px;color:var(--text2)">jours ce mois' + specSuffix + '</span>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">'
+    + codesHtml
+    + '</div>'
+    + caFooter;
 }
 
 // ============================================================
