@@ -2352,6 +2352,11 @@ table input:focus { border-color: var(--accent); }
           <div id="ag-excl-sect" style="display:flex;flex-wrap:wrap;gap:4px"></div>
         </div>
         <div class="form-group">
+          <label>PIN QR code (4 chiffres)</label>
+          <input type="text" id="ag-pin" maxlength="4" placeholder="Laissez vide = n° matricule auto" style="letter-spacing:4px;font-family:monospace;font-size:15px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;box-sizing:border-box" pattern="[0-9]{4}">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Code à 4 chiffres que l'agent utilise pour accéder à son planning QR. Si vide, le numéro extrait de son ID est utilisé.</div>
+        </div>
+        <div class="form-group">
           <label>Notes</label>
           <textarea id="ag-notes" rows="3" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none;resize:vertical" placeholder="Notes diverses..."></textarea>
         </div>
@@ -3160,6 +3165,29 @@ function startPolling() {
         }
       }
       _pollLastCongesCount = pending.length;
+      // Sync dispos depuis agent_dispos (remplies par QR)
+      try {
+        const dispos = await supaLoadDispos(etab.id);
+        dispos.forEach(function(row) {
+          if (!fresh.vacDispos) fresh.vacDispos = {};
+          // Vacataires
+          const isVac = (fresh.vacataires||[]).find(v => v.id === row.agent_id);
+          if (isVac) {
+            if (!fresh.vacDispos[row.agent_id]) fresh.vacDispos[row.agent_id] = {};
+            // Ne pas écraser un statut 'affecte'
+            if (fresh.vacDispos[row.agent_id][row.date_key] !== 'affecte') {
+              fresh.vacDispos[row.agent_id][row.date_key] = row.slot;
+            }
+          }
+          // Agents réguliers
+          const isAgent = (fresh.agents||[]).find(a => a.id === row.agent_id);
+          if (isAgent) {
+            if (!fresh.agentDisposQR) fresh.agentDisposQR = {};
+            if (!fresh.agentDisposQR[row.agent_id]) fresh.agentDisposQR[row.agent_id] = {};
+            fresh.agentDisposQR[row.agent_id][row.date_key] = row.slot;
+          }
+        });
+      } catch(e2) {}
       // Sync données fraîches en mémoire (sans écraser une modification en cours)
       DB.etablissements[etab.id] = fresh;
     } catch(e) {}
@@ -4045,6 +4073,11 @@ function renderPlanning() {
         const isToday = date.getDate() === new Date().getDate() &&
                         date.getMonth() === new Date().getMonth() &&
                         date.getFullYear() === new Date().getFullYear();
+        // Appliquer joursOff en temps réel (index lundi=0 … dimanche=6)
+        const dowIdx = (dow + 6) % 7;
+        if ((agent.joursOff||[]).includes(dowIdx) && ['M','S','J','NU','N'].includes(agPlan[d]||'')) {
+          agPlan[d] = 'R';
+        }
         const shift = agPlan[d] || '';
         const hor = etab.horaires.find(h => h.code === shift);
         const isTravail = shift && ['M','S','J','NU','N'].includes(shift);
@@ -4070,7 +4103,12 @@ function renderPlanning() {
 
         let cellBg, badgeStyle;
 
-        if (isTravail) {
+        if (isHS) {
+          // HS badge : fond hachuré déjà appliqué sur la cellule ; badge visible en blanc sur fond coloré
+          const hsColor = shift.endsWith('M') ? '#4f8ef7' : shift.endsWith('S') ? '#f7a94f' : shift.endsWith('J') ? '#38d9a9' : '#a78bfa';
+          cellBg = isWE ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.06)` : rowBg;
+          badgeStyle = `background:${hsColor};color:#fff;font-weight:800;border:1px solid ${hsColor};font-size:9px;padding:1px 3px`;
+        } else if (isTravail) {
           cellBg = isFixe ? fixeBg : rowBg;
           badgeStyle = `background:transparent;color:${scColor};font-weight:800;border:1px solid ${sectBorder}`;
         } else if (isAbsence) {
@@ -4225,7 +4263,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
   const badge = document.getElementById('planning-vac-badge');
   if (!section || !container) return;
 
-  const vacataires = (etab.vacataires || []);
+  const vacataires = (etab.vacataires || []).filter(v => !currentSpecFilter || v.spec === currentSpecFilter);
   if (vacataires.length === 0) { section.style.display = 'none'; return; }
 
   // Construire une map des jours où chaque vacataire est dispo ce mois
@@ -4300,7 +4338,17 @@ function renderPlanningVacataires(daysInMonth, etab) {
       let cellBg = isWE ? 'rgba(247,169,79,0.04)' : 'transparent';
       if (isToday2) cellBg = 'rgba(79,142,247,0.08)';
 
-      if (st === 'oui' || st === 'hs') {
+      if (st === 'affecte') {
+        // Déjà affecté : montrer le shift réel depuis vacAffectations
+        nbDispo++;
+        const aff = (etab.affectationsVac||{})[dk] || {};
+        const affEntry = Object.values(aff).find(a => a);
+        const shiftLabel = (affEntry?.shift && affEntry.shift !== '') ? affEntry.shift : 'AFF';
+        const specC = getSpecColor(vac.spec);
+        cellContent = '<span style=\"background:' + specC + '33;color:' + specC + ';border:1px solid ' + specC + '66;border-radius:4px;' +
+          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block\">' + shiftLabel + '</span>';
+        cellBg = 'rgba(56,217,169,0.08)';
+      } else if (st === 'oui' || st === 'hs') {
         nbDispo++;
         const bgC = st === 'hs' ? 'rgba(247,169,79,0.25)' : 'rgba(56,217,169,0.2)';
         const col = st === 'hs' ? '#f7a94f' : '#38d9a9';
@@ -4347,6 +4395,9 @@ function affecterVacataireJour(vacId, day, statut) {
     // Retirer si déjà présent
     etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
     etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, affecteLe: new Date().toISOString() });
+    // Marquer comme affecté dans vacDispos pour que la cellule reflète l'état
+    if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
+    etab.vacDispos[vacId][dk] = 'affecte';
     saveToStorage();
     showToast(`${vac.prenom||''} ${vac.nom} affecté(e) le ${day}/${currentMonth+1}`, 'success');
     renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
@@ -5733,6 +5784,7 @@ function openNewAgent() {
   document.getElementById('ag-prenom').value = '';
   document.getElementById('ag-taux').value = 100;
   document.getElementById('ag-notes').value = '';
+  document.getElementById('ag-pin').value = '';
   document.getElementById('ag-date-arrivee').value = '';
   document.getElementById('ag-actif').className = 'toggle on';
   document.getElementById('ag-delete-btn').style.display = 'none';
@@ -5751,6 +5803,7 @@ function openEditAgent(agentId) {
   document.getElementById('ag-prenom').value = agent.prenom;
   document.getElementById('ag-taux').value = agent.taux;
   document.getElementById('ag-notes').value = agent.notes || '';
+  document.getElementById('ag-pin').value = agent.pin || '';
   document.getElementById('ag-date-arrivee').value = agent.dateArrivee || '';
   document.getElementById('ag-actif').className = 'toggle ' + (agent.actif ? 'on' : '');
   document.getElementById('ag-delete-btn').style.display = '';
@@ -5804,7 +5857,8 @@ function saveAgent() {
     joursOff, exclusHoraires, exclusSecteurs,
     notes: document.getElementById('ag-notes').value,
     actif: document.getElementById('ag-actif').classList.contains('on'),
-    dateArrivee: document.getElementById('ag-date-arrivee').value
+    dateArrivee: document.getElementById('ag-date-arrivee').value,
+    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null)
   };
 
   if (editingAgentId) {
@@ -6072,6 +6126,10 @@ function affecterDepuisRecherche(vacId) {
   if (!etab.vacAffectations) etab.vacAffectations = {};
   if (!etab.vacAffectations[ctx.dk]) etab.vacAffectations[ctx.dk] = {};
   etab.vacAffectations[ctx.dk][vacId] = { shift: ctx.shift || '', affecteLe: new Date().toISOString() };
+  // Marquer comme affecté dans vacDispos
+  if (!etab.vacDispos) etab.vacDispos = {};
+  if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
+  etab.vacDispos[vacId][ctx.dk] = 'affecte';
   saveToStorage();
   // Mettre à jour la carte visuellement
   const card = document.querySelector(`.rcard-${vacId}`);
@@ -6525,8 +6583,8 @@ function validateQrPin(etab) {
     // Pas d'agent sélectionné, chercher par PIN parmi tous
     var matchAgent = null, matchType = 'agent';
     etab.agents.filter(function(a){ return a.actif; }).forEach(function(a) {
-      var num = (a.id||'').replace(/[^0-9]/g,'');
-      if (_qrPinBuffer === num.padStart(4,'0') || _qrPinBuffer === num) { matchAgent = a; }
+      var num = (a.pin && /^\d{4}$/.test(a.pin)) ? a.pin : (a.id||'').replace(/[^0-9]/g,'');
+      if (_qrPinBuffer === num || _qrPinBuffer === num.padStart(4,'0')) { matchAgent = a; }
     });
     (etab.vacataires||[]).forEach(function(v) {
       if (v.pin && (_qrPinBuffer === v.pin || _qrPinBuffer === v.pin.padStart(4,'0'))) { matchAgent = v; matchType = 'vacataire'; }
@@ -6552,10 +6610,10 @@ function validateQrPin(etab) {
   if (!agent) { agent = (etab.vacataires||[]).find(function(v){ return v.id === targetId; }); isVac = true; }
   if (!agent) { if (errEl) errEl.style.display = 'block'; _qrPinBuffer=''; updatePinDots(); return; }
 
-  var num = isVac ? (agent.pin||'') : (agent.id||'').replace(/[^0-9]/g,'').padStart(4,'0');
-  var numAlt = isVac ? '' : (agent.id||'').replace(/[^0-9]/g,'');
+  var num = (agent.pin && /^\d{4}$/.test(agent.pin)) ? agent.pin : (isVac ? (agent.pin||'') : (agent.id||'').replace(/[^0-9]/g,'').padStart(4,'0'));
+  var numAlt = (agent.pin && /^\d{4}$/.test(agent.pin)) ? '' : (isVac ? '' : (agent.id||'').replace(/[^0-9]/g,''));
 
-  if (_qrPinBuffer === num || (!isVac && _qrPinBuffer === numAlt)) {
+  if (_qrPinBuffer === num || (numAlt && _qrPinBuffer === numAlt)) {
     var overlay = document.getElementById('qr-pin-overlay');
     if (overlay) overlay.style.display = 'none';
     if (errEl) errEl.style.display = 'none';
@@ -6642,7 +6700,7 @@ function qrSelectAgent(agentId) {
 }
 function qrOpenPlanning(agentId) {
   var etab = DB.etablissements[_qrEtabId];
-  if (!etab) { alert('Donnees non chargees. Relancez depuis le QR code.'); return; }
+  if (!etab) { var errDiv=document.getElementById('qr-pin-section'); if(errDiv) errDiv.insertAdjacentHTML('beforebegin','<div style="text-align:center;padding:16px;color:#f76f6f;font-size:13px">❌ Données non chargées. Relancez depuis le QR code.</div>'); return; }
 
   // Chercher agent ou vacataire
   var agent = etab.agents.find(function(a) { return a.id === agentId; });
@@ -7690,7 +7748,7 @@ function renderConfigHoraires() {
               <span style="color:var(--text3);font-size:11px">→</span>
               <input type="time" value="${p.fin||''}" onchange="updatePause(${i},${pi},'fin',this.value)"
                 style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px">
-              <input type="number" value="${p.duree||0}" min="0" max="4" step="0.25" onchange="updatePause(${i},${pi},'duree',parseFloat(this.value))"
+              <input type="number" value="${p.duree||0}" min="0" max="12" step="0.5" onchange="updatePause(${i},${pi},'duree',parseFloat(String(this.value).replace(',','.')))"
                 style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;text-align:center">
               <span style="color:var(--text3);font-size:11px">h</span>
               <button onclick="removePause(${i},${pi})" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--accent4);padding:2px 7px;cursor:pointer;font-size:12px">✕</button>
@@ -7728,7 +7786,19 @@ function removePause(horIdx, pauseIdx) {
 function updatePause(horIdx, pauseIdx, field, val) {
   const etab = getEtab();
   if (!etab.horaires[horIdx].pauses) etab.horaires[horIdx].pauses = [];
-  etab.horaires[horIdx].pauses[pauseIdx][field] = val;
+  const pause = etab.horaires[horIdx].pauses[pauseIdx];
+  // Normaliser les valeurs numériques (virgule → point)
+  if (field === 'duree') {
+    val = parseFloat(String(val).replace(',', '.')) || 0;
+  }
+  pause[field] = val;
+  // Auto-calculer durée depuis début/fin si les deux sont renseignés
+  if ((field === 'debut' || field === 'fin') && pause.debut && pause.fin) {
+    const [dh, dm] = pause.debut.split(':').map(Number);
+    const [fh, fm] = pause.fin.split(':').map(Number);
+    const diffMin = (fh * 60 + fm) - (dh * 60 + dm);
+    if (diffMin > 0) pause.duree = Math.round(diffMin / 60 * 4) / 4; // arrondi au quart
+  }
   // Recalculer présence totale
   const h = etab.horaires[horIdx];
   const totalPause = (h.pauses||[]).reduce((s,p) => s + (parseFloat(p.duree)||0), 0);
