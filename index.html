@@ -1289,14 +1289,6 @@ table input:focus { border-color: var(--accent); }
       <!-- Légende impression (masquée à l'écran) -->
       <div id="print-legend" style="display:none"></div>
 
-      <!-- Astreintes de la semaine — AU DESSUS DU PLANNING -->
-      <div id="planning-astreintes-banner" style="display:none;margin-bottom:6px;border:1px solid #f59e0b44;border-radius:8px;background:var(--card);overflow:hidden">
-        <div style="padding:5px 14px;background:#f59e0b14;border-bottom:1px solid #f59e0b33;font-size:11px;font-weight:700;color:#f59e0b;display:flex;align-items:center;gap:8px">
-          🔔 Astreintes — semaine en cours
-        </div>
-        <div id="planning-astreintes-content" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px"></div>
-      </div>
-
       <!-- Légende horaires + planning -->
       <div class="card" style="padding:0;overflow:hidden">
         <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
@@ -3359,35 +3351,41 @@ function renderDashAstreintes() {
     return;
   }
 
-  const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
+  // Trier et dédupliquer : 1 seule carte par type canonique
+  const canonicalType = {
+    'Direction': 'Direction', 'Directeur': 'Direction',
+    'Organisation et Soins': 'Organisation et Soins', 'IDEC': 'Organisation et Soins',
+    'Technique': 'Technique'
+  };
   const typeStyles = {
     'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.12)',  border:'rgba(99,102,241,0.3)',  icon:'🏛️' },
-    'Organisation et Soins': { color:'var(--accent)', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
-    'Technique':             { color:'var(--accent3)', bg:'rgba(247,169,79,0.12)', border:'rgba(247,169,79,0.3)', icon:'🔧' },
-    'IDEC':      { color:'var(--accent)', bg:'rgba(79,142,247,0.12)', border:'rgba(79,142,247,0.3)', icon:'🩺' },
-    'Directeur': { color:'#6366f1', bg:'rgba(99,102,241,0.12)', border:'rgba(99,102,241,0.3)', icon:'🏛️' }
+    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
+    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.12)',  border:'rgba(247,169,79,0.3)',  icon:'🔧' }
   };
+  const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
 
-  // Trier par typeOrder puis afficher côte à côte (groupé par semaine = déjà filtré sur cette semaine)
-  const sorted = [...actives].sort((a,b) => {
-    const ia = typeOrder.indexOf(a.type) !== -1 ? typeOrder.indexOf(a.type) : 99;
-    const ib = typeOrder.indexOf(b.type) !== -1 ? typeOrder.indexOf(b.type) : 99;
-    return ia - ib;
+  // Grouper par type canonique, garder la première entrée active
+  const byCanonical = {};
+  actives.forEach(a => {
+    const canon = canonicalType[a.type] || a.type;
+    if (!byCanonical[canon]) byCanonical[canon] = a;
   });
 
-  const cards = sorted.map(a => {
-    const s = typeStyles[a.type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
+  const cards = typeOrder.map(type => {
+    const a = byCanonical[type];
+    if (!a) return '';
+    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
     const d1str = fmt(new Date(a.debut + 'T00:00:00'));
     const d2str = fmt(new Date(a.fin + 'T00:00:00'));
     return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${a.type}</div>
+      <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${type}</div>
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px">${a.nom}</div>
       ${a.tel ? `<div style="font-size:11px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
       <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
     </div>`;
-  }).join('');
+  }).filter(Boolean).join('');
 
-  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards}</div>`;
+  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucun</p>'}</div>`;
 }
 
 function renderDashboard() {
@@ -4050,7 +4048,8 @@ function renderPlanning() {
   // Sector daily totals
   renderSectorTotals(daysInMonth, agents, planMonth, etab);
   // Astreintes semaine courante
-  renderAstreintesBanner(etab);
+  // Astreintes banner supprimé du planning (voir tableau de bord)
+  // renderAstreintesBanner(etab);
 }
 
 function renderAstreintesBanner(etab) {
@@ -4097,91 +4096,11 @@ function renderAstreintesBanner(etab) {
 }
 
 function renderSectorTotals(daysInMonth, agents, planMonth, etab) {
-  // Injecter les totaux comme <tfoot> dans le tableau du planning
+  // Totaux désactivés temporairement — supprimer ancien tfoot si présent
   const planTable = document.querySelector('#planning-container table');
   if (!planTable) return;
-
-  const codesWork = ['M','S','J','NU','N'];
-  const secteurs = etab.secteurs.filter(s => !s.nom.startsWith('BG:') && !s.id.startsWith('BG'));
-  const codesPrésents = etab.horaires.filter(h => codesWork.includes(h.code));
-  const today = new Date();
-
-  const counts = {};
-  secteurs.forEach(s => { counts[s.id] = {}; for(let d=1;d<=daysInMonth;d++) counts[s.id][d]={}; });
-  const totalByCode = {};
-  codesPrésents.forEach(h => { totalByCode[h.code]={}; for(let d=1;d<=daysInMonth;d++) totalByCode[h.code][d]=0; });
-
-  agents.forEach(agent => {
-    const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
-    for (let d=1; d<=daysInMonth; d++) {
-      const sh = (planMonth[agent.id]||{})[d]||'';
-      if (!codesWork.includes(sh)) continue;
-      if (sectId && counts[sectId]) counts[sectId][d][sh] = (counts[sectId][d][sh]||0)+1;
-      if (totalByCode[sh]) totalByCode[sh][d]++;
-    }
-  });
-
-  function makeCell(val, color, bgCell, isMon, isToday, req) {
-    const alertCol = val>0&&req>0&&val<req ? '#f76f6f' : val>0&&req>0&&val>req*1.5 ? '#f7a94f' : val>0 ? color : '#2a3350';
-    const bg = isToday ? 'rgba(79,142,247,0.2)' : bgCell;
-    return '<td style="text-align:center;padding:2px 0;background:' + bg + ';color:' + alertCol + ';font-weight:' + (val>0?'800':'400') + ';font-size:11px;border-left:' + (isMon?'2px solid #3a4560':'1px solid #2a335033') + '">' + (val>0?val:'<span style="opacity:0.12">·</span>') + '</td>';
-  }
-
-  let tfoot = '<tfoot style="position:sticky;bottom:0;z-index:15">';
-
-  // Séparateur
-  tfoot += '<tr style="height:3px;background:#1a2035"><td colspan="' + (daysInMonth+2) + '" style="background:#1a2035;border-top:2px solid var(--accent)"></td></tr>';
-
-  // Lignes M/S/J globales
-  codesPrésents.forEach(h => {
-    const color = h.couleur || '#888';
-    const rowBg = color + '22';
-    const labelBg = color + '30';
-    tfoot += '<tr style="border-bottom:1px solid #2a335033">';
-    tfoot += '<td style="position:sticky;left:0;z-index:5;background:' + labelBg + ';padding:3px 8px;border-right:1px solid var(--border)33;white-space:nowrap;font-size:10px"><span style="color:#8892aa;opacity:0.7">Poste</span></td>';
-    tfoot += '<td style="position:sticky;left:60px;z-index:5;background:' + labelBg + ';padding:3px 10px;border-right:3px solid var(--accent);white-space:nowrap;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:' + color + ';display:inline-block"></span><span style="color:' + color + ';font-weight:700;font-size:11px">' + h.code + '</span><span style="color:#5a6480;font-size:9px">' + (h.label||'') + '</span></span></td>';
-    for (let d=1;d<=daysInMonth;d++) {
-      const cnt = totalByCode[h.code][d]||0;
-      const date = new Date(currentYear,currentMonth,d);
-      const isMon = date.getDay()===1;
-      const isToday2 = date.toDateString()===today.toDateString();
-      tfoot += makeCell(cnt, color, cnt>0?rowBg:'transparent', isMon, isToday2, 0);
-    }
-    tfoot += '</tr>';
-  });
-
-  // Séparateur secteurs
-  tfoot += '<tr style="height:3px;background:#131928"><td colspan="' + (daysInMonth+2) + '"></td></tr>';
-
-  // Lignes secteurs
-  secteurs.forEach(sect => {
-    const sectColor = secteurCouleurCSS(sect);
-    const rawBg = sect.couleur ? (sect.couleur.startsWith('#')?sect.couleur:'#'+sect.couleur) : '#888';
-    const req = sect.agentsRequisJour || 3;
-    tfoot += '<tr style="border-top:1px solid ' + rawBg + '44">';
-    tfoot += '<td style="position:sticky;left:0;z-index:5;background:' + rawBg + '18;padding:2px 8px;border-right:1px solid var(--border)33;font-size:9px;color:#8892aa">Poste</td>';
-    tfoot += '<td style="position:sticky;left:60px;z-index:5;background:' + rawBg + '28;padding:4px 10px;border-right:3px solid var(--accent);white-space:nowrap;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:' + sectColor + ';display:inline-block;flex-shrink:0"></span><span style="color:' + sectColor + ';font-weight:700;font-size:10px">' + sect.nom + '</span><span style="color:#5a6480;font-size:9px">±' + req + '</span></span></td>';
-    for (let d=1;d<=daysInMonth;d++) {
-      const tot = Object.values(counts[sect.id][d]||{}).reduce((a,b)=>a+b,0);
-      const date = new Date(currentYear,currentMonth,d);
-      const isMon = date.getDay()===1;
-      const isWE = date.getDay()===0||date.getDay()===6;
-      const isToday2 = date.toDateString()===today.toDateString();
-      const bg = isToday2?'rgba(79,142,247,0.2)':isWE?rawBg+'12':rawBg+'18';
-      tfoot += makeCell(tot, sectColor, bg, isMon, isToday2, req);
-    }
-    tfoot += '</tr>';
-  });
-
-  // Légende
-  tfoot += '<tr style="background:#0f1117"><td colspan="' + (daysInMonth+2) + '" style="padding:3px 8px;font-size:10px;color:#5a6480"><span style="color:#f76f6f">▲ Sous-effectif</span> · <span style="color:#f7a94f">▲ Sureffectif</span></td></tr>';
-
-  tfoot += '</tfoot>';
-
-  // Supprimer ancien tfoot si présent
   const oldTfoot = planTable.querySelector('tfoot');
   if (oldTfoot) oldTfoot.remove();
-  planTable.insertAdjacentHTML('beforeend', tfoot);
 }
 
 // ============================================================
