@@ -365,17 +365,18 @@ body {
   position: sticky; top: 0; z-index: 10;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 20; }
+/* Sticky coin NOM+POSTE dans le thead : z-index plus élevé que les day-headers (10) */
+.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 30; background: var(--bg3); }
 .agent-cell {
   padding: 5px 8px; background: var(--bg2);
-  position: sticky; left: 0; z-index: 6;
+  position: sticky; left: 0; z-index: 15;
   min-width: 60px; max-width: 60px; width: 60px;
   border-right: 1px solid var(--border);
   overflow: hidden;
 }
 .agent-cell-poste {
   padding: 5px 8px; background: var(--bg2);
-  position: sticky; left: 60px; z-index: 6;
+  position: sticky; left: 60px; z-index: 15;
   min-width: 150px; max-width: 150px; width: 150px;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -1248,6 +1249,13 @@ table input:focus { border-color: var(--accent); }
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(1)">▶</button>
         </div>
         <div style="width:1px;height:24px;background:var(--border)"></div>
+        <!-- Toggle vue quinzaine -->
+        <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px">
+          <button id="view-btn-mois" onclick="setPlanningView('mois')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s">Mois</button>
+          <button id="view-btn-q1" onclick="setPlanningView('q1')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.15s">1–15</button>
+          <button id="view-btn-q2" onclick="setPlanningView('q2')" style="padding:4px 10px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text2);transition:all 0.15s">16–fin</button>
+        </div>
+        <div style="width:1px;height:24px;background:var(--border)"></div>
         <!-- Filtres spécialité -->
         <div id="filter-spec-tabs" style="display:flex;gap:5px;flex-wrap:wrap"></div>
         <div style="width:1px;height:24px;background:var(--border)"></div>
@@ -1577,14 +1585,9 @@ table input:focus { border-color: var(--accent); }
             <button class="btn btn-primary btn-sm" onclick="saveSpecRegles()">💾 Enregistrer les règles spécialités</button>
           </div>
           <div class="config-section">
-            <div class="config-section-title">📅 Codes d'absence</div>
-            <div id="absence-codes-list"></div>
-            <div class="flex gap-2 mt-2">
-              <input type="text" id="new-abs-code" placeholder="Code (ex: AM)" style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <input type="text" id="new-abs-label" placeholder="Libellé" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <input type="number" id="new-abs-heures" placeholder="h" style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
-              <button class="btn btn-secondary btn-sm" onclick="addAbsCode()">+</button>
-            </div>
+            <div class="config-section-title">📅 Codes absences &amp; congés</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Les codes absence et congés sont gérés dans l'onglet <strong>Horaires</strong> — section « Codes absences &amp; congés ». Ils sont communs à tous vos établissements.</p>
+            <button class="btn btn-secondary btn-sm" onclick="switchConfigTab('horaires')">→ Aller à l'onglet Horaires</button>
           </div>
         </div>
       </div>
@@ -1652,7 +1655,8 @@ table input:focus { border-color: var(--accent); }
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <div>
                 <div class="config-section-title" style="margin-bottom:2px">📅 Codes absences & congés</div>
-                <p style="font-size:11px;color:var(--text2);margin:0">Ces codes remplacent un jour de travail par une absence. Paramétrable : nombre d'heures comptées, impact RH. <strong style="color:var(--accent)">CF = Congé de Fractionnement</strong> (pas Formation — la Formation est FO).</p>
+                <p style="font-size:11px;color:var(--text2);margin:0 0 4px 0">Ces codes remplacent un jour de travail par une absence. Paramétrable : nombre d'heures comptées, impact RH. <strong style="color:var(--accent)">CF = Congé de Fractionnement</strong> (pas Formation — la Formation est FO).</p>
+                <p style="font-size:11px;color:var(--accent3);margin:0;font-weight:600">⚠️ Ces codes sont communs à tous vos établissements du groupe Horizon Studio.</p>
               </div>
             </div>
             <div id="cfg-absence-codes-list"></div>
@@ -2537,6 +2541,7 @@ let DB = {
 
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
+let planningViewMode = 'mois'; // 'mois' | 'q1' (1-15) | 'q2' (16-fin)
 let currentVacWeek = new Date();
 let editingAgentId = null;
 let editingVacId = null;
@@ -3790,6 +3795,8 @@ function renderPlanning() {
   document.getElementById('month-label-2').textContent = getMonthLabel();
 
   const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const { startDay, endDay } = getPlanningDayRange();
+  const nbDaysShown = endDay - startDay + 1;
   const filterSect = document.getElementById('filter-secteur')?.value || '';
   const filterTxt = (document.getElementById('filter-agent')?.value || '').toLowerCase();
   const today = new Date();
@@ -3805,10 +3812,10 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
-    <th style="position:sticky;left:0;z-index:20;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:20;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
-  for (let d = 1; d <= daysInMonth; d++) {
+  let html = `<table class="planning-table" style="min-width:${210 + nbDaysShown*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+    <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
+    <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
+  for (let d = startDay; d <= endDay; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
     const isWE = dow === 0 || dow === 6;
@@ -3946,7 +3953,7 @@ function renderPlanning() {
           '</span>' +
         '</td>';
 
-      for (let d = 1; d <= daysInMonth; d++) {
+      for (let d = startDay; d <= endDay; d++) {
         const date = new Date(currentYear, currentMonth, d);
         const dow = date.getDay();
         const isWE = dow === 0 || dow === 6;
@@ -4043,7 +4050,7 @@ function renderPlanning() {
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
     const horPart = etab.horaires
-      .filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
+      .filter(h => h.comptage === 'travail' && !['AT','FO','FO2'].includes(h.code) && !h.isConge)
       .map(h => {
         const pauses = h.pauses || [];
         const totalPause = pauses.reduce((s,p) => s+(parseFloat(p.duree)||0), 0);
@@ -4161,7 +4168,8 @@ function renderPlanningVacataires(daysInMonth, etab) {
   let html = '<table style="border-collapse:collapse;width:max-content;font-size:11px">';
   html += '<thead><tr>';
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
-  for (let d = 1; d <= daysInMonth; d++) {
+  const { startDay: vsD, endDay: veD } = getPlanningDayRange();
+  for (let d = vsD; d <= veD; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
     const isWE = dow === 0 || dow === 6;
@@ -4188,7 +4196,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
     html += '</div></td>';
 
     let nbDispo = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
+    for (let d = vsD; d <= veD; d++) {
       const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       const st = (etab.vacDispos[vac.id]||{})[dk];
       const date = new Date(currentYear, currentMonth, d);
@@ -4261,6 +4269,29 @@ function changeMonth(delta) {
   autoFillIfEmpty();
   renderPlanning();
   renderComptage();
+}
+
+function setPlanningView(mode) {
+  planningViewMode = mode;
+  ['mois','q1','q2'].forEach(m => {
+    const btn = document.getElementById('view-btn-' + m);
+    if (!btn) return;
+    if (m === mode) {
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text2)';
+    }
+  });
+  renderPlanning();
+}
+
+function getPlanningDayRange() {
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  if (planningViewMode === 'q1') return { startDay: 1, endDay: 15 };
+  if (planningViewMode === 'q2') return { startDay: 16, endDay: daysInMonth };
+  return { startDay: 1, endDay: daysInMonth };
 }
 
 function autoFillIfEmpty() {
@@ -4418,7 +4449,7 @@ function openShiftPicker(agentId, day) {
 
   // === HORAIRES DE TRAVAIL ===
   const travailCodes = etab.horaires.filter(h => 
-    h.comptage === 'travail' || ['M','S','J','NU','N'].includes(h.code)
+    h.comptage === 'travail' && !h.isConge && !['CA','CF','FO','AT','GR','RC','MO','EM','AM','CP'].includes(h.code)
   ).filter(h => !h.code.startsWith('HS'));
   const travailBtns = document.getElementById('shift-travail-btns');
   travailBtns.innerHTML = travailCodes.map(h => {
@@ -4452,11 +4483,11 @@ function openShiftPicker(agentId, day) {
   congeBtns.innerHTML = congesCodes.map(h => {
     const isActive = currentShift === h.code;
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
-      style="padding:10px 16px;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
+      style="padding:10px 0;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
       background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
-      font-size:13px;font-weight:800;cursor:pointer;min-width:80px;text-align:center">
+      font-size:13px;font-weight:800;cursor:pointer;width:80px;min-width:80px;max-width:80px;text-align:center;box-sizing:border-box">
       <div>${h.code}</div>
-      <div style="font-size:9px;opacity:0.7;font-weight:400">${h.label||''}</div>
+      <div style="font-size:9px;opacity:0.7;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px">${h.label||''}</div>
     </button>`;
   }).join('');
 
