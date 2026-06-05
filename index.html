@@ -1215,6 +1215,10 @@ table input:focus { border-color: var(--accent); }
           <div id="dash-conges-list" style="font-size:12px;color:var(--text2)">Aucune demande en attente</div>
         </div>
         <div class="card">
+          <div class="card-header"><span class="card-title">📋 Absences &amp; Congés</span></div>
+          <div id="dash-abs-content"></div>
+        </div>
+        <div class="card">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
             <span class="card-title">🔔 Astreintes</span>
             <div style="display:flex;align-items:center;gap:6px">
@@ -1230,20 +1234,13 @@ table input:focus { border-color: var(--accent); }
 
     <!-- PLANNING -->
     <div id="page-planning" class="page">
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div>
-          <h2>Planning mensuel</h2>
-          <p>Gestion des présences et horaires</p>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary btn-sm" onclick="openHistory()" style="font-size:11px">📋 Historique</button>
-          <button class="btn btn-success btn-sm" onclick="autoFillMonth()" style="font-size:11px">✨ Générer</button>
-          <button class="btn btn-secondary btn-sm" onclick="printPlanning()" style="font-size:11px">🖨️ Imprimer</button>
-        </div>
-      </div>
-
-      <!-- Barre de navigation mois + filtres -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+      <!-- Barre de navigation mois + filtres (sans header titre) -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+        <!-- Boutons action -->
+        <button class="btn btn-success btn-sm" onclick="autoFillMonth()" style="font-size:11px">✨ Générer</button>
+        <button class="btn btn-secondary btn-sm" onclick="openHistory()" style="font-size:11px">📋 Historique</button>
+        <button class="btn btn-secondary btn-sm" onclick="printPlanning()" style="font-size:11px">🖨️ Imprimer</button>
+        <div style="width:1px;height:24px;background:var(--border)"></div>
         <!-- Navigation mois -->
         <div class="month-nav">
           <button class="btn btn-secondary btn-sm btn-icon" onclick="changeMonth(-1)">◀</button>
@@ -1629,7 +1626,13 @@ table input:focus { border-color: var(--accent); }
 
       <div id="config-tab-horaires" class="hidden">
         <div class="config-section" style="max-width:800px">
-          <div class="config-section-title">🕐 Codes horaires</div>
+          <!-- SECTION 1: Codes travaillés -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div class="config-section-title" style="margin-bottom:2px">🕐 Codes horaires travaillés</div>
+              <p style="font-size:11px;color:var(--text2);margin:0">Ces codes correspondent à des jours de travail effectif (M, S, J...). Ils ont un horaire début/fin et comptent dans les heures travaillées.</p>
+            </div>
+          </div>
           <div class="horaire-list" id="cfg-horaire-list"></div>
           <hr class="divider">
           <div style="display:grid;grid-template-columns:70px 1fr 1fr 80px 80px auto;gap:8px;align-items:end">
@@ -1648,6 +1651,34 @@ table input:focus { border-color: var(--accent); }
               </div>
             </div>
             <button class="btn btn-success btn-sm" style="align-self:end" onclick="addHoraire()">+ Ajouter</button>
+          </div>
+
+          <div style="height:24px"></div>
+
+          <!-- SECTION 2: Codes absences / congés -->
+          <div style="border-top:2px solid var(--border);padding-top:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <div class="config-section-title" style="margin-bottom:2px">📅 Codes absences & congés</div>
+                <p style="font-size:11px;color:var(--text2);margin:0">Ces codes remplacent un jour de travail par une absence. Paramétrable : nombre d'heures comptées, impact RH. <strong style="color:var(--accent)">CF = Congé de Fractionnement</strong> (pas Formation — la Formation est FO).</p>
+              </div>
+            </div>
+            <div id="cfg-absence-codes-list"></div>
+            <div style="display:grid;grid-template-columns:70px 1fr 80px 120px auto;gap:8px;align-items:end;margin-top:10px">
+              <div class="form-group" style="margin:0"><label>Code</label><input type="text" id="new-abs2-code" placeholder="CA" maxlength="5" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box"></div>
+              <div class="form-group" style="margin:0"><label>Libellé</label><input type="text" id="new-abs2-label" placeholder="Congé Annuel" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box"></div>
+              <div class="form-group" style="margin:0"><label>Heures</label><input type="number" id="new-abs2-heures" placeholder="10" value="10" step="0.5" min="0" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box"></div>
+              <div class="form-group" style="margin:0">
+                <label>Impact RH</label>
+                <select id="new-abs2-impact" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box">
+                  <option value="presence">Présence (décompté CA)</option>
+                  <option value="travail">Travail (compte en h.)</option>
+                  <option value="absent">Absent (ne compte pas)</option>
+                  <option value="repos">Repos compensateur</option>
+                </select>
+              </div>
+              <button class="btn btn-success btn-sm" style="align-self:end" onclick="addAbsCode2()">+ Ajouter</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2390,6 +2421,31 @@ table input:focus { border-color: var(--accent); }
       <button class="modal-close" onclick="closeModal('modal-cal-absence')">✕</button>
     </div>
     <div id="cal-agent-info" style="margin-bottom:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;font-size:13px"></div>
+
+    <!-- Sélection rapide par plage de dates -->
+    <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">⚡ Sélection rapide par plage</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:10px;color:var(--text3);font-weight:600">Du</label>
+          <div style="display:flex;gap:4px">
+            <select id="cal-range-dj" style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none"></select>
+            <select id="cal-range-dm" style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none"></select>
+          </div>
+        </div>
+        <span style="color:var(--text3);font-size:18px;margin-top:14px">→</span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <label style="font-size:10px;color:var(--text3);font-weight:600">Au</label>
+          <div style="display:flex;gap:4px">
+            <select id="cal-range-fj" style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none"></select>
+            <select id="cal-range-fm" style="padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;outline:none"></select>
+          </div>
+        </div>
+        <button onclick="calApplyRange()" class="btn btn-primary btn-sm" style="margin-top:14px">✓ Sélectionner la plage</button>
+        <button onclick="calClearAll()" class="btn btn-secondary btn-sm" style="margin-top:14px">Effacer</button>
+      </div>
+    </div>
+
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <button class="btn btn-secondary btn-sm btn-icon" onclick="calNavMonth(-1)">◀</button>
       <span id="cal-month-label" style="font-weight:700;font-size:15px"></span>
@@ -2400,7 +2456,6 @@ table input:focus { border-color: var(--accent); }
       <span id="cal-count">0 jour sélectionné</span>
       <span style="flex:1"></span>
       <button class="btn btn-secondary btn-sm" onclick="calSelectAll()">Tout sélectionner</button>
-      <button class="btn btn-secondary btn-sm" onclick="calClearAll()">Tout effacer</button>
     </div>
     <div class="flex gap-2 mt-3">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-cal-absence')">Annuler</button>
@@ -3644,6 +3699,68 @@ function renderDashboard() {
   }
   // Card astreintes semaine
   renderDashAstreintes();
+
+  // Card absences & congés ce mois
+  renderDashAbsences();
+}
+
+function renderDashAbsences() {
+  const etab = getEtab();
+  const el = document.getElementById('dash-abs-content');
+  if (!el || !etab) return;
+
+  const y = currentYear, m = currentMonth;
+  const agents = etab.agents.filter(a => a.actif);
+  const absCodesTrack = ['CA','CF','MO','AM','EM','AT','FO','GR','CP','RC'];
+  const absCouleurs = { CA:'#f76f6f', CF:'#e879f9', MO:'#94a3b8', AM:'#94a3b8', EM:'#fb923c', AT:'#f59e0b', FO:'#34d399', GR:'#6b7280', CP:'#f76f6f', RC:'#4a5568' };
+
+  // Compter jours d'absence par code ce mois
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const counts = {};
+  absCodesTrack.forEach(c => { counts[c] = 0; });
+  const agentsEnCA = new Set();
+
+  agents.forEach(ag => {
+    const plan = ((etab.planning[y]||{})[m]||{})[ag.id]||{};
+    for (let d=1; d<=daysInMonth; d++) {
+      const sh = plan[d]||'';
+      if (absCodesTrack.includes(sh)) {
+        counts[sh] = (counts[sh]||0) + 1;
+        if (sh === 'CA') agentsEnCA.add(ag.id);
+      }
+    }
+  });
+
+  const totalJours = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  // Filtrer les codes qui ont > 0 jours OU sont CA/CF (toujours affichés)
+  const codesPrimaires = ['CA','CF','MO','AM','AT','EM'];
+  const codesSecondaires = absCodesTrack.filter(c => !codesPrimaires.includes(c) && counts[c]>0);
+  const allCodes = [...codesPrimaires, ...codesSecondaires];
+
+  // Récupérer les libellés depuis absenceCodes
+  const getLabel = code => {
+    const found = etab.absenceCodes.find(a => a.code === code);
+    return found ? found.label : code;
+  };
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+      <span style="font-size:28px;font-weight:900;color:var(--accent3)">${totalJours}</span>
+      <span style="font-size:12px;color:var(--text2)">jours ce mois</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+      ${allCodes.map(code => {
+        const n = counts[code]||0;
+        const col = absCouleurs[code]||'#888';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:${n>0?col+'18':'var(--bg3)'};border-radius:6px;border:1px solid ${n>0?col+'44':'var(--border)'}">
+          <span style="font-weight:800;font-size:11px;color:${n>0?col:'var(--text3)'};font-family:monospace">${code}</span>
+          <span style="font-size:12px;font-weight:700;color:${n>0?col:'var(--text3)'}">${n}j</span>
+        </div>`;
+      }).join('')}
+    </div>
+    ${agentsEnCA.size > 0 ? `<div style="font-size:10px;color:var(--text2)">${agentsEnCA.size} agent${agentsEnCA.size>1?'s':''} en CA</div>` : '<div style="font-size:10px;color:var(--text3)">0 agent en CA</div>'}
+  `;
 }
 
 // ============================================================
@@ -4525,16 +4642,85 @@ function openCalAbsence(agentId, code, startDay) {
 
   // Titre et info agent
   const codeColors = { CA:'#f76f6f', AM:'#94a3b8', MO:'#94a3b8', CF:'#e879f9' };
-  const codeLabels = { CA:'Congé Annuel', AM:'Arrêt Maladie', MO:'Maladie Ordinaire', CF:'Congé Fractionnement' };
+  const codeLabels = { CA:'Congé Annuel', AM:'Arrêt Maladie', MO:'Maladie Ordinaire', CF:'Congé de Fractionnement' };
   document.getElementById('cal-modal-title').innerHTML =
     `<span style="color:${codeColors[code]||'var(--accent)'}">${code}</span> — ${codeLabels[code]||code}`;
   document.getElementById('cal-agent-info').innerHTML =
     `👤 <strong>${agent.nom} ${agent.prenom||''}</strong> · ${agent.spec} · ${agent.taux}%
      <span style="margin-left:12px;color:var(--text2);font-size:11px">Cliquer sur les jours travaillés à mettre en ${code}</span>`;
 
+  // Init selects plage de dates
+  _calInitRangeSelects();
+
   renderCalGrid();
   openModal('modal-cal-absence');
 }
+
+function _calInitRangeSelects() {
+  const moisFr = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  ['d','f'].forEach(p => {
+    const mSel = document.getElementById('cal-range-' + p + 'm');
+    const jSel = document.getElementById('cal-range-' + p + 'j');
+    if (!mSel || !jSel) return;
+    mSel.innerHTML = moisFr.map((mn, i) => `<option value="${i+1}"${i===currentMonth?' selected':''}>${mn}</option>`).join('');
+    const dim = new Date(currentYear, currentMonth+1, 0).getDate();
+    jSel.innerHTML = '';
+    for (let d=1; d<=dim; d++) {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      if (p==='d' && d===calState.startDay) opt.selected=true;
+      if (p==='f' && d===calState.startDay) opt.selected=true;
+      jSel.appendChild(opt);
+    }
+    mSel.onchange = () => {
+      // Recalc jours selon mois
+      const m = parseInt(mSel.value)-1;
+      const dim2 = new Date(currentYear, m+1, 0).getDate();
+      const prev = parseInt(jSel.value)||1;
+      jSel.innerHTML = '';
+      for (let d=1; d<=dim2; d++) {
+        const opt = document.createElement('option');
+        opt.value=d; opt.textContent=d;
+        if (d===Math.min(prev,dim2)) opt.selected=true;
+        jSel.appendChild(opt);
+      }
+    };
+  });
+}
+
+function calApplyRange() {
+  const etab = getEtab();
+  const { agentId, year } = calState;
+  const dm = parseInt(document.getElementById('cal-range-dm').value)-1;
+  const dj = parseInt(document.getElementById('cal-range-dj').value);
+  const fm = parseInt(document.getElementById('cal-range-fm').value)-1;
+  const fj = parseInt(document.getElementById('cal-range-fj').value);
+
+  const dateD = new Date(year, dm, dj);
+  const dateF = new Date(year, fm, fj);
+  if (dateD > dateF) { showToast('Date de début > date de fin', 'error'); return; }
+
+  const codesWork = ['M','S','J','NU','N'];
+  // Effacer ancienne sélection
+  calState.selected = new Set();
+
+  let cur = new Date(dateD);
+  while (cur <= dateF) {
+    const m = cur.getMonth();
+    const d = cur.getDate();
+    const sh = (((etab.planning[year]||{})[m]||{})[agentId]||{})[d]||'';
+    if (codesWork.includes(sh)) calState.selected.add({ month: m, day: d });
+    cur.setDate(cur.getDate()+1);
+  }
+
+  // Navigate to the start month
+  calState.month = dm;
+  renderCalGrid();
+  showToast(`${calState.selected.size} jour(s) travaillés sélectionnés`, 'success');
+}
+
+// Override calToggleDay to handle multi-month keys
+const _origCalToggleDay = typeof calToggleDay !== 'undefined' ? calToggleDay : null;
 
 // Jours éligibles à CA/AM : tous sauf les absences déjà posées
 // R et RC sont inclus car l'agent peut venir faire des heures sup ou une journée
@@ -4653,21 +4839,23 @@ function applyCalAbsence() {
   }
 
   if (!etab.planning[year]) etab.planning[year] = {};
-  if (!etab.planning[year][month]) etab.planning[year][month] = {};
-  if (!etab.planning[year][month][agentId]) etab.planning[year][month][agentId] = {};
 
-  selected.forEach(day => {
-    etab.planning[year][month][agentId][day] = code;
+  selected.forEach(item => {
+    // item peut être un number (jour du mois courant) ou {month, day} (multi-mois depuis plage)
+    let m = month, day;
+    if (typeof item === 'object' && item !== null) {
+      m = item.month;
+      day = item.day;
+    } else {
+      day = item;
+    }
+    if (!etab.planning[year][m]) etab.planning[year][m] = {};
+    if (!etab.planning[year][m][agentId]) etab.planning[year][m][agentId] = {};
+    etab.planning[year][m][agentId][day] = code;
   });
 
   saveToStorage();
   closeModal('modal-cal-absence');
-
-  // Revenir au mois courant si on a navigué
-  if (year !== currentYear || month !== currentMonth) {
-    currentYear = year; currentMonth = month;
-  }
-
   renderPlanning();
   renderComptage();
   showToast(`${code} appliqué sur ${selected.size} jour${selected.size > 1 ? 's' : ''}`, 'success');
@@ -7446,16 +7634,55 @@ function removeHoraire(idx) {
 function renderAbsenceCodes() {
   const etab = getEtab();
   if (!etab) return;
+  // Old list (kept for compatibility with rules tab)
   const el = document.getElementById('absence-codes-list');
-  if (!el) return;
-  el.innerHTML = etab.absenceCodes.map((a, i) => `
-    <div class="flex items-center gap-2 mb-2">
-      <span class="font-mono" style="width:40px;font-weight:700;color:var(--accent)">${a.code}</span>
-      <span style="flex:1">${a.label}</span>
-      <span class="text-muted text-sm">${a.heures}h</span>
-      <button class="btn btn-danger btn-sm btn-icon" onclick="removeAbsCode(${i})">×</button>
-    </div>`
-  ).join('');
+  if (el) {
+    el.innerHTML = etab.absenceCodes.map((a, i) => `
+      <div class="flex items-center gap-2 mb-2">
+        <span class="font-mono" style="width:40px;font-weight:700;color:var(--accent)">${a.code}</span>
+        <span style="flex:1">${a.label}</span>
+        <span class="text-muted text-sm">${a.heures}h</span>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="removeAbsCode(${i})">×</button>
+      </div>`
+    ).join('');
+  }
+
+  // New combined list in horaires tab
+  const el2 = document.getElementById('cfg-absence-codes-list');
+  if (!el2) return;
+  const impactLabels = { presence:'🌴 Présence', travail:'⚙️ Travail', absent:'❌ Absent', repos:'💤 Repos' };
+  const impactColors = { presence:'#f76f6f', travail:'#38d9a9', absent:'#6b7fa8', repos:'#8892aa' };
+  el2.innerHTML = etab.absenceCodes.map((a, i) => {
+    const col = impactColors[a.impact] || '#888';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+      <span style="font-family:monospace;font-weight:800;color:${col};min-width:40px;font-size:13px">${a.code}</span>
+      <span style="flex:1;font-size:12px;color:var(--text)">${a.label}</span>
+      <span style="background:${col}22;color:${col};border:1px solid ${col}44;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${a.heures}h</span>
+      <span style="font-size:11px;color:var(--text3)">${impactLabels[a.impact]||a.impact}</span>
+      <input type="number" value="${a.heures}" min="0" max="24" step="0.5" onchange="updateAbsCode(${i},'heures',parseFloat(this.value))" style="width:55px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;text-align:center" title="Modifier les heures">
+      <button class="btn btn-danger btn-sm btn-icon" onclick="removeAbsCode(${i})" title="Supprimer">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+function addAbsCode2() {
+  const code = document.getElementById('new-abs2-code').value.trim().toUpperCase();
+  const label = document.getElementById('new-abs2-label').value.trim();
+  const heures = parseFloat(document.getElementById('new-abs2-heures').value) || 0;
+  const impact = document.getElementById('new-abs2-impact').value || 'presence';
+  if (!code || !label) return;
+  const etab = getEtab();
+  etab.absenceCodes.push({ code, label, heures, impact });
+  saveToStorage(); renderAbsenceCodes();
+  document.getElementById('new-abs2-code').value = '';
+  document.getElementById('new-abs2-label').value = '';
+}
+
+function updateAbsCode(idx, field, val) {
+  const etab = getEtab();
+  if (!etab.absenceCodes[idx]) return;
+  etab.absenceCodes[idx][field] = val;
+  saveToStorage(); renderAbsenceCodes();
 }
 
 function addAbsCode() {
@@ -9205,10 +9432,27 @@ function renderAstrList(astreintes, container) {
 
 function renderAstrCalendar(astreintes, container) {
   const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const typeStyles = {
+    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.10)',  border:'rgba(99,102,241,0.25)', icon:'🏛️' },
+    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.10)',  border:'rgba(79,142,247,0.25)', icon:'🩺' },
+    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.10)',  border:'rgba(247,169,79,0.25)', icon:'🔧' },
+    'IDEC':      { color:'#4f8ef7', bg:'rgba(79,142,247,0.10)', border:'rgba(79,142,247,0.25)', icon:'🩺' },
+    'Directeur': { color:'#6366f1', bg:'rgba(99,102,241,0.10)', border:'rgba(99,102,241,0.25)', icon:'🏛️' }
+  };
+  const topTypes = ['Direction', 'Organisation et Soins', 'Directeur', 'IDEC'];
+  const botTypes = ['Technique'];
+  const getWeekNum = d => {
+    const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = d2.getUTCDay() || 7;
+    d2.setUTCDate(d2.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
+    return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
+  };
+  const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+
   let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:4px">';
 
   for (let m = 0; m < 12; m++) {
-    const daysInMonth = new Date(astrCurrentYear, m+1, 0).getDate();
     const monthAstr = astreintes.filter(a => {
       const d1 = new Date(a.debut), d2 = new Date(a.fin);
       return d1 <= new Date(astrCurrentYear, m+1, 0) && d2 >= new Date(astrCurrentYear, m, 1);
@@ -9221,42 +9465,62 @@ function renderAstrCalendar(astreintes, container) {
     if (monthAstr.length === 0) {
       html += '<div style="text-align:center;color:var(--text3);font-size:11px;padding:8px">Aucune astreinte</div>';
     } else {
-      // Grouper par semaine (lundi→dimanche de début)
+      // Grouper par semaine
       const semaines = {};
       monthAstr.forEach(a => {
         const d1 = new Date(a.debut);
-        // Trouver le lundi de la semaine de début
-        const dow = d1.getDay() === 0 ? 6 : d1.getDay() - 1; // 0=lun
+        const dow = d1.getDay() === 0 ? 6 : d1.getDay() - 1;
         const lundi = new Date(d1); lundi.setDate(d1.getDate() - dow);
         const key = lundi.toISOString().slice(0,10);
         if (!semaines[key]) semaines[key] = { lundi, astreintes: [] };
         semaines[key].astreintes.push(a);
       });
 
-      Object.entries(semaines).sort(([a],[b]) => a.localeCompare(b)).forEach(([key, sem], si) => {
+      Object.entries(semaines).sort(([a],[b]) => a.localeCompare(b)).forEach(([key, sem]) => {
         const lundi = sem.lundi;
         const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
-        const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
-        const getWeekNum = d => {
-          const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-          const dayNum = d2.getUTCDay() || 7;
-          d2.setUTCDate(d2.getUTCDate() + 4 - dayNum);
-          const yearStart = new Date(Date.UTC(d2.getUTCFullYear(),0,1));
-          return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
-        };
         const semNum = getWeekNum(lundi);
-        html += `<div style="margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
-            Semaine ${semNum} · ${fmt(lundi)} → ${fmt(dimanche)}
-          </div>`;
-        sem.astreintes.forEach(a => {
-          const s = astrTypeStyle(a.type);
-          html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:5px 8px;margin-bottom:3px;cursor:pointer" onclick="openAstrModal('${a.id}')">
-            <div style="font-size:10px;color:${s.color};font-weight:700;margin-bottom:1px">${s.icon} ${a.type}</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">${a.nom}</div>
-            ${a.tel ? `<div style="font-size:10px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+
+        // Séparer haut (Direction/OrgSoins) et bas (Technique)
+        const topAstr = sem.astreintes.filter(a => topTypes.includes(a.type));
+        const botAstr = sem.astreintes.filter(a => botTypes.includes(a.type));
+
+        html += `<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+          <div style="background:var(--bg2);padding:3px 8px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;display:flex;justify-content:space-between">
+            <span>Semaine ${semNum}</span><span>${fmt(lundi)} → ${fmt(dimanche)}</span>
+          </div>
+          <!-- Top: Direction + Org. Soins -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px 6px 0">`;
+
+        topAstr.forEach(a => {
+          const s = typeStyles[a.type] || typeStyles['Direction'];
+          html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:6px 8px;cursor:pointer" onclick="openAstrModal('${a.id}')">
+            <div style="font-size:9px;color:${s.color};font-weight:700">${s.icon} ${a.type}</div>
+            <div style="font-size:11px;font-weight:800;color:var(--text);margin-top:2px">${a.nom}</div>
+            ${a.tel ? `<div style="font-size:9px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
           </div>`;
         });
+        if (topAstr.length === 0) html += `<div style="color:var(--text3);font-size:10px;padding:4px">—</div><div></div>`;
+        else if (topAstr.length === 1) html += `<div></div>`;
+
+        html += `</div>`;
+
+        if (botAstr.length > 0) {
+          html += `<div style="margin:4px 6px 6px;height:1px;background:var(--border)"></div>
+            <div style="padding:0 6px 6px">`;
+          botAstr.forEach(a => {
+            const s = typeStyles[a.type] || typeStyles['Technique'];
+            html += `<div style="background:${s.bg};border:1px solid ${s.border};border-radius:6px;padding:6px 8px;cursor:pointer" onclick="openAstrModal('${a.id}')">
+              <div style="font-size:9px;color:${s.color};font-weight:700">${s.icon} ${a.type}</div>
+              <div style="font-size:11px;font-weight:800;color:var(--text);margin-top:2px">${a.nom}</div>
+              ${a.tel ? `<div style="font-size:9px;color:var(--text2)">📞 ${a.tel}</div>` : ''}
+            </div>`;
+          });
+          html += '</div>';
+        } else {
+          html += `<div style="margin:4px 6px 6px;padding:0 6px 4px"><div style="color:var(--text3);font-size:9px">🔧 Technique : —</div></div>`;
+        }
+
         html += '</div>';
       });
     }
