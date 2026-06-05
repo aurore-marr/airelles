@@ -3110,6 +3110,9 @@ async function doLogin() {
   document.getElementById('sb-user-name').textContent = login.nom;
 
   startSessionTimer();
+  const _etabInit = getEtab();
+  if (_etabInit) _pollLastCongesCount = (_etabInit.demandesConges||[]).filter(d=>d.statut==='en_attente').length;
+  startPolling();
 
   // Badge nouvelles dispos
   const newDispos = etab.newDispos || [];
@@ -3136,6 +3139,46 @@ let _sessionTimer = null;
 const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8h en ms
 let _sessionStart = null;
 let _sessionWarningShown = false;
+
+// ============================================================
+// POLLING — Détection nouvelles demandes congés (toutes les 90s)
+// ============================================================
+let _pollTimer = null;
+let _pollLastCongesCount = -1;
+
+function startPolling() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(async function() {
+    if (!DB.currentUser) { clearInterval(_pollTimer); return; }
+    const etab = getEtab();
+    if (!etab || !etab.id) return;
+    try {
+      const fresh = await supaLoadEtab(etab.id);
+      if (!fresh) return;
+      const pending = (fresh.demandesConges || []).filter(d => d.statut === 'en_attente');
+      // Notifier si le nombre de demandes en attente a augmenté depuis la dernière vérification
+      if (_pollLastCongesCount >= 0 && pending.length > _pollLastCongesCount) {
+        const diff = pending.length - _pollLastCongesCount;
+        showToast(`📋 ${diff} nouvelle${diff>1?'s':''} demande${diff>1?'s':''} de congés en attente !`, 'info');
+        // Mettre à jour le badge dashboard sans re-render complet
+        const badge = document.getElementById('dash-conges-badge');
+        if (badge) { badge.textContent = pending.length; badge.style.display = pending.length > 0 ? 'inline' : 'none'; }
+        // Rafraîchir le dashboard si visible
+        if (document.getElementById('page-dashboard') && document.getElementById('page-dashboard').classList.contains('active')) {
+          renderDashboard();
+        }
+      }
+      _pollLastCongesCount = pending.length;
+      // Sync données fraîches en mémoire (sans écraser une modification en cours)
+      DB.etablissements[etab.id] = fresh;
+    } catch(e) {}
+  }, 90 * 1000); // toutes les 90 secondes
+}
+
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+  _pollLastCongesCount = -1;
+}
 
 function startSessionTimer() {
   clearTimeout(_sessionTimer);
@@ -3183,6 +3226,7 @@ function doLogout() {
   DB.currentUser = null;
   try { localStorage.removeItem('horizon_session'); } catch(e) {}
   clearInterval(_sessionTimer);
+  stopPolling();
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pwd').value = '';
@@ -3357,45 +3401,59 @@ function renderDashAstreintes() {
     'Technique': 'Technique'
   };
   const typeStyles = {
-    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.12)',  border:'rgba(99,102,241,0.3)',  icon:'🏛️' },
-    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
-    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.12)',  border:'rgba(247,169,79,0.3)',  icon:'🔧' }
+    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.10)',  border:'rgba(99,102,241,0.25)',  icon:'🏛️' },
+    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.10)',  border:'rgba(79,142,247,0.25)',  icon:'🩺' },
+    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.10)',  border:'rgba(247,169,79,0.25)',  icon:'🔧' }
   };
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
 
-  // Grouper par type canonique
-  const byCanonical = {};
-  actives.forEach(a => {
-    const canon = canonicalType[a.type] || a.type;
-    const existing = byCanonical[canon];
-    if (!existing) {
-      byCanonical[canon] = a;
-    } else {
-      const aStartsInPeriod = a.debut >= lundiStr;
-      const existingStartsInPeriod = existing.debut >= lundiStr;
-      if (aStartsInPeriod && !existingStartsInPeriod) {
-        byCanonical[canon] = a;
-      } else if (aStartsInPeriod && existingStartsInPeriod && a.debut > existing.debut) {
-        byCanonical[canon] = a;
-      }
-    }
+  // Calculer les 2 semaines séparément
+  const lundi2 = new Date(lundi); lundi2.setDate(lundi.getDate() + 7);
+  const dimanche1 = new Date(lundi); dimanche1.setDate(lundi.getDate() + 6);
+  const dimancheF = new Date(lundi); dimancheF.setDate(lundi.getDate() + 13);
+
+  const lundi1Str   = lundi.toISOString().slice(0,10);
+  const dim1Str     = dimanche1.toISOString().slice(0,10);
+  const lundi2Str   = lundi2.toISOString().slice(0,10);
+  const dim2Str     = dimancheF.toISOString().slice(0,10);
+
+  // Trouver l'astreinte active pour un type et une plage
+  const findForPeriod = (type, startStr, endStr) => {
+    return astreintes.filter(a => {
+      const canon = canonicalType[a.type] || a.type;
+      return canon === type && a.debut <= endStr && a.fin >= startStr;
+    }).sort((a,b) => b.debut.localeCompare(a.debut))[0] || null;
+  };
+
+  // Construire les colonnes : une par type (2 lignes = S et S+1)
+  const cols = typeOrder.map(type => {
+    const a1 = findForPeriod(type, lundi1Str, dim1Str);
+    const a2 = findForPeriod(type, lundi2Str, dim2Str);
+    const s = typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.08)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
+
+    const makeCard = (a, weekLabel) => {
+      if (!a) return `<div style="flex:1;background:${s.bg};border:1.5px dashed ${s.border};border-radius:10px;padding:10px 12px;opacity:0.5">
+        <div style="font-size:9px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${type}</div>
+        <div style="font-size:10px;color:var(--text3)">${weekLabel}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">—</div>
+      </div>`;
+      const d1str = fmt(new Date(a.debut + 'T00:00:00'));
+      const d2str = fmt(new Date(a.fin + 'T00:00:00'));
+      return `<div style="flex:1;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${type}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px">${a.nom}</div>
+        ${a.tel ? `<div style="font-size:10px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
+        <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
+      </div>`;
+    };
+
+    return `<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:130px">
+      ${makeCard(a1, 'S' + wn)}
+      ${makeCard(a2, 'S' + wn2)}
+    </div>`;
   });
 
-  const cards = typeOrder.map(type => {
-    const a = byCanonical[type];
-    if (!a) return '';
-    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
-    const d1str = fmt(new Date(a.debut + 'T00:00:00'));
-    const d2str = fmt(new Date(a.fin + 'T00:00:00'));
-    return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;font-weight:700;color:${s.color};margin-bottom:4px">${s.icon} ${type}</div>
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px">${a.nom}</div>
-      ${a.tel ? `<div style="font-size:11px;color:var(--text2);margin-bottom:2px">📞 ${a.tel}</div>` : ''}
-      <div style="font-size:10px;color:var(--text3)">${d1str} → ${d2str}</div>
-    </div>`;
-  }).filter(Boolean).join('');
-
-  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucun</p>'}</div>`;
+  contentEl.innerHTML = `<div style="display:flex;gap:8px;align-items:stretch">${cols.join('')}</div>`;
 }
 
 function renderDashboard() {
@@ -4052,7 +4110,7 @@ function renderPlanning() {
   const legendEl = document.getElementById('planning-legend');
   if (legendEl) {
     const horPart = etab.horaires
-      .filter(h => ['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N','R'].includes(h.code))
+      .filter(h => (['travail','presence'].includes(h.comptage) || ['M','S','J','NU','N'].includes(h.code)) && !['AT','FO','CA','CF','MO','AM','EM','GR','CP','RC','R'].includes(h.code))
       .map(h => {
         const pauses = h.pauses || [];
         const totalPause = pauses.reduce((s,p) => s+(parseFloat(p.duree)||0), 0);
@@ -4164,12 +4222,17 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   const today = new Date();
   const colWidth = 46;
-  const nameWidth = 210;
+  const posWidth = 60;   // identique à la colonne Poste du planning
+  const nomWidth = 150;  // identique à la colonne Nom du planning
+  const nameWidth = posWidth + nomWidth; // 210px total
 
   // Header row (aligned with planning columns)
   let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
   html += '<thead><tr>';
-  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
+  // Colonne "Poste" (sticky left:0, 60px)
+  html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + posWidth + 'px;width:' + posWidth + 'px;padding:3px 8px;text-align:left;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">VAC</th>';
+  // Colonne "Nom" (sticky left:60px, 150px)
+  html += '<th style="position:sticky;left:' + posWidth + 'px;z-index:10;background:var(--bg3);min-width:' + nomWidth + 'px;width:' + nomWidth + 'px;padding:3px 10px;text-align:left;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;border-right:3px solid var(--accent)">Vacataire</th>';
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
     const dow = date.getDay();
@@ -4190,11 +4253,14 @@ function renderPlanningVacataires(daysInMonth, etab) {
   vacDispo.forEach(vac => {
     const specColor = getSpecColor(vac.spec);
     html += '<tr style="background:var(--card)">';
-    html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nameWidth + 'px;width:' + nameWidth + 'px;border-bottom:1px solid var(--border)">';
-    html += '<div style="display:flex;align-items:center;gap:6px">';
-    html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + (vac.prenom||'') + ' ' + vac.nom + '</span>';
+    // Cellule "Poste" (sticky left:0, 60px) — spec badge
+    html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 8px;border-right:1px solid var(--border);min-width:' + posWidth + 'px;width:' + posWidth + 'px;border-bottom:1px solid var(--border);text-align:center">';
     html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
-    html += '</div></td>';
+    html += '</td>';
+    // Cellule "Nom" (sticky left:60px, 150px) — nom prénom
+    html += '<td style="position:sticky;left:' + posWidth + 'px;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nomWidth + 'px;width:' + nomWidth + 'px;border-bottom:1px solid var(--border)">';
+    html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + (vac.prenom||'') + ' ' + vac.nom + '</span>';
+    html += '</td>';
 
     let nbDispo = 0;
     for (let d = 1; d <= daysInMonth; d++) {
@@ -4426,8 +4492,10 @@ function openShiftPicker(agentId, day) {
   }
 
   // === HORAIRES DE TRAVAIL ===
+  // FO (Formation) est une absence, pas un horaire de travail cliquable ici
   const travailCodes = etab.horaires.filter(h => 
-    h.comptage === 'travail' || ['M','S','J','NU','N'].includes(h.code)
+    (h.comptage === 'travail' || ['M','S','J','NU','N'].includes(h.code))
+    && h.code !== 'FO' && h.code !== 'AT'
   ).filter(h => !h.code.startsWith('HS'));
   const travailBtns = document.getElementById('shift-travail-btns');
   travailBtns.innerHTML = travailCodes.map(h => {
