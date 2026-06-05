@@ -993,14 +993,6 @@ table input:focus { border-color: var(--accent); }
 }
 .toast.show { display: flex; align-items: center; gap: 10px; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Details/Summary in dark shift modal */
-#modal-shift details { border:1px solid #2a3350; border-radius:8px; padding:4px 12px; background:#0f1117; }
-#modal-shift details[open] { padding-bottom:10px; }
-#modal-shift summary { list-style:none; outline:none; }
-#modal-shift summary::-webkit-details-marker { display:none; }
-#modal-shift summary::after { content:" ▸"; font-size:9px; }
-#modal-shift details[open] summary::after { content:" ▾"; }
 </style>
 </head>
 <body>
@@ -2220,11 +2212,11 @@ table input:focus { border-color: var(--accent); }
       <div id="shift-travail-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
-    <!-- CONGÉS & DROITS -->
+    <!-- CONGES & DROITS -->
     <div style="margin-bottom:14px">
-      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés & Droits</div>
+      <div style="font-size:10px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌴 Congés &amp; Droits</div>
       <div id="shift-conge-btns" style="display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px"></div>
-      <p style="font-size:10px;color:#5a6480;margin:8px 0 0 0">📅 Les jours fériés sont détectés automatiquement — pas besoin de saisir FE manuellement.</p>
+      <p style="font-size:10px;color:#5a6480;margin:8px 0 0 0">📅 Les jours fériés sont détectés automatiquement.</p>
     </div>
 
     <!-- ABSENCES -->
@@ -2249,15 +2241,13 @@ table input:focus { border-color: var(--accent); }
     </div>
 
     <!-- HS + MODIFICATEURS (section repliable) -->
-    <details style="margin-bottom:14px">
-      <summary style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;cursor:pointer;user-select:none;padding:6px 0">⚡ HS &amp; Modificateurs horaires</summary>
+    <details style="margin-bottom:14px;border:1px solid #2a3350;border-radius:8px;padding:4px 12px;background:#0f1117">
+      <summary style="font-size:10px;font-weight:700;color:var(--accent3);text-transform:uppercase;letter-spacing:1px;cursor:pointer;user-select:none;padding:6px 0;list-style:none;outline:none">⚡ HS &amp; Modificateurs horaires ▸</summary>
       <div style="padding-top:10px">
-        <!-- JOUR DE REPOS TRAVAILLÉ (HS) -->
         <div style="margin-bottom:12px">
           <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Agent vient travailler sur son jour de repos :</div>
           <div id="shift-hs-repos-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
         </div>
-        <!-- MODIFICATEUR HORAIRE -->
         <div id="shift-modificateur-section">
           <div style="font-size:10px;color:#8892aa;margin-bottom:6px">Sur un jour travaillé — ajuste les heures comptées :</div>
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -2682,7 +2672,7 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 
 window.onload = async function() {
   loadTheme();
-  checkQRView();
+  if (checkQRView()) return; // Vue QR : ne pas continuer vers l'écran de login
 
   // ── Afficher un indicateur de chargement dans le dropdown ──
   const sel = document.getElementById('login-etab');
@@ -2794,7 +2784,7 @@ function checkQRView() {
   const specFilter = params.get('spec') || '';
   const isQR    = params.get('qr') === '1' || !!agentId || !!vacId;
 
-  if (!isQR) return;
+  if (!isQR) return false;
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'none';
@@ -2870,6 +2860,7 @@ function checkQRView() {
 
     qrPopulateAgentSelect(etab, specFilter);
   });
+  return true; // indique à window.onload qu'on est en mode QR
 }
 
 // ── Charger un établissement depuis Supabase ──
@@ -3321,13 +3312,12 @@ function secteurCouleurCSS(sect) {
 // ============================================================
 // DASHBOARD
 // ============================================================
-let _dashAstrWeekOffset = 0; // 0 = semaine courante, 1 = semaine suivante, etc.
+let _dashAstrWeekOffset = 0; // 0 = période courante, ±N = N quinzaines
 
 function dashAstrNav(delta) {
   _dashAstrWeekOffset += delta;
-  // Limiter à -2 semaines et +4 semaines
-  if (_dashAstrWeekOffset < -2) _dashAstrWeekOffset = -2;
-  if (_dashAstrWeekOffset > 4) _dashAstrWeekOffset = 4;
+  if (_dashAstrWeekOffset < -4) _dashAstrWeekOffset = -4;
+  if (_dashAstrWeekOffset > 8) _dashAstrWeekOffset = 8;
   renderDashAstreintes();
 }
 
@@ -3347,7 +3337,7 @@ function renderDashAstreintes() {
     return Math.ceil((((d2 - yearStart) / 86400000) + 1)/7);
   };
 
-  // Quinzaine : J0 = aujourd'hui, navigation par blocs de 15 jours
+  // Quinzaine : navigation par blocs de 15 jours depuis aujourd'hui
   const debutBase = new Date(today);
   debutBase.setDate(today.getDate() + _dashAstrWeekOffset * 15);
   const finPeriode = new Date(debutBase);
@@ -3375,14 +3365,14 @@ function renderDashAstreintes() {
     'Organisation et Soins': 'Organisation et Soins', 'IDEC': 'Organisation et Soins',
     'Technique': 'Technique'
   };
-  // Couleurs originales (fond très légèrement teinté, comme image de référence)
   const typeStyles = {
-    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.10)',  border:'rgba(99,102,241,0.25)',  icon:'🏛️' },
-    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.10)',  border:'rgba(79,142,247,0.25)',  icon:'🩺' },
-    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.10)',  border:'rgba(247,169,79,0.25)',  icon:'🔧' }
+    'Direction':             { color:'#6366f1', bg:'rgba(99,102,241,0.12)',  border:'rgba(99,102,241,0.3)',  icon:'🏛️' },
+    'Organisation et Soins': { color:'#4f8ef7', bg:'rgba(79,142,247,0.12)',  border:'rgba(79,142,247,0.3)',  icon:'🩺' },
+    'Technique':             { color:'#f7a94f', bg:'rgba(247,169,79,0.12)',  border:'rgba(247,169,79,0.3)',  icon:'🔧' }
   };
   const typeOrder = ['Direction', 'Organisation et Soins', 'Technique'];
 
+  // Grouper par type canonique — préférer l'astreinte qui démarre dans la période
   const byCanonical = {};
   actives.forEach(a => {
     const canon = canonicalType[a.type] || a.type;
@@ -3403,7 +3393,7 @@ function renderDashAstreintes() {
   const cards = typeOrder.map(type => {
     const a = byCanonical[type];
     if (!a) return '';
-    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.08)', border:'rgba(128,128,128,0.18)', icon:'🔔' };
+    const s = typeStyles[a.type] || typeStyles[type] || { color:'#888', bg:'rgba(128,128,128,0.1)', border:'rgba(128,128,128,0.2)', icon:'🔔' };
     const d1str = fmt(new Date(a.debut + 'T00:00:00'));
     const d2str = fmt(new Date(a.fin + 'T00:00:00'));
     return `<div style="flex:1;min-width:120px;background:${s.bg};border:1.5px solid ${s.border};border-radius:10px;padding:10px 12px">
@@ -3414,7 +3404,7 @@ function renderDashAstreintes() {
     </div>`;
   }).filter(Boolean).join('');
 
-  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucune astreinte</p>'}</div>`;
+  contentEl.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap">${cards || '<p style="color:var(--text3);font-size:11px">Aucun</p>'}</div>`;
 }
 
 function renderDashboard() {
@@ -3445,32 +3435,84 @@ function renderDashboard() {
   const totalAgents = etab.agents.filter(a => a.actif).length;
   const totalVac = etab.vacataires.length;
 
+  // Breakdown par spécialité
+  const specList = etab.specialites || [];
+  const agentsActifs = etab.agents.filter(a => a.actif);
+  const todayD = today.getDate();
+
+  // Agents actifs par spécialité
+  const specAgentsCount = {};
+  agentsActifs.forEach(a => { specAgentsCount[a.spec] = (specAgentsCount[a.spec]||0) + 1; });
+  const agentsSpecHTML = specList.map(sp => {
+    const cnt = specAgentsCount[sp] || 0;
+    return `<span style="font-size:11px;color:var(--text2)">${sp} <strong style="color:var(--text)">${cnt}</strong></span>`;
+  }).join('<span style="color:var(--border);margin:0 4px">·</span>');
+
+  // Présents par spécialité
+  const specPresentCount = {};
+  agentsActifs.forEach(a => {
+    const sh = (planMonth[a.id]||{})[todayD]||'';
+    if (_codesWork.includes(sh)) specPresentCount[a.spec] = (specPresentCount[a.spec]||0) + 1;
+  });
+  const presentSpecHTML = specList.map(sp => {
+    const cnt = specPresentCount[sp] || 0;
+    if (cnt === 0) return `<span style="font-size:11px;color:var(--text3)">${sp} <strong>0</strong></span>`;
+    return `<span style="font-size:11px;color:var(--text2)">${sp} <strong style="color:var(--text)">${cnt}</strong></span>`;
+  }).join('<span style="color:var(--border);margin:0 4px">·</span>');
+
+  // Absents par spécialité
+  const specAbsCount = {};
+  agentsActifs.forEach(a => {
+    const sh = (planMonth[a.id]||{})[todayD]||'';
+    if (_codesAbs.includes(sh)) specAbsCount[a.spec] = (specAbsCount[a.spec]||0) + 1;
+  });
+  const absSpecHTML = specList.map(sp => {
+    const cnt = specAbsCount[sp] || 0;
+    if (cnt === 0) return '';
+    return `<span style="font-size:11px;color:var(--text3)">${sp} <strong style="color:var(--accent4)">${cnt}</strong></span>`;
+  }).filter(Boolean).join('<span style="color:var(--border);margin:0 4px">·</span>') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+
+  // Repos par spécialité
+  const specReposCount = {};
+  agentsActifs.forEach(a => {
+    const sh = (planMonth[a.id]||{})[todayD]||'';
+    if (sh === 'R' || sh === 'RC' || sh === '') specReposCount[a.spec] = (specReposCount[a.spec]||0) + 1;
+  });
+  const reposSpecHTML = specList.map(sp => {
+    const cnt = specReposCount[sp] || 0;
+    if (cnt === 0) return '';
+    return `<span style="font-size:11px;color:var(--text3)">${sp} <strong>${cnt}</strong></span>`;
+  }).filter(Boolean).join('<span style="color:var(--border);margin:0 4px">·</span>') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+
+  const reposTotal = agentsActifs.filter(a => { const sh=(planMonth[a.id]||{})[todayD]||''; return sh==='R'||sh==='RC'||sh===''; }).length;
+
   document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card blue">
       <div class="stat-label">Agents actifs</div>
       <div class="stat-value">${totalAgents}</div>
-      <div class="stat-sub">${etab.specialites.join(' · ')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${agentsSpecHTML}</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Présents aujourd'hui</div>
       <div class="stat-value">${presentToday}</div>
-      <div class="stat-sub">sur ${totalAgents} agents</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${presentSpecHTML}</div>
     </div>
     <div class="stat-card orange">
       <div class="stat-label">Absences aujourd'hui</div>
       <div class="stat-value">${_totalAbs}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${absSpecHTML}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${
         Object.entries(_absMap).map(([k,v]) => {
           const _h = etab.horaires.find(h=>h.code===k);
           const _c = _h ? _h.couleur : '#888';
-          return '<span style="background:'+_c+'20;color:'+_c+';border:1px solid '+_c+'40;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+k+' <span style="font-size:10px;opacity:0.8">'+v+'j</span></span>';
+          return '<span style="background:'+_c+'20;color:'+_c+';border:1px solid '+_c+'40;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">'+k+' <span style="font-size:10px;opacity:0.8">'+v+'</span></span>';
         }).join('')
       }</div>
     </div>
     <div class="stat-card red">
       <div class="stat-label">En repos aujourd'hui</div>
-      <div class="stat-value">${etab.agents.filter(a=>{if(!a.actif)return false;const sh=(planMonth[a.id]||{})[today.getDate()]||'';return sh==='R'||sh==='RC'||sh==='';}).length}</div>
-      <div class="stat-sub">sur ${totalAgents} agents</div>
+      <div class="stat-value">${reposTotal}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${reposSpecHTML}</div>
     </div>
   `;
 
@@ -3857,7 +3899,7 @@ function renderPlanning() {
     // Séparateur de groupe principal
     const nbActifsGroupe = gAgents.filter(a => a.actif).length;
     html += '<tr>' +
-      '<td colspan="2" style="position:sticky;left:0;z-index:20;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap"> +
+      '<td colspan="2" style="position:sticky;left:0;z-index:20;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap">' +
         '<span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ' + gKey + ' — ' + nbActifsGroupe + ' agent' + (nbActifsGroupe>1?'s':'') + '</span>' +
       '</td>' +
       '<td colspan="' + (daysInMonth + 1) + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
@@ -4465,7 +4507,7 @@ function openShiftPicker(agentId, day) {
   const congeBtns = document.getElementById('shift-conge-btns');
   congeBtns.innerHTML = congesCodes.map(h => {
     const isActive = currentShift === h.code;
-    const shortLabel = (h.label||'').replace('Congé ','').replace('Congé','').trim().toUpperCase().slice(0,6);
+    const shortLabel = (h.label||'').replace(/Cong[ée] /i,'').toUpperCase().slice(0,6);
     return `<button onclick="selectShiftCode('${h.code}',this)" data-code="${h.code}"
       style="padding:10px 0;border-radius:8px;border:2px solid ${isActive ? h.couleur : h.couleur+'44'};
       background:${isActive ? h.couleur+'22' : '#1e2538'};color:${h.couleur};font-family:inherit;
