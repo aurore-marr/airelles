@@ -235,6 +235,33 @@ body {
 }
 .sidebar.collapsed .sidebar-logo .logo-collapsed-icon { display: flex; }
 
+/* Zone utilisateur en mode collapsed */
+.sidebar-user-collapsed {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+.sidebar.collapsed .sidebar-user-collapsed { display: flex; }
+.sidebar-user-collapsed .user-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent2), #059669);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #0f1117;
+  letter-spacing: -0.5px; flex-shrink: 0;
+}
+.sidebar-user-collapsed .online-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 6px var(--accent2);
+}
+.sidebar-user-collapsed .online-count {
+  font-size: 9px; font-weight: 700; color: var(--text3);
+  background: var(--bg3); border-radius: 8px;
+  padding: 1px 5px; min-width: 18px; text-align: center;
+}
+
 /* Toggle button */
 .sidebar-toggle {
   position: absolute; top: 18px; right: -14px;
@@ -1160,13 +1187,22 @@ table input:focus { border-color: var(--accent); }
         <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
       </div>
     </div>
+    <!-- Zone user en sidebar collapsed -->
+    <div class="sidebar-user-collapsed" id="sidebar-user-collapsed">
+      <div class="user-avatar" id="sb-collapsed-avatar" title="Vous">?</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="online-dot"></div>
+        <div class="online-count" id="sb-collapsed-online">1</div>
+      </div>
+    </div>
     <div class="nav-section">
+      <div class="nav-section-title">Direction</div>
+      <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
+        <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
+      </div>
       <div class="nav-section-title">Planning</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
         <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
-      </div>
-      <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
-        <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
       </div>
       <div class="nav-item" onclick="showPage('planning')" data-tooltip="Planning mensuel">
         <span class="icon">📅</span><span class="nav-label">Planning mensuel</span>
@@ -2915,6 +2951,7 @@ window.onload = async function() {
             document.getElementById('sb-user-name').textContent = loginOk.nom;
             const _inEl1 = document.getElementById('sb-user-initials');
             if (_inEl1) { _inEl1.textContent = '1'; _inEl1.title = 'Utilisateurs connectés'; }
+            updateCollapsedUserUI(loginOk, 1);
             _sessionStart = sess.loginTime;
             _sessionWarningShown = false;
             _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
@@ -3301,6 +3338,8 @@ async function doLogin() {
   document.getElementById('sb-user-name').textContent = login.nom;
   const _inEl2 = document.getElementById('sb-user-initials');
   if (_inEl2) { _inEl2.textContent = '1'; _inEl2.title = 'Utilisateurs connectés'; }
+  // Mettre à jour le collapsed avatar avec les initiales de l'utilisateur
+  updateCollapsedUserUI(login, 1);
 
   startSessionTimer();
   const _etabInit = getEtab();
@@ -3471,6 +3510,32 @@ async function createNewEtab() {
 // ============================================================
 // APP INIT
 // ============================================================
+// Mettre à jour la zone utilisateur en sidebar collapsed
+function updateCollapsedUserUI(user, nbOnline) {
+  const avatarEl = document.getElementById('sb-collapsed-avatar');
+  const onlineEl = document.getElementById('sb-collapsed-online');
+  const mainBadge = document.getElementById('sb-user-initials');
+
+  if (avatarEl && user) {
+    // Initiales : 1ère lettre prénom + 1ère lettre nom
+    const parts = (user.nom || '').split(' ');
+    let initials = '';
+    if (parts.length >= 2) {
+      initials = (parts[0][0] || '') + (parts[parts.length-1][0] || '');
+    } else {
+      initials = (user.nom || '?').substring(0, 2);
+    }
+    avatarEl.textContent = initials.toUpperCase();
+    avatarEl.title = user.nom + (user.titre ? ' · ' + user.titre : '') + (user.role ? ' · ' + user.role : '');
+  }
+  if (onlineEl) onlineEl.textContent = nbOnline || '1';
+  // Aussi mettre à jour le badge principal (quand sidebar ouverte)
+  if (mainBadge) {
+    mainBadge.textContent = nbOnline || '1';
+    mainBadge.title = (nbOnline || 1) + ' utilisateur(s) connecté(s)';
+  }
+}
+
 function initApp() {
   // Migration sécurité : hasher les mots de passe en clair existants
   migratePasswordsIfNeeded();
@@ -3524,6 +3589,7 @@ function initPresence() {
         const totalConnected = users.length + 1; // soi + autres
         const badge = document.getElementById('sb-user-initials');
         if (badge) { badge.textContent = totalConnected; badge.title = totalConnected + ' utilisateur(s) connecté(s)'; }
+        updateCollapsedUserUI(DB.currentUser, totalConnected);
         if (users.length === 0) {
           list.textContent = 'Vous seul';
         } else {
@@ -3562,7 +3628,8 @@ function applyRoleUI() {
   const role = getRoleActuel();
   // Page Vue Direction — visible IDEC + Dir + Ass Dir + Admin (pas Cadre/Binome/RespHot)
   const navDir = document.getElementById('nav-dir');
-  const canSeeDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome'].includes(role);
+  const canSeeDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome','Resp Hot','RH Binome'].includes(role)
+    || (DB.currentUser && DB.currentUser.vueDirection === true);
   if (navDir) navDir.style.display = canSeeDir ? 'flex' : 'none';
   // Config — seulement Admin
   const navConfig = document.querySelector('[onclick="showPage(\'config\')"]');
@@ -9536,11 +9603,11 @@ function renderConfigLogins() {
   renderCustomRoles();
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
-      <span>Nom complet</span><span>Identifiant</span><span>Mot de passe</span><span>Rôle</span><span>Titre/Fonction</span><span></span><span></span>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 70px 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
+      <span>Nom complet</span><span>Identifiant</span><span>Mot de passe</span><span>Rôle</span><span>Titre/Fonction</span><span title="Accès Vue Direction">Vue Dir.</span><span></span><span></span>
     </div>` +
   etab.logins.map((l, i) => `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 70px 110px 36px;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px">
       <input type="text" value="${(l.nom||'').replace(/"/g,'&quot;')}"
         onchange="updateLogin(${i},'nom',this.value)"
         style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%">
@@ -9558,6 +9625,12 @@ function renderConfigLogins() {
       <input type="text" value="${esc(l.titre||'')}"
         onchange="updateLogin(${i},'titre',this.value)" placeholder="Titre/Fonction libre…"
         style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:inherit;width:100%">
+      <div style="display:flex;align-items:center;justify-content:center">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text2)">
+          <input type="checkbox" ${l.vueDirection!==false?'checked':''} onchange="updateLogin(${i},'vueDirection',this.checked)"
+            style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
+        </label>
+      </div>
       ${i > 0
         ? `<button class="btn btn-danger btn-sm btn-icon" onclick="removeLogin(${i})" title="Supprimer">×</button>`
         : `<span></span>`}
