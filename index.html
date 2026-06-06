@@ -1899,15 +1899,27 @@ table input:focus { border-color: var(--accent); }
                 <option value="cadre">Cadre</option>
                 <option value="IDEC">IDEC</option>
                 <option value="IDEC Binome">IDEC Binôme</option>
-                <option value="BINOME">Binôme planning</option>
                 <option value="Ass Dir">Ass. Direction</option>
                 <option value="Dir">Direction</option>
                 <option value="Resp Hot">Resp. Hôtellerie</option>
+                <option value="RH Binome">RH Binôme</option>
                 <option value="admin">Administrateur</option>
               </select>
             </div>
             <div class="form-group" style="margin:0"><label>Titre / Fonction</label><input type="text" id="new-login-titre" placeholder="Ex: IDEC de nuit, Kiné…"></div>
             <button class="btn btn-success btn-sm" style="align-self:end" onclick="addLogin()">+ Ajouter</button>
+          </div>
+
+          <!-- Gestion rôles custom (admin seulement) -->
+          <div id="custom-roles-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🏷️ Rôles personnalisés</div>
+            <div id="custom-roles-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" id="new-role-name" placeholder="Ex: Kiné, Médecin coordinateur…" maxlength="30"
+                style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:13px">
+              <button class="btn btn-secondary btn-sm" onclick="addCustomRole()">+ Ajouter ce rôle</button>
+            </div>
+            <p style="font-size:11px;color:var(--text3);margin-top:6px">Les rôles créés ici apparaîtront dans le sélecteur "Rôle" ci-dessus. Droits identiques à "Cadre".</p>
           </div>
         </div>
       </div>
@@ -2186,6 +2198,8 @@ table input:focus { border-color: var(--accent); }
     <div id="qr-agent-banner" style="background:#161b27;padding:10px 16px;display:flex;gap:10px;border-bottom:1px solid #1e3050;flex-wrap:wrap"></div>
     <!-- Zone alertes manque de personnel -->
     <div id="qr-alertes-zone" style="display:none;padding:12px 16px"></div>
+    <!-- Postes à pourvoir (affichés dans planning) -->
+    <div id="qr-postes-pourvoir" style="display:none;padding:12px 16px;border-top:1px solid #1e3050"></div>
 
     <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
 
@@ -3538,16 +3552,18 @@ function getRoleActuel() {
 
 function isAdmin()    { return ['admin'].includes(getRoleActuel()); }
 function isDir()      { return ['admin','Dir','Ass Dir'].includes(getRoleActuel()); }
-function isIDEC()     { return ['admin','IDEC','IDEC Binome','BINOME','Dir','Ass Dir'].includes(getRoleActuel()); }
+function isIDEC()     { return ['admin','IDEC','IDEC Binome','Dir','Ass Dir'].includes(getRoleActuel()); }
+function isRespHotAny(){ return ['admin','Resp Hot','RH Binome','Dir','Ass Dir'].includes(getRoleActuel()); }
 function isRespHot()  { return ['admin','Resp Hot','Dir','Ass Dir'].includes(getRoleActuel()); }
 function isCadre()    { return true; } // tous les rôles ont accès aux fonctions de base
 
 // Adapter la nav selon le rôle
 function applyRoleUI() {
   const role = getRoleActuel();
-  // Page TdB Directeur — visible seulement Dir / Ass Dir / Admin
+  // Page Vue Direction — visible IDEC + Dir + Ass Dir + Admin (pas Cadre/Binome/RespHot)
   const navDir = document.getElementById('nav-dir');
-  if (navDir) navDir.style.display = isDir() ? 'flex' : 'none';
+  const canSeeDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome'].includes(role);
+  if (navDir) navDir.style.display = canSeeDir ? 'flex' : 'none';
   // Config — seulement Admin
   const navConfig = document.querySelector('[onclick="showPage(\'config\')"]');
   if (navConfig) navConfig.style.display = isAdmin() ? 'flex' : 'none';
@@ -3727,10 +3743,15 @@ function initDirectionSelects() {
   const moisSel = document.getElementById('dir-mois-select');
   const annSel  = document.getElementById('dir-annee-select');
   if (!moisSel || !annSel) return;
-  const moisFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  moisSel.innerHTML = moisFr.map((m,i) => `<option value="${i}" ${i===currentMonth?'selected':''}>${m}</option>`).join('');
-  const yr = new Date().getFullYear();
-  annSel.innerHTML = [yr-1, yr, yr+1].map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('');
+  // N'initialiser que si vide (premier chargement) — ne pas écraser la sélection en cours
+  if (moisSel.options.length === 0) {
+    const moisFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    moisSel.innerHTML = moisFr.map((m,i) => `<option value="${i}" ${i===currentMonth?'selected':''}>${m}</option>`).join('');
+  }
+  if (annSel.options.length === 0) {
+    const yr = new Date().getFullYear();
+    annSel.innerHTML = [yr-1, yr, yr+1].map(y => `<option value="${y}" ${y===currentYear?'selected':''}>${y}</option>`).join('');
+  }
 }
 
 function renderDirectionDashboard() {
@@ -7414,13 +7435,26 @@ function countAlertesNonVues(etab, agentId) {
 function renderAlertesSuivi() {
   const etab = getEtab();
   if (!etab || !etab.alertesPersonnel || etab.alertesPersonnel.length === 0) return '';
-  const dernieres = etab.alertesPersonnel.slice(-3).reverse();
+  const dernieres = etab.alertesPersonnel.slice(-5).reverse();
   return dernieres.map(a => {
-    const nbVues = Object.keys(a.vues).length;
+    const nbVues = Object.keys(a.vues || {}).length;
+    const reponses = Object.values(a.reponses || {});
+    const nbDispo = reponses.filter(r => Object.values(r).some(v => v.disponible)).length;
+    const nbNonDispo = reponses.filter(r => Object.values(r).some(v => !v.disponible)).length;
     const moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][a.mois];
-    return `<div style="font-size:11px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border)22">
-      📢 ${moisLabel} ${a.annee} · ${a.destinataires.length} destinataires · 
-      <strong style="color:${nbVues>0?'var(--accent2)':'var(--text3)'}">${nbVues} vue(s)</strong>
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border)22">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">📢 ${moisLabel} ${a.annee} — ${a.destinataires.length} destinataires</div>
+      <div style="display:flex;gap:12px;margin-top:4px;font-size:11px">
+        <span style="color:var(--text3)">${nbVues} vue(s)</span>
+        ${nbDispo>0?`<span style="color:var(--accent2);font-weight:700">✅ ${nbDispo} disponible(s)</span>`:''}
+        ${nbNonDispo>0?`<span style="color:var(--accent4)">❌ ${nbNonDispo} non disponible(s)</span>`:''}
+      </div>
+      ${nbDispo>0 ? `<div style="margin-top:6px;font-size:11px;color:var(--text2)">${
+        Object.entries(a.reponses||{}).filter(([id,r])=>Object.values(r).some(v=>v.disponible)).map(([id,r])=>{
+          const rep = Object.values(r).find(v=>v.disponible);
+          return rep ? `<span style="background:var(--accent2)15;color:var(--accent2);padding:2px 8px;border-radius:4px;margin-right:4px">${esc(rep.prenom||'')} ${esc(rep.nom)}</span>` : '';
+        }).join('')
+      }</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -8149,6 +8183,149 @@ function qrRenderPlanning() {
   container.appendChild(wrapper);
 
   qrRenderDispos(etab, agent);
+
+  // Afficher les postes à pourvoir (alertes manque de personnel)
+  qrRenderPostesAPourvoir(etab, agent);
+}
+
+function qrRenderPostesAPourvoir(etab, agent) {
+  var zone = document.getElementById('qr-postes-pourvoir');
+  if (!zone) return;
+
+  // Trouver les alertes actives pour cet agent
+  var alertes = (etab.alertesPersonnel || []).filter(function(a) {
+    if (!a.destinataires.includes(agent.id)) return false;
+    var fin = new Date(a.annee, a.mois + 1, 15);
+    return new Date() < fin;
+  });
+
+  if (alertes.length === 0) { zone.style.display = 'none'; return; }
+
+  zone.style.display = 'block';
+  var today = new Date();
+  var colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
+
+  // Secteur préféré de l'agent
+  var secteurAgent = agent.secteurFixe || getSecteurDuMois(agent, today.getFullYear(), today.getMonth(), etab);
+  var secteursExclus = agent.exclusSecteurs || [];
+
+  var html = '<div style="font-size:11px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚨 Postes à pourvoir — cliquez pour vous proposer</div>';
+
+  alertes.forEach(function(alerte) {
+    var moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][alerte.mois];
+    var jours = (alerte.joursManquants || []).filter(function(j) {
+      // Ne montrer que les jours futurs ou aujourd'hui
+      var dt = new Date(j.date + 'T00:00:00');
+      return dt >= new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    });
+    if (jours.length === 0) return;
+
+    html += '<div style="font-size:11px;font-weight:600;color:#8892aa;margin-bottom:6px">' + moisLabel + ' ' + alerte.annee + '</div>';
+
+    jours.forEach(function(j) {
+      var dt = new Date(j.date + 'T00:00:00');
+      var dl = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+      var dk = j.date;
+
+      // Vérifier si l'agent est déjà affecté ce jour
+      var dejaAff = ((etab.affectationsVac || {})[dk] || {})[agent.id];
+      if (dejaAff) return;
+
+      j.manq.forEach(function(m) {
+        var col = colors[m.code] || '#888';
+        var hor = etab.horaires.find(function(h){ return h.code === m.code; });
+        var horaire = hor ? (hor.debut && hor.fin ? hor.debut + '–' + hor.fin : '') : '';
+        var duree = hor ? hor.duree : 10;
+
+        // Secteur prévu ce jour (si rotation)
+        var secteurJour = getSecteurDuJour ? getSecteurDuJour(agent, dt.getFullYear(), dt.getMonth(), dt.getDate(), etab) : secteurAgent;
+        var sectObj = etab.secteurs.find(function(s){ return s.id === secteurJour; });
+        var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
+        var isExclu = secteursExclus.includes(secteurJour);
+
+        html += '<div style="background:rgba(247,111,111,0.08);border:1.5px solid rgba(247,111,111,0.25);border-radius:10px;padding:12px;margin-bottom:8px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+            '<div>' +
+              '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
+              '<div style="font-size:11px;color:#8892aa;margin-top:2px">' +
+                '<span style="background:' + col + '20;color:' + col + ';padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace">' + m.code + '</span>' +
+                (horaire ? ' · ' + horaire : '') +
+                (duree ? ' · ' + duree + 'h' : '') +
+              '</div>' +
+            '</div>' +
+            (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
+          '</div>' +
+          (isExclu ?
+            '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Ce secteur figure dans vos exclusions — vous pouvez quand même vous proposer.</div>' : '') +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+            '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, true)" ' +
+              'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">' +
+              '✅ Je suis disponible' +
+            '</button>' +
+            '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, false)" ' +
+              'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">' +
+              '❌ Pas disponible' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      });
+    });
+  });
+
+  zone.innerHTML = html;
+}
+
+function qrSeProposer(alerteId, dateKey, shiftCode, disponible) {
+  var etab = DB.etablissements[_qrEtabId];
+  if (!etab) return;
+  var agent = etab.agents.find(function(a){ return a.id === _qrAgentId; });
+  var isVac = false;
+  if (!agent) {
+    agent = (etab.vacataires || []).find(function(v){ return v.id === _qrAgentId; });
+    isVac = true;
+  }
+  if (!agent) return;
+
+  // Enregistrer la réponse dans l'alerte
+  var alerte = (etab.alertesPersonnel || []).find(function(a){ return a.id === alerteId; });
+  if (!alerte) return;
+  if (!alerte.reponses) alerte.reponses = {};
+  alerte.reponses[_qrAgentId] = alerte.reponses[_qrAgentId] || {};
+  alerte.reponses[_qrAgentId][dateKey + '_' + shiftCode] = {
+    disponible: disponible,
+    reponduAt: new Date().toISOString(),
+    nom: agent.nom, prenom: agent.prenom || '', spec: agent.spec || '',
+    isVac: isVac
+  };
+
+  if (disponible) {
+    // Pré-affecter : créer une affectation "proposée" visible du cadre
+    if (!etab.affectationsVac) etab.affectationsVac = {};
+    if (!etab.affectationsVac[dateKey]) etab.affectationsVac[dateKey] = {};
+    etab.affectationsVac[dateKey][_qrAgentId] = {
+      vacId: _qrAgentId, nom: agent.nom, prenom: agent.prenom || '',
+      spec: agent.spec || '', shift: shiftCode,
+      statut: 'propose', // cadre devra confirmer
+      affecteLe: new Date().toISOString(),
+      source: 'qr_auto'
+    };
+  }
+
+  DB.etablissements[_qrEtabId] = etab;
+  saveToStorage();
+  supa.from('horizon_data').upsert({
+    etab_id: _qrEtabId, data: etab, updated_at: new Date().toISOString()
+  }, { onConflict: 'etab_id' }).catch(function(){});
+
+  // Rafraîchir l'affichage
+  qrRenderPostesAPourvoir(etab, agent);
+
+  var msg = disponible
+    ? '✅ Votre disponibilité a été transmise au cadre !'
+    : '❌ Réponse enregistrée.';
+  var st = document.getElementById('qr-conge-status');
+  if (st) { st.textContent = msg; st.style.display = 'block'; st.style.color = disponible ? '#38d9a9' : '#8892aa'; }
+  setTimeout(function(){ if(st) st.style.display = 'none'; }, 3000);
 }
 
 function qrNavWeek(delta) {
@@ -9283,17 +9460,80 @@ function savePostesAssignations() {
   showToast('Assignations enregistrées', 'success');
 }
 
+// ── Gestion rôles custom ──
+function renderCustomRoles() {
+  const etab = getEtab();
+  const el = document.getElementById('custom-roles-list');
+  const sect = document.getElementById('custom-roles-section');
+  if (!el) return;
+  // Visible seulement pour admin
+  if (sect) sect.style.display = isAdmin() ? 'block' : 'none';
+  const roles = etab ? (etab.rolesCustom || []) : [];
+  if (roles.length === 0) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3)">Aucun rôle personnalisé</span>';
+    return;
+  }
+  el.innerHTML = roles.map((r, i) =>
+    `<div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px">
+      <span style="font-size:12px;color:var(--text)">${esc(r)}</span>
+      <button onclick="removeCustomRole(${i})" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px" title="Supprimer">×</button>
+    </div>`
+  ).join('');
+}
+
+function addCustomRole() {
+  const etab = getEtab();
+  if (!etab) return;
+  const inp = document.getElementById('new-role-name');
+  const name = (inp?.value || '').trim();
+  if (!name) return;
+  if (!etab.rolesCustom) etab.rolesCustom = [];
+  const baseRoles = ['cadre','IDEC','IDEC Binome','Ass Dir','Dir','Resp Hot','RH Binome','admin'];
+  if (baseRoles.includes(name) || etab.rolesCustom.includes(name)) {
+    showToast('Ce rôle existe déjà', 'warning'); return;
+  }
+  etab.rolesCustom.push(name);
+  if (inp) inp.value = '';
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  renderCustomRoles();
+  renderConfigLogins();
+  showToast(`Rôle "${name}" créé ✓`, 'success');
+}
+
+function removeCustomRole(idx) {
+  const etab = getEtab();
+  if (!etab || !etab.rolesCustom) return;
+  const name = etab.rolesCustom[idx];
+  // Vérifier qu'aucun login n'utilise ce rôle
+  const used = etab.logins.some(l => l.role === name);
+  if (used) { showToast(`Le rôle "${name}" est utilisé par un compte — changez-le d'abord`, 'error'); return; }
+  etab.rolesCustom.splice(idx, 1);
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  renderCustomRoles();
+  renderConfigLogins();
+  showToast(`Rôle "${name}" supprimé`, 'info');
+}
+
 function renderConfigLogins() {
   const etab = getEtab();
   if (!etab) return;
   const el = document.getElementById('logins-list');
   if (!el) return;
 
+  const etabRoles = getEtab()?.rolesCustom || [];
   const roleColors = {
-    admin:'tag-blue', IDEC:'tag-green', 'IDEC Binome':'tag-green', BINOME:'tag-green',
-    'Ass Dir':'tag-orange', Dir:'tag-orange', 'Resp Hot':'tag-gray', cadre:'tag-gray'
+    admin:'tag-blue', IDEC:'tag-green', 'IDEC Binome':'tag-green',
+    'Ass Dir':'tag-orange', Dir:'tag-orange', 'Resp Hot':'tag-gray',
+    'RH Binome':'tag-gray', cadre:'tag-gray'
   };
-  const roleOptions = ['cadre','IDEC','IDEC Binome','BINOME','Ass Dir','Dir','Resp Hot','admin'];
+  // Rôles de base + rôles custom de l'établissement
+  const roleOptions = ['cadre','IDEC','IDEC Binome','Ass Dir','Dir','Resp Hot','RH Binome','admin',
+    ...etabRoles.filter(r => !['cadre','IDEC','IDEC Binome','Ass Dir','Dir','Resp Hot','RH Binome','admin'].includes(r))
+  ];
+
+  renderCustomRoles();
 
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
@@ -10402,20 +10642,26 @@ function calcDroitsConges(agent, planMonth, etab, year, month) {
     droitCA = Math.ceil(droitCA * 2) / 2;
   }
 
-  // Jours CA pris hors période principale (mai-octobre = mois 4-9)
+  // Jours CA pris hors période principale — CUMULATIF sur tous les mois de l'année
+  // (pas seulement le mois affiché — le CF est acquis sur l'année entière)
+  const debutPer = (cfg.cfPeriodeDebut != null ? cfg.cfPeriodeDebut - 1 : 4); // mai = 4
+  const finPer   = (cfg.cfPeriodeFin   != null ? cfg.cfPeriodeFin   - 1 : 9); // oct = 9
+
   let joursHorsPeriode = 0;
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const shift = (planMonth[agent.id] || {})[d] || '';
-    if (shift === 'CA') {
-      const mois = month; // mois courant
-      const debutPer = cfg.cfPeriodeDebut - 1 || 4; // mai = index 4
-      const finPer = cfg.cfPeriodeFin - 1 || 9;     // oct = index 9
-      if (mois < debutPer || mois > finPer) joursHorsPeriode++;
+  // Parcourir tous les mois de janvier jusqu'au mois affiché inclus
+  for (let m = 0; m <= month; m++) {
+    const pm = ((etab.planning[year] || {})[m] || {});
+    const dim = new Date(year, m+1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+      const shift = (pm[agent.id] || {})[d] || '';
+      if (shift === 'CA') {
+        // Hors période principale → compte pour fractionnement
+        if (m < debutPer || m > finPer) joursHorsPeriode++;
+      }
     }
   }
 
-  // Congé de fractionnement
+  // Congé de fractionnement acquis (cumulatif annuel)
   let droitCF = 0;
   if (joursHorsPeriode >= (cfg.cfFrac2Seuil || 8)) droitCF = 2;
   else if (joursHorsPeriode >= (cfg.cfFrac1Seuil || 5)) droitCF = 1;
