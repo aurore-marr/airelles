@@ -1362,6 +1362,99 @@ body[data-qr-mode="1"] #qr-view {
   z-index: 36 !important;
 }
 
+
+
+/* ============================================================
+   PATCH RESPONSIVE PLANNING — cellules qui ne débordent plus
+   ============================================================ */
+#planning-container,
+.planning-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.planning-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.day-header,
+.shift-cell {
+  width: var(--planning-day-w, 46px) !important;
+  min-width: var(--planning-day-w, 46px) !important;
+  max-width: var(--planning-day-w, 46px) !important;
+}
+
+.shift-cell {
+  height: var(--planning-cell-h, 46px) !important;
+  padding: 0 !important;
+  overflow: hidden;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.shift-badge {
+  width: var(--planning-badge-w, 32px) !important;
+  max-width: calc(100% - 6px) !important;
+  height: var(--planning-badge-h, 28px) !important;
+  max-height: calc(100% - 6px) !important;
+  box-sizing: border-box;
+  margin: 0 auto;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* Écrans moyens : on compresse le planning au lieu de laisser les badges dépasser */
+@media (max-width: 1400px) and (min-width: 1101px) {
+  :root {
+    --planning-day-w: 36px;
+    --planning-cell-h: 40px;
+    --planning-badge-w: 28px;
+    --planning-badge-h: 26px;
+  }
+  .main { padding: 18px !important; }
+  .agent-cell { min-width: 52px !important; width: 52px !important; max-width: 52px !important; }
+  .agent-cell-poste { left: 52px !important; min-width: 132px !important; width: 132px !important; max-width: 132px !important; }
+  .planning-table { font-size: 11px; }
+}
+
+/* Petits laptops / tablettes paysage */
+@media (max-width: 1100px) and (min-width: 701px) {
+  :root {
+    --planning-day-w: 32px;
+    --planning-cell-h: 36px;
+    --planning-badge-w: 24px;
+    --planning-badge-h: 24px;
+  }
+  .main { padding: 14px !important; }
+  .card { padding: 12px !important; }
+  .planning-table { font-size: 10px; min-width: max-content !important; }
+  .planning-table th { font-size: 9px !important; padding: 4px 2px !important; }
+  .agent-cell { min-width: 46px !important; width: 46px !important; max-width: 46px !important; padding: 4px 5px !important; }
+  .agent-cell-poste { left: 46px !important; min-width: 118px !important; width: 118px !important; max-width: 118px !important; padding: 4px 5px !important; }
+  .agent-cell-name { font-size: 11px !important; }
+  .agent-cell-info { font-size: 9px !important; }
+}
+
+/* Mobile : scroll fluide + cellules compactes */
+@media (max-width: 700px) {
+  :root {
+    --planning-day-w: 30px;
+    --planning-cell-h: 34px;
+    --planning-badge-w: 22px;
+    --planning-badge-h: 22px;
+  }
+  .planning-table { min-width: max-content !important; }
+  .shift-badge { font-size: 10px !important; border-radius: 5px !important; }
+  .agent-cell { min-width: 42px !important; width: 42px !important; max-width: 42px !important; padding: 3px 4px !important; }
+  .agent-cell-poste { left: 42px !important; min-width: 105px !important; width: 105px !important; max-width: 105px !important; padding: 3px 4px !important; }
+  .agent-cell-name { font-size: 10px !important; }
+  .agent-cell-info, .agent-cell-sector { font-size: 8px !important; }
+}
 </style>
 </head>
 <body>
