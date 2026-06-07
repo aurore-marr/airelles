@@ -2881,9 +2881,9 @@ body[data-qr-mode="1"] #qr-view {
       </div>
 
       <!-- BOUTONS MODIFICATEUR -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <div id="shift-mod-hs-wrap" style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #38d9a944;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div id="shift-mod-hs-wrap">
+          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #38d9a944;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
             + HEURES SUP
           </button>
           <div id="hs-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2900,8 +2900,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
             DÉPART ANTICIPÉ
           </button>
           <div id="depart-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2915,8 +2915,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
             RETARD
           </button>
           <div id="retard-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2929,8 +2929,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
             AUCUN
           </button>
         </div>
@@ -6200,7 +6200,7 @@ function renderPlanning() {
   const planMonth = planning[currentYear][currentMonth];
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   // Calcul dynamique largeur colonnes jour selon écran disponible
@@ -6420,7 +6420,7 @@ function renderPlanning() {
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
+          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
@@ -14569,7 +14569,7 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
 
 
 <!-- ═══════════ MODAL CGU / MENTIONS LÉGALES ═══════════ -->
-<div class="modal-backdrop" id="modal-legal" style="display:none;z-index:9999;overflow-y:auto;align-items:flex-start;padding:20px 0">
+<div class="modal-backdrop" id="modal-legal" style="z-index:9999;overflow-y:auto;align-items:flex-start;padding:20px 0">
   <div class="modal" style="max-width:720px;width:95%;margin:auto;max-height:90vh;overflow-y:auto">
     <div class="modal-header" style="position:sticky;top:0;background:var(--bg2);z-index:1;border-bottom:1px solid var(--border)">
       <span class="modal-title">⚖️ Mentions légales &amp; CGU — Horizon Planning</span>
@@ -14644,7 +14644,7 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
 </div>
 
 <!-- ═══════════ MODAL ONBOARDING ═══════════ -->
-<div class="modal-backdrop" id="modal-onboarding" style="display:none;z-index:9998">
+<div class="modal-backdrop" id="modal-onboarding" style="z-index:9998">
   <div class="modal" style="max-width:560px;width:95%">
     <div class="modal-header">
       <span class="modal-title">🚀 Bienvenue sur Horizon Planning !</span>
