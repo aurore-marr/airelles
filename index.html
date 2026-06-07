@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Horizon Planning — Planning Établissements de Santé</title>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f8ef7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horizon Planning">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -119,7 +126,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 48px 40px;
-  width: 420px;
+  width: min(420px, calc(100vw - 32px));
   box-shadow: var(--shadow-lg);
   position: relative;
   z-index: 1;
@@ -189,29 +196,42 @@ body {
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   z-index: 100;
-  padding: 20px 0;
+  padding: 20px 0 0;
   transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
   overflow: visible;
 }
-/* Clip only the inner content, not the toggle button */
+/* Clip inner content but let the toggle button overflow */
 .sidebar::before {
   content: '';
   position: absolute;
   inset: 0;
   background: var(--bg2);
-  z-index: -1;
+  z-index: 0;
   border-right: 1px solid var(--border);
+  pointer-events: none;
+}
+.sidebar-header, .etab-badge, .sidebar-user-collapsed,
+.sidebar-nav-scroll, .sidebar-footer {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 .sidebar-nav-scroll {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
+  min-height: 0; /* critical for flex overflow */
   display: flex;
   flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding-bottom: 8px;
 }
+.sidebar-nav-scroll::-webkit-scrollbar { width: 3px; }
+.sidebar-nav-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .sidebar.collapsed { width: 60px; }
-.sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; transition: padding 0.25s; }
-.sidebar.collapsed .sidebar-header { padding: 0 10px 16px; }
+.sidebar-header { padding: 0 20px 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px; transition: padding 0.25s; flex-shrink: 0; }
+.sidebar.collapsed .sidebar-header { padding: 0 10px 12px; }
 .sidebar-logo { display: flex; align-items: center; gap: 10px; overflow: hidden; }
 .sidebar-logo .mark {
   width: 36px; height: 36px;
@@ -264,6 +284,11 @@ body {
   padding: 1px 5px; min-width: 18px; text-align: center;
 }
 
+.sidebar.collapsed #online-users-bar { display: none !important; }
+.sidebar.collapsed .user-initials-badge { display: flex; }
+/* badge initiales/compteur : masqué sidebar ouverte (affiché dans zone collapsed) */
+.sidebar:not(.collapsed) .sidebar-user-collapsed { display: none; }
+
 /* Toggle button */
 .sidebar-toggle {
   position: absolute; top: 18px; right: -14px;
@@ -292,23 +317,24 @@ body {
 .sidebar.collapsed .etab-badge-icon { display: block; }
 .user-initials-badge { display: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent2); color: #0f1117; font-size: 12px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 .sidebar.collapsed .user-initials-badge { display: flex; }
+.sidebar:not(.collapsed) .user-initials-badge { display: none !important; }
 .sidebar.collapsed .etab-badge { flex-direction: column; gap: 4px; }
 
 .nav-section { padding: 0 12px; margin-bottom: 4px; }
 .sidebar.collapsed .nav-section { padding: 0 6px; }
-.nav-section-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; transition: opacity 0.2s; white-space: nowrap; }
+.nav-section-title { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 8px 2px; transition: opacity 0.2s; white-space: nowrap; }
 .sidebar.collapsed .nav-section-title { opacity: 0; height: 0; padding: 0; overflow: hidden; margin: 0; }
 .nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px; border-radius: 8px;
-  color: var(--text2); font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: 7px;
+  color: var(--text2); font-size: 12.5px; font-weight: 500;
   cursor: pointer; transition: all 0.15s;
   user-select: none; white-space: nowrap; position: relative;
 }
-.sidebar.collapsed .nav-item { padding: 9px; justify-content: center; }
+.sidebar.collapsed .nav-item { padding: 7px; justify-content: center; }
 .nav-item:hover { background: var(--bg3); color: var(--text); }
 .nav-item.active { background: rgba(79,142,247,0.15); color: var(--accent); }
-.nav-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-item .icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .nav-item .nav-label { transition: opacity 0.2s, width 0.25s; overflow: hidden; }
 .sidebar.collapsed .nav-item .nav-label { opacity: 0; width: 0; display: none; }
 .nav-badge {
@@ -333,8 +359,12 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-.sidebar-footer { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--border); }
-.sidebar.collapsed .sidebar-footer { padding: 16px 6px 0; }
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--border);
+}
+.sidebar.collapsed .sidebar-footer { padding: 8px 6px 0; }
 
 .main { margin-left: 240px; padding: 28px; min-height: 100vh; transition: margin-left 0.25s cubic-bezier(0.4,0,0.2,1); }
 .main.sidebar-collapsed { margin-left: 60px; }
@@ -395,10 +425,10 @@ body {
   background: var(--bg3);
   font-size: 10px; font-weight: 600; color: var(--text2);
   text-align: center; padding: 6px 4px;
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: var(--planning-toolbar-h, 52px); z-index: 10;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 32; background: var(--bg3); }
+.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; top: var(--planning-toolbar-h, 52px); z-index: 32; background: var(--bg3); }
 .agent-cell {
   padding: 5px 8px; background: var(--bg2);
   position: sticky; left: 0; z-index: 15;
@@ -546,7 +576,7 @@ body {
   #planning-vac-section { display: none !important; }
 
   /* Supprimer les sticky (cause problèmes d'impression) */
-  .agent-cell, .agent-cell-poste, th { position: static !important; }
+  .agent-cell, .agent-cell-poste, th { position: static !important; top: auto !important; }
 
   /* Couleurs */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -1003,6 +1033,47 @@ body {
   .astr-calendar { overflow-x: auto; }
 }
 
+/* ── Login très petit écran ── */
+@media (max-width: 480px) {
+  .login-box { padding: 28px 20px; border-radius: 16px; }
+  .login-logo h1 { font-size: 18px; }
+}
+
+/* ── Tablette : forcer scroll horizontal sur le planning ── */
+@media (max-width: 900px) {
+  .planning-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .planning-table { min-width: 800px; }
+}
+
+/* ── Très petit écran (< 400px) : stats en 1 colonne ── */
+@media (max-width: 400px) {
+  .stats-row { grid-template-columns: 1fr !important; }
+  .stat-value { font-size: 20px !important; }
+}
+
+/* ── Import/Export grid responsive ── */
+@media (max-width: 700px) {
+  #page-import > div { display: flex !important; flex-direction: column !important; }
+}
+
+/* ── Astreintes stats grid responsive ── */
+@media (max-width: 600px) {
+  #astr-stats-row { grid-template-columns: 1fr !important; }
+  .planning-toolbar { gap: 5px !important; }
+  .month-nav .month-label { min-width: 110px !important; font-size: 13px !important; }
+  .planning-toolbar button, .planning-toolbar select { font-size: 10px !important; padding: 5px 7px !important; }
+}
+
+/* ── Toast sur mobile : décalé au-dessus de la nav bottom ── */
+@media (max-width: 600px) {
+  .toast { bottom: 80px !important; left: 12px; right: 12px; font-size: 12px !important; }
+}
+
+/* ── Search input pleine largeur sur mobile ── */
+@media (max-width: 600px) {
+  .search-input { width: 100% !important; }
+}
+
 @media (max-width: 1400px) and (min-width: 901px) {
   .day-header { min-width:40px; width:40px; max-width:40px; }
   .shift-cell { width:40px; min-width:40px; max-width:40px; height:42px; }
@@ -1201,7 +1272,7 @@ table input:focus { border-color: var(--accent); }
 .agents-empty { grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text2); font-size: 14px; }
 
 .toast {
-  position: fixed; bottom: 24px; right: 24px;
+  position: fixed; bottom: 24px; right: 24px; max-width: calc(100vw - 32px);
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 10px; padding: 12px 18px;
   font-size: 13px; font-weight: 500;
@@ -1347,8 +1418,16 @@ table input:focus { border-color: var(--accent); }
     </div>
     <div class="etab-badge">
       <span class="etab-badge-icon">🏥</span>
-      <div class="etab-name" id="sb-etab-name">Établissement</div>
-      <div class="etab-role" id="sb-user-name">Utilisateur</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;width:100%">
+        <div style="min-width:0;flex:1">
+          <div class="etab-name" id="sb-etab-name">Établissement</div>
+          <div class="etab-role" id="sb-user-name">Utilisateur</div>
+        </div>
+        <button onclick="doLogout()" title="Déconnexion"
+          style="background:transparent;border:none;cursor:pointer;padding:3px 5px;border-radius:5px;color:var(--text3);font-size:13px;flex-shrink:0;line-height:1;margin-top:1px;transition:all 0.15s"
+          onmouseover="this.style.background='rgba(247,111,111,0.15)';this.style.color='#f76f6f'"
+          onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">🚪</button>
+      </div>
       <div class="user-initials-badge" id="sb-user-initials" title="Utilisateurs connectés">1</div>
       <div id="online-users-bar" style="display:none;margin-top:6px;padding:4px 8px;background:rgba(56,217,169,0.1);border:1px solid rgba(56,217,169,0.25);border-radius:6px;font-size:10px;color:#38d9a9">
         <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
@@ -1397,6 +1476,10 @@ table input:focus { border-color: var(--accent); }
       <div class="nav-item" onclick="showPage('qr')" data-tooltip="QR Codes">
         <span class="icon">📱</span><span class="nav-label">QR Codes</span>
       </div>
+      <div class="nav-item" onclick="showPage('notifications')" data-tooltip="Notifications RH" id="nav-notifications" style="position:relative">
+        <span class="icon">🔔</span><span class="nav-label">Notifications</span>
+        <span class="nav-badge" id="notif-rh-badge" style="display:none;background:#f76f6f;color:#fff">0</span>
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Paramétrage</div>
@@ -1408,22 +1491,24 @@ table input:focus { border-color: var(--accent); }
       </div>
     </div>
     <div class="sidebar-footer">
-      <div class="nav-item" onclick="toggleTheme()" id="theme-toggle-btn" data-tooltip="Mode clair">
-        <span class="icon" id="theme-icon">☀️</span><span class="nav-label" id="theme-label">Mode clair</span>
+      <!-- Actions footer groupées en ligne compacte -->
+      <div style="display:flex;align-items:center;gap:2px;padding:4px 0">
+        <button onclick="toggleTheme()" id="theme-toggle-btn" title="Mode clair/sombre"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--text2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+          <span id="theme-icon">☀️</span>
+        </button>
+        <button onclick="openHistory()" title="Historique"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--text2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">🕐</button>
+        <button onclick="exportRH()" title="Export RH"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--text2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">📊</button>
+        <button onclick="saveToSupabase()" title="Sync Supabase"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--accent2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">☁️</button>
       </div>
-      <div class="nav-item" onclick="openHistory()" style="color:var(--text2)" data-tooltip="Historique">
-        <span class="icon">🕐</span><span class="nav-label">Historique</span>
-      </div>
-      <div class="nav-item" onclick="exportRH()" style="color:var(--text2)" data-tooltip="Export RH">
-        <span class="icon">📊</span><span class="nav-label">Export RH</span>
-      </div>
-      <div class="nav-item" onclick="saveToSupabase()" style="color:var(--accent2)" data-tooltip="Sync Supabase">
-        <span class="icon">☁️</span><span class="nav-label">Sync Supabase</span>
-      </div>
-      <div id="session-timer" style="font-size:11px;color:var(--text3);padding:4px 12px;text-align:center;font-family:'DM Mono',monospace;transition:opacity 0.2s">🕐 8h00</div>
-      <div class="nav-item" onclick="doLogout()" data-tooltip="Déconnexion">
-        <span class="icon">🚪</span><span class="nav-label">Déconnexion</span>
-      </div>
+      <div id="session-timer" style="font-size:10px;color:var(--text3);padding:2px 8px 4px;text-align:center;font-family:'DM Mono',monospace">🕐 8h00</div>
     </div>
   </aside>
 
@@ -1563,10 +1648,22 @@ table input:focus { border-color: var(--accent); }
       </div>
     </div>
 
+    <!-- NOTIFICATIONS RH -->
+    <div id="page-notifications" class="page">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <h2>🔔 Notifications RH</h2>
+          <p style="color:var(--text2);font-size:13px">Disponibilités agents et réponses aux alertes</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="marquerToutesLues()">✓ Tout marquer comme lu</button>
+      </div>
+      <div id="notif-rh-list" style="max-width:700px"></div>
+    </div>
+
     <!-- PLANNING -->
     <div id="page-planning" class="page">
       <!-- Barre de navigation mois + filtres (sans header titre) -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+      <div id="planning-toolbar" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,0.25)">
         <!-- Boutons action -->
         <button class="btn btn-success btn-sm" onclick="autoFillMonth()" style="font-size:11px">✨ Générer</button>
         <button class="btn btn-secondary btn-sm" onclick="openHistory()" style="font-size:11px">📋 Historique</button>
@@ -1801,6 +1898,7 @@ table input:focus { border-color: var(--accent); }
         <div class="tab" onclick="switchConfigTab('rotation')">Rotation secteurs</div>
         <div class="tab" onclick="switchConfigTab('postes')">Postes IDE/ASH</div>
         <div class="tab" onclick="switchConfigTab('logins')">Accès cadres</div>
+        <div class="tab" onclick="switchConfigTab('interim')">🏢 Agences intérim</div>
       </div>
 
       <div id="config-tab-general">
@@ -2094,6 +2192,55 @@ table input:focus { border-color: var(--accent); }
         </div>
       </div>
 
+      <div id="config-tab-interim" class="hidden">
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🏢 Agences intérim</div>
+          <div style="font-size:12px;color:var(--text2)">Gérez vos agences partenaires, leurs tarifs par spécialité et associez vos vacataires intérimaires.</div>
+        </div>
+
+        <!-- Liste des agences -->
+        <div id="interim-agences-list" style="margin-bottom:20px"></div>
+
+        <!-- Formulaire ajout agence -->
+        <div class="card" style="border:1px dashed var(--border)">
+          <div class="card-header"><span class="card-title">➕ Ajouter une agence</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="form-group" style="margin:0">
+              <label>Nom de l'agence ★</label>
+              <input type="text" id="interim-nom" placeholder="Ex: Adecco Médical">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Ville</label>
+              <input type="text" id="interim-ville" placeholder="Annecy">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Téléphone</label>
+              <input type="tel" id="interim-tel" placeholder="04 50 00 00 00">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Email contact</label>
+              <input type="email" id="interim-email" placeholder="contact@agence.fr">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Nom du contact</label>
+              <input type="text" id="interim-contact" placeholder="Prénom NOM">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Notes</label>
+              <input type="text" id="interim-notes" placeholder="Convention, délai de réponse…">
+            </div>
+          </div>
+
+          <!-- Tarifs par spécialité -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">💶 Tarifs horaires par spécialité (€/h)</div>
+            <div id="interim-tarifs-form" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+
+          <button class="btn btn-success btn-sm" onclick="addAgenceInterim()">+ Enregistrer l'agence</button>
+        </div>
+      </div>
+
       <div id="config-tab-logins" class="hidden">
         <div class="config-section" style="max-width:600px">
           <div class="config-section-title">🔑 Accès cadres de santé</div>
@@ -2141,7 +2288,7 @@ table input:focus { border-color: var(--accent); }
         <h2>Import / Export</h2>
         <p>Importer votre configuration Excel ou exporter vos données</p>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
         <div class="card">
           <div class="card-header"><span class="card-title">📂 Importer depuis Excel</span></div>
           <div class="import-zone" id="import-zone" onclick="document.getElementById('file-import').click()">
@@ -2228,7 +2375,7 @@ table input:focus { border-color: var(--accent); }
       </div>
 
       <!-- Stats rapides -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px" id="astr-stats-row"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px" id="astr-stats-row"></div>
 
       <!-- Format import Excel attendu -->
       <div class="card">
@@ -2736,6 +2883,16 @@ table input:focus { border-color: var(--accent); }
     <div class="form-group"><label>Téléphone</label><input type="tel" id="vac-tel" placeholder="06 00 00 00 00"></div>
     <div class="form-group"><label>Email</label><input type="email" id="vac-email" placeholder="prenom.nom@email.fr"></div>
     <div class="form-group"><label>Code PIN (4 chiffres — pour accès QR)</label><input type="text" id="vac-pin" placeholder="ex: 1234" maxlength="4" pattern="[0-9]{4}"></div>
+    <div class="form-group">
+      <label>Agence intérim (si applicable)</label>
+      <select id="vac-agence" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
+        <option value="">— Vacataire direct (pas d'agence) —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tarif horaire spécifique (€/h) — laisser vide = tarif agence</label>
+      <input type="number" id="vac-tarif" placeholder="Ex: 19.50" step="0.5" min="0">
+    </div>
     <div class="form-group"><label>Notes</label><textarea id="vac-notes" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none;resize:vertical"></textarea></div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-vac')">Annuler</button>
@@ -3463,6 +3620,13 @@ function applyTheme(theme) {
   const labelEl = document.getElementById('theme-label');
   if (iconEl) iconEl.textContent = icon;
   if (labelEl) labelEl.textContent = label;
+  // Mettre à jour aussi le bouton footer compact
+  const themeBtn = document.getElementById('theme-toggle-btn');
+  if (themeBtn) {
+    const ic = themeBtn.querySelector('#theme-icon');
+    if (ic) ic.textContent = icon;
+    themeBtn.title = label;
+  }
 
   // Bouton login (visible sur l'écran de connexion)
   const loginBtn = document.getElementById('login-theme-btn');
@@ -3633,6 +3797,12 @@ async function doLogin() {
       const isMobile = window.innerWidth <= 600;
       if (mhBar) mhBar.style.display = isMobile ? 'flex' : 'none';
       if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
+      // Recalcule l'offset de la toolbar planning si elle est visible
+      const tb = document.getElementById('planning-toolbar');
+      if (tb) {
+        const h = tb.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+      }
     });
   }
   const _inEl2 = document.getElementById('sb-user-initials');
@@ -3988,6 +4158,7 @@ function showPage(page) {
     checkNouvellesDemandesConges();
   }
   if (page === 'direction') renderDirectionDashboard();
+  if (page === 'notifications') { renderNotificationsRH(); marquerToutesLues(); }
   if (page === 'agents') { updateAgentSpecTabs(); renderAgents(); }
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
@@ -4234,6 +4405,114 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
+// NOTIFICATIONS RH — Disponibilités agents
+// ============================================================
+function updateNotifRHBadge() {
+  const etab = getEtab();
+  const badge = document.getElementById('notif-rh-badge');
+  const mnBadge = document.getElementById('mn-notif-badge');
+  if (!etab || !badge) return;
+  const nb = (etab.notificationsRH || []).filter(n => !n.lu).length;
+  badge.textContent = nb;
+  badge.style.display = nb > 0 ? 'inline' : 'none';
+  if (mnBadge) { mnBadge.textContent = nb; mnBadge.style.display = nb > 0 ? 'block' : 'none'; }
+}
+
+function renderNotificationsRH() {
+  const etab = getEtab();
+  const el = document.getElementById('notif-rh-list');
+  if (!el || !etab) return;
+
+  const notifs = (etab.notificationsRH || []).slice().reverse();
+  if (notifs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:14px">🔕 Aucune notification pour l&rsquo;instant</div>';
+    return;
+  }
+
+  const colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
+
+  el.innerHTML = notifs.map((n, i) => {
+    const col = colors[n.shiftCode] || '#888';
+    const dt = new Date(n.createdAt);
+    const dateStr = dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' à ' +
+      dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const bgColor = n.lu ? 'var(--bg3)' : 'var(--card)';
+    const borderColor = n.lu ? 'var(--border)' : col;
+
+    return `<div style="background:${bgColor};border:1.5px solid ${borderColor};border-radius:12px;padding:16px;margin-bottom:10px;${n.lu ? 'opacity:0.6' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            ${!n.lu ? '<span style="width:8px;height:8px;border-radius:50%;background:' + col + ';display:inline-block;flex-shrink:0"></span>' : ''}
+            <span style="font-size:13px;font-weight:700;color:var(--text)">${esc(n.agentPrenom)} ${esc(n.agentNom)}</span>
+            <span style="font-size:11px;color:${col};font-weight:600">${esc(n.agentSpec)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">
+            ✅ Se propose pour le poste
+            <span style="background:${col}20;color:${col};padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace;margin:0 4px">${esc(n.shiftCode)}</span>
+            du <strong style="color:var(--text)">${esc(n.dateLabel)}</strong>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">${dateStr}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          ${!n.lu ? `<button onclick="marquerNotifLue(${notifs.length - 1 - i})" 
+            style="font-size:11px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">✓ Lu</button>` : ''}
+          <button onclick="affecterDepuisNotif('${n.agentId}','${n.dateKey}','${n.shiftCode}')"
+            style="font-size:11px;padding:5px 10px;background:${col}22;border:1px solid ${col}55;border-radius:6px;cursor:pointer;color:${col};font-weight:700">
+            ✅ Affecter
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function marquerNotifLue(idx) {
+  const etab = getEtab();
+  if (!etab || !etab.notificationsRH) return;
+  // idx dans l'ordre inversé → convertir
+  const realIdx = etab.notificationsRH.length - 1 - idx;
+  if (etab.notificationsRH[realIdx]) {
+    etab.notificationsRH[realIdx].lu = true;
+  }
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  updateNotifRHBadge();
+  renderNotificationsRH();
+}
+
+function marquerToutesLues() {
+  const etab = getEtab();
+  if (!etab || !etab.notificationsRH) return;
+  etab.notificationsRH.forEach(n => { n.lu = true; });
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  updateNotifRHBadge();
+  renderNotificationsRH();
+}
+
+function affecterDepuisNotif(agentId, dateKey, shiftCode) {
+  const etab = getEtab();
+  if (!etab) return;
+  const agent = etab.agents.find(a => a.id === agentId);
+  if (!agent) { showToast('Agent introuvable', 'error'); return; }
+
+  if (!etab.affectationsVac) etab.affectationsVac = {};
+  if (!etab.affectationsVac[dateKey]) etab.affectationsVac[dateKey] = {};
+  etab.affectationsVac[dateKey][agentId] = {
+    vacId: agentId, nom: agent.nom, prenom: agent.prenom || '',
+    spec: agent.spec || '', shift: shiftCode,
+    statut: 'confirme', affecteLe: new Date().toISOString(), source: 'notif_rh'
+  };
+
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  showToast(esc(agent.prenom||'') + ' ' + esc(agent.nom) + ' affecté(e) → ' + shiftCode + ' le ' + dateKey.split('-').reverse().join('/'), 'success');
+  renderPlanning();
+  renderNotificationsRH();
+}
+
+// ============================================================
 // TABLEAU DE BORD DIRECTION
 // ============================================================
 function initDirectionSelects() {
@@ -4387,12 +4666,29 @@ function renderDirectionDashboard() {
     hsEl.innerHTML = hsDetails.length ? hsDetails.join('') + `<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;font-weight:700"><span>Total</span><span style="color:var(--accent2)">+${totalHS}h</span></div>` : '<span style="color:var(--text3);font-size:12px">Aucune HS ce mois</span>';
   }
 
-  // ── Coût vacataires ──
+  // ── Coût vacataires par agence ──
   const coutEl = document.getElementById('dir-cout-detail');
   if (coutEl) {
+    const coutParAgence = calcCoutParAgence(annee, mois, etab);
+    const totalReel = coutParAgence.reduce((s, a) => s + a.totalCout, 0);
+
+    let agencesHtml = '';
+    if (coutParAgence.length > 0) {
+      agencesHtml = '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">' +
+        coutParAgence.map(a => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)22;font-size:12px">
+            <div>
+              <div style="font-weight:600;color:var(--text)">${esc(a.agence.nom)}</div>
+              <div style="font-size:10px;color:var(--text3)">${a.nbAffectations} affectation(s) · ${a.totalHeures}h</div>
+            </div>
+            <span style="font-weight:800;color:var(--accent4)">${a.totalCout.toLocaleString('fr-FR')} €</span>
+          </div>`).join('') +
+        '</div>';
+    }
+
     coutEl.innerHTML = `
       <div style="margin-bottom:12px">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Taux horaire configuré</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Taux horaire par défaut (si pas de tarif agence)</div>
         <div style="display:flex;align-items:center;gap:8px">
           <input type="number" value="${txHoraireVac}" min="10" max="100" step="0.5"
             onchange="getEtab().config.tauxHoraireVac=parseFloat(this.value)||18;saveToStorage();renderDirectionDashboard()"
@@ -4400,10 +4696,11 @@ function renderDirectionDashboard() {
           <span style="font-size:13px;color:var(--text2)">€ / heure</span>
         </div>
       </div>
-      <div style="font-size:24px;font-weight:900;color:${coutVac>0?'var(--accent4)':'var(--text3)'}">
-        ${coutVac.toLocaleString('fr-FR')} €
+      <div style="font-size:24px;font-weight:900;color:${totalReel>0?'var(--accent4)':'var(--text3)'}">
+        ${(totalReel || coutVac).toLocaleString('fr-FR')} €
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-top:4px">${nbVacJours} poste(s) rempli(s) par des vacataires</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">${nbVacJours} poste(s) rempli(s)</div>
+      ${agencesHtml}
     `;
   }
 
@@ -4966,6 +5263,15 @@ function renderDashAbsences() {
 function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
+
+  // Figer la ligne des dates : mesure la hauteur réelle de la toolbar sticky
+  (function updateToolbarOffset() {
+    const tb = document.getElementById('planning-toolbar');
+    if (tb) {
+      const h = tb.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+    }
+  })();
 
   // Auto-générer si mois vide
   autoFillIfEmpty();
@@ -7418,6 +7724,227 @@ function deleteCurrentAgent() {
 // ============================================================
 // VACATAIRES
 // ============================================================
+// ============================================================
+// AGENCES INTÉRIM
+// ============================================================
+function renderAgencesInterim() {
+  const etab = getEtab();
+  if (!etab) return;
+  if (!etab.agencesInterim) etab.agencesInterim = [];
+
+  // Peupler le formulaire de tarifs avec les spécialités
+  const tarifForm = document.getElementById('interim-tarifs-form');
+  if (tarifForm) {
+    tarifForm.innerHTML = (etab.specialites || ['AS','IDE','AUX','ASH','Nuit']).map(spec => `
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--text2);font-weight:600">${esc(spec)}</label>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="number" id="interim-tarif-${spec}" placeholder="18" step="0.5" min="0"
+            style="width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;text-align:center">
+          <span style="font-size:11px;color:var(--text3)">€/h</span>
+        </div>
+      </div>`).join('');
+  }
+
+  // Peupler le select agence dans la fiche vacataire
+  const vacAgenceSel = document.getElementById('vac-agence');
+  if (vacAgenceSel) {
+    const current = vacAgenceSel.value;
+    vacAgenceSel.innerHTML = '<option value="">— Vacataire direct (pas d&rsquo;agence) —</option>' +
+      etab.agencesInterim.map(a => `<option value="${a.id}" ${a.id===current?'selected':''}>${esc(a.nom)}</option>`).join('');
+  }
+
+  // Afficher la liste des agences
+  const el = document.getElementById('interim-agences-list');
+  if (!el) return;
+  if (etab.agencesInterim.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;background:var(--bg3);border-radius:10px">Aucune agence enregistrée — ajoutez votre première agence ci-dessous</div>';
+    return;
+  }
+
+  el.innerHTML = etab.agencesInterim.map((ag, i) => {
+    const specs = Object.entries(ag.tarifs || {}).filter(([,v]) => v > 0);
+    const vacCount = (etab.vacataires||[]).filter(v => v.agenceId === ag.id).length;
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--accent)22;color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">🏢</div>
+            <div>
+              <div style="font-size:14px;font-weight:800;color:var(--text)">${esc(ag.nom)}</div>
+              <div style="font-size:11px;color:var(--text2)">${ag.ville ? esc(ag.ville) + ' · ' : ''}${ag.contact ? esc(ag.contact) + ' · ' : ''}${vacCount} intérimaire(s)</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+            ${ag.tel ? `<a href="tel:${ag.tel}" style="font-size:11px;color:var(--accent);text-decoration:none">📞 ${esc(ag.tel)}</a>` : ''}
+            ${ag.email ? `<a href="mailto:${ag.email}" style="font-size:11px;color:var(--accent);text-decoration:none">✉️ ${esc(ag.email)}</a>` : ''}
+            ${ag.notes ? `<span style="font-size:11px;color:var(--text3)">📝 ${esc(ag.notes)}</span>` : ''}
+          </div>
+          ${specs.length > 0 ? `
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${specs.map(([spec, tarif]) => `
+              <span style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--text2)">
+                ${esc(spec)} : <span style="color:var(--accent2)">${tarif}€/h</span>
+              </span>`).join('')}
+          </div>` : '<span style="font-size:11px;color:var(--text3)">Aucun tarif défini</span>'}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="editAgenceInterim(${i})" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2)">✏️</button>
+          <button onclick="deleteAgenceInterim(${i})" style="padding:6px 10px;background:rgba(247,111,111,0.1);border:1px solid rgba(247,111,111,0.3);border-radius:6px;cursor:pointer;font-size:12px;color:var(--accent4)">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addAgenceInterim() {
+  const etab = getEtab();
+  if (!etab) return;
+  const nom = document.getElementById('interim-nom')?.value.trim();
+  if (!nom) { showToast('Le nom de l\'agence est obligatoire', 'error'); return; }
+
+  if (!etab.agencesInterim) etab.agencesInterim = [];
+
+  // Récupérer les tarifs par spécialité
+  const tarifs = {};
+  (etab.specialites || ['AS','IDE','AUX','ASH','Nuit']).forEach(spec => {
+    const val = parseFloat(document.getElementById('interim-tarif-' + spec)?.value || '0');
+    if (val > 0) tarifs[spec] = val;
+  });
+
+  const agence = {
+    id: 'AG_' + Date.now(),
+    nom,
+    ville: document.getElementById('interim-ville')?.value.trim() || '',
+    tel: document.getElementById('interim-tel')?.value.trim() || '',
+    email: document.getElementById('interim-email')?.value.trim() || '',
+    contact: document.getElementById('interim-contact')?.value.trim() || '',
+    notes: document.getElementById('interim-notes')?.value.trim() || '',
+    tarifs,
+    createdAt: new Date().toISOString()
+  };
+
+  etab.agencesInterim.push(agence);
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+
+  // Réinitialiser le formulaire
+  ['interim-nom','interim-ville','interim-tel','interim-email','interim-contact','interim-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  (etab.specialites || []).forEach(spec => {
+    const el = document.getElementById('interim-tarif-' + spec);
+    if (el) el.value = '';
+  });
+
+  showToast('Agence "' + nom + '" enregistrée ✓', 'success');
+  renderAgencesInterim();
+}
+
+function deleteAgenceInterim(idx) {
+  const etab = getEtab();
+  if (!etab || !etab.agencesInterim) return;
+  const nom = etab.agencesInterim[idx]?.nom;
+  // Vérifier qu'aucun vacataire n'est lié
+  const linked = (etab.vacataires||[]).filter(v => v.agenceId === etab.agencesInterim[idx]?.id).length;
+  if (linked > 0) {
+    showToast(`Impossible — ${linked} vacataire(s) lié(s) à cette agence. Modifiez-les d'abord.`, 'error');
+    return;
+  }
+  etab.agencesInterim.splice(idx, 1);
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  showToast('Agence "' + nom + '" supprimée', 'info');
+  renderAgencesInterim();
+}
+
+function editAgenceInterim(idx) {
+  const etab = getEtab();
+  if (!etab || !etab.agencesInterim[idx]) return;
+  const ag = etab.agencesInterim[idx];
+  // Pré-remplir le formulaire
+  document.getElementById('interim-nom').value = ag.nom || '';
+  document.getElementById('interim-ville').value = ag.ville || '';
+  document.getElementById('interim-tel').value = ag.tel || '';
+  document.getElementById('interim-email').value = ag.email || '';
+  document.getElementById('interim-contact').value = ag.contact || '';
+  document.getElementById('interim-notes').value = ag.notes || '';
+  Object.entries(ag.tarifs || {}).forEach(([spec, val]) => {
+    const el = document.getElementById('interim-tarif-' + spec);
+    if (el) el.value = val;
+  });
+  // Supprimer l'ancienne entrée
+  etab.agencesInterim.splice(idx, 1);
+  saveToStorage();
+  renderAgencesInterim();
+  showToast('Modifiez et enregistrez l\'agence', 'info');
+}
+
+// ── Calcul coût réel par agence pour la Vue Direction ──
+function calcCoutParAgence(annee, mois, etab) {
+  if (!etab || !etab.agencesInterim) return [];
+  const daysInMonth = new Date(annee, mois+1, 0).getDate();
+  const result = [];
+
+  etab.agencesInterim.forEach(ag => {
+    let totalCout = 0;
+    let totalHeures = 0;
+    let nbAffectations = 0;
+    const vacsAgence = (etab.vacataires||[]).filter(v => v.agenceId === ag.id);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dk = annee + '-' + String(mois+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const affs = (etab.affectationsVac||{})[dk] || {};
+      Object.values(affs).forEach(aff => {
+        if (!aff) return;
+        const vac = vacsAgence.find(v => v.id === aff.vacId);
+        if (!vac) return;
+        // Tarif : vacataire spécifique > agence > global
+        const tarifH = vac.tarif || ag.tarifs?.[vac.spec] || etab.config.tauxHoraireVac || 18;
+        const hor = etab.horaires.find(h => h.code === aff.shift);
+        const duree = aff.dureeH || (hor ? hor.duree : 10) || 10;
+        totalCout += duree * tarifH;
+        totalHeures += duree;
+        nbAffectations++;
+      });
+    }
+
+    if (nbAffectations > 0 || vacsAgence.length > 0) {
+      result.push({ agence: ag, totalCout, totalHeures, nbAffectations, nbVacs: vacsAgence.length });
+    }
+  });
+
+  // Vacataires directs (sans agence)
+  const vacsDirects = (etab.vacataires||[]).filter(v => !v.agenceId);
+  if (vacsDirects.length > 0) {
+    let totalCout = 0, totalHeures = 0, nbAff = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dk = annee + '-' + String(mois+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const affs = (etab.affectationsVac||{})[dk] || {};
+      Object.values(affs).forEach(aff => {
+        if (!aff) return;
+        const vac = vacsDirects.find(v => v.id === aff.vacId);
+        if (!vac) return;
+        const tarifH = vac.tarif || etab.config.tauxHoraireVac || 18;
+        const hor = etab.horaires.find(h => h.code === aff.shift);
+        const duree = aff.dureeH || (hor ? hor.duree : 10) || 10;
+        totalCout += duree * tarifH;
+        totalHeures += duree;
+        nbAff++;
+      });
+    }
+    if (nbAff > 0) {
+      result.push({
+        agence: { nom: 'Vacataires directs', id: null },
+        totalCout, totalHeures, nbAffectations: nbAff, nbVacs: vacsDirects.length
+      });
+    }
+  }
+
+  return result.sort((a, b) => b.totalCout - a.totalCout);
+}
+
 function renderVacataires() {
   const etab = getEtab();
   if (!etab) return;
@@ -7545,6 +8072,14 @@ function openEditVacataire(vacId) {
   if (!vac) return;
   editingVacId = vacId;
   document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)}`;
+  // Peupler select agences intérim
+  const vacAgSel = document.getElementById('vac-agence');
+  if (vacAgSel) {
+    vacAgSel.innerHTML = '<option value="">— Vacataire direct (pas d&rsquo;agence) —</option>' +
+      (etab.agencesInterim||[]).map(a => `<option value="${a.id}" ${a.id===(vac.agenceId||'')?'selected':''}>${esc(a.nom)}</option>`).join('');
+  }
+  const vacTarifEl = document.getElementById('vac-tarif');
+  if (vacTarifEl) vacTarifEl.value = vac.tarif || '';
   document.getElementById('vac-nom').value = vac.nom;
   document.getElementById('vac-prenom').value = vac.prenom;
   document.getElementById('vac-tel').value = vac.tel || '';
@@ -7568,7 +8103,9 @@ function saveVacataire() {
     tel: document.getElementById('vac-tel').value,
     email: document.getElementById('vac-email').value,
     notes: document.getElementById('vac-notes').value,
-    pin: pin || null
+    pin: pin || null,
+    agenceId: document.getElementById('vac-agence')?.value || '',
+    tarif: parseFloat(document.getElementById('vac-tarif')?.value || '0') || 0,
   };
   if (editingVacId) {
     const idx = etab.vacataires.findIndex(v => v.id === editingVacId);
@@ -8189,7 +8726,385 @@ function printAgentQR(agentId, nom, prenom, spec) {
       <div class="url">${agentUrl}</div>
     </div>
     <script>setTimeout(() => { window.print(); window.close(); }, 300);<\/script>
-  </body></html>`);
+  
+<script>
+/* ============================================================
+   HORIZON PLANNING — Intégration PWA + Notifications Push
+   
+   INSTRUCTIONS D'INTÉGRATION :
+   Copier ce bloc JUSTE AVANT </body> dans index.html
+   (après tous les autres scripts)
+   ============================================================ */
+
+// ============================================================
+// 1. ENREGISTREMENT DU SERVICE WORKER
+// ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(reg) {
+        console.log('[PWA] Service Worker enregistré:', reg.scope);
+        // Écouter les messages du SW (clic sur notification → navigation)
+        navigator.serviceWorker.addEventListener('message', _handleSWMessage);
+      })
+      .catch(function(err) {
+        console.warn('[PWA] Service Worker échec:', err);
+      });
+  });
+}
+
+// ── Message reçu depuis le SW après clic sur une notification ──
+function _handleSWMessage(event) {
+  const msg = event.data;
+  if (!msg || msg.type !== 'NOTIF_CLICK') return;
+  console.log('[PWA] Navigation depuis notification:', msg.notifType);
+  if (msg.notifType === 'conge') {
+    // Ouvrir la modal des congés si on est dans l'app cadre
+    if (typeof showPage === 'function') showPage('conges');
+    if (typeof openCongesModal === 'function') openCongesModal();
+  } else if (msg.notifType === 'planning' || msg.notifType === 'shift') {
+    if (typeof showPage === 'function') showPage('planning');
+  } else if (msg.notifType === 'alerte') {
+    if (typeof showPage === 'function') showPage('vacataires');
+  }
+}
+
+// ============================================================
+// 2. CLÉS VAPID
+// ============================================================
+// ⚠️  IMPORTANT : Génère tes propres clés VAPID sur :
+//     https://vapidkeys.com/  ou  npx web-push generate-vapid-keys
+// Remplace les valeurs ci-dessous par tes clés personnelles.
+//
+const VAPID_PUBLIC_KEY = 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+// La clé PRIVÉE reste côté serveur (Edge Function Supabase), ne jamais la mettre ici.
+
+// ── Convertit une clé VAPID base64 en Uint8Array ──
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(function(c) { return c.charCodeAt(0); }));
+}
+
+// ============================================================
+// 3. ABONNEMENT AUX NOTIFICATIONS PUSH
+//    Appelé quand un agent ouvre son planning QR
+// ============================================================
+async function subscribePushNotifications(agentId, agentName, etabId) {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[PWA] Push non supporté sur ce navigateur');
+    return false;
+  }
+
+  // Clé VAPID non configurée → skip silencieux
+  if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('REMPLACER')) {
+    console.warn('[PWA] Clé VAPID non configurée — notifications push désactivées');
+    return false;
+  }
+
+  try {
+    // Demander la permission si pas encore accordée
+    let permission = Notification.permission;
+    if (permission === 'denied') {
+      console.log('[PWA] Notifications refusées par l\'utilisateur');
+      return false;
+    }
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') return false;
+
+    // Récupérer le service worker actif
+    const reg = await navigator.serviceWorker.ready;
+
+    // Vérifier si déjà abonné
+    let subscription = await reg.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    // Sauvegarder l'abonnement dans Supabase
+    const subJson = subscription.toJSON();
+    const { error } = await supa
+      .from('push_subscriptions')
+      .upsert({
+        agent_id:  agentId,
+        etab_id:   etabId,
+        agent_name: agentName || agentId,
+        endpoint:  subJson.endpoint,
+        p256dh:    subJson.keys.p256dh,
+        auth:      subJson.keys.auth,
+      }, { onConflict: 'endpoint' });
+
+    if (error) {
+      console.error('[PWA] Erreur sauvegarde abonnement:', error);
+      return false;
+    }
+
+    console.log('[PWA] ✅ Abonnement push enregistré pour:', agentName || agentId);
+    return true;
+
+  } catch(err) {
+    console.error('[PWA] Erreur abonnement push:', err);
+    return false;
+  }
+}
+
+// ── Désabonnement (ex: agent supprimé) ──
+async function unsubscribePushNotifications(agentId, etabId) {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.getSubscription();
+    if (subscription) {
+      await subscription.unsubscribe();
+      await supa
+        .from('push_subscriptions')
+        .delete()
+        .eq('agent_id', agentId)
+        .eq('etab_id', etabId);
+      console.log('[PWA] Désabonnement effectué');
+    }
+  } catch(err) {
+    console.warn('[PWA] Erreur désabonnement:', err);
+  }
+}
+
+// ============================================================
+// 4. ENVOI DE NOTIFICATIONS (côté cadre)
+//    Appeler ces fonctions depuis l'interface de gestion
+// ============================================================
+
+/**
+ * Envoyer une notification à un ou plusieurs agents
+ * @param {Object} options
+ * @param {string} options.etabId       - ID de l'établissement
+ * @param {string|null} options.agentId - null = tous les agents de l'établissement
+ * @param {string} options.type         - 'planning' | 'conge' | 'alerte' | 'shift'
+ * @param {string} options.title        - Titre de la notification
+ * @param {string} options.body         - Corps du message
+ * @param {string|null} options.url     - URL de destination (optionnel)
+ */
+async function sendPushNotification(options) {
+  const { etabId, agentId, type, title, body, url } = options;
+  if (!etabId || !title) return;
+
+  try {
+    // Récupérer les abonnements concernés
+    let query = supa.from('push_subscriptions').select('*').eq('etab_id', etabId);
+    if (agentId) query = query.eq('agent_id', agentId);
+    const { data: subs, error } = await query;
+
+    if (error || !subs || subs.length === 0) {
+      console.log('[PWA] Aucun abonnement trouvé pour', etabId, agentId || '(tous)');
+      return;
+    }
+
+    console.log('[PWA] Envoi notification à', subs.length, 'abonné(s)');
+
+    // Appel à la Supabase Edge Function qui envoie vraiment les push
+    const { data: result, error: fnError } = await supa.functions.invoke('send-push', {
+      body: {
+        subscriptions: subs,
+        payload: {
+          title: title,
+          body:  body || '',
+          type:  type  || 'general',
+          url:   url   || '/',
+          etabId: etabId,
+          agentId: agentId || null,
+        }
+      }
+    });
+
+    if (fnError) {
+      console.error('[PWA] Erreur Edge Function:', fnError);
+      return;
+    }
+
+    // Logger l'envoi
+    await supa.from('notifications_log').insert({
+      etab_id:  etabId,
+      agent_id: agentId || null,
+      type:     type || 'general',
+      title:    title,
+      body:     body || '',
+      success:  true,
+    });
+
+    console.log('[PWA] ✅ Notifications envoyées:', result);
+    return result;
+
+  } catch(err) {
+    console.error('[PWA] Erreur envoi push:', err);
+  }
+}
+
+// ── Raccourcis pour les 4 types de notifications de l'app ──
+
+function notifNouveauPlanning(etabId, moisLabel) {
+  return sendPushNotification({
+    etabId,
+    agentId: null, // tous les agents
+    type: 'planning',
+    title: 'Planning mis à jour',
+    body: 'Le planning ' + (moisLabel || '') + ' vient d\'être publié.',
+    url: '/?qr=1&etab=' + etabId,
+  });
+}
+
+function notifCongeValide(etabId, agentId, agentName, accepted, mois) {
+  return sendPushNotification({
+    etabId,
+    agentId,
+    type: 'conge',
+    title: accepted ? '✅ Congé validé' : '❌ Congé refusé',
+    body: (accepted ? 'Votre demande de congé' : 'Votre demande de congé') +
+          (mois ? ' (' + mois + ')' : '') +
+          (accepted ? ' a été accordée.' : ' a été refusée par le cadre.'),
+    url: '/?agent=' + agentId + '&etab=' + etabId,
+  });
+}
+
+function notifAlerteManque(etabId, dateLabel, posteLabel) {
+  return sendPushNotification({
+    etabId,
+    agentId: null, // tous
+    type: 'alerte',
+    title: '🚨 Appel à volontaires',
+    body: 'Poste à pourvoir : ' + (posteLabel || '') + ' le ' + (dateLabel || '') + '. Êtes-vous disponible ?',
+    url: '/?qr=1&etab=' + etabId,
+  });
+}
+
+function notifModifShift(etabId, agentId, agentName, dateLabel, ancienShift, nouveauShift) {
+  return sendPushNotification({
+    etabId,
+    agentId,
+    type: 'shift',
+    title: '🔄 Modification de planning',
+    body: 'Votre shift du ' + (dateLabel || '') + ' a été modifié : ' +
+          (ancienShift || '—') + ' → ' + (nouveauShift || '—'),
+    url: '/?agent=' + agentId + '&etab=' + etabId,
+  });
+}
+
+// ============================================================
+// 5. AUTO-ABONNEMENT À L'OUVERTURE DU PLANNING QR
+//    Ce bloc s'exécute automatiquement côté agent
+// ============================================================
+(function _autoSubscribeQR() {
+  // Attendre que l'app QR soit prête (polling léger)
+  let _checkCount = 0;
+  const _checkInterval = setInterval(function() {
+    _checkCount++;
+    if (_checkCount > 60) { clearInterval(_checkInterval); return; } // timeout 30s
+
+    // Détecter qu'un agent est connecté en vue QR
+    const qrView = document.getElementById('qr-view');
+    if (!qrView || qrView.style.display === 'none') return;
+
+    // Vérifier que _qrAgentId est rempli (défini dans le code principal)
+    if (typeof _qrAgentId === 'undefined' || !_qrAgentId) return;
+    if (typeof _qrEtabId  === 'undefined' || !_qrEtabId)  return;
+
+    clearInterval(_checkInterval);
+
+    // Trouver le nom de l'agent
+    let agentName = _qrAgentId;
+    try {
+      const etab = DB && DB.etablissements && DB.etablissements[_qrEtabId];
+      if (etab) {
+        const ag = (etab.agents || []).find(function(a) { return a.id === _qrAgentId; })
+                || (etab.vacataires || []).find(function(v) { return v.id === _qrAgentId; });
+        if (ag) agentName = ag.nom || ag.name || _qrAgentId;
+      }
+    } catch(e) {}
+
+    // Petit délai pour ne pas perturber le chargement initial
+    setTimeout(function() {
+      subscribePushNotifications(_qrAgentId, agentName, _qrEtabId).then(function(ok) {
+        if (ok) {
+          // Afficher un toast discret
+          const toastEl = document.getElementById('toast');
+          if (toastEl) {
+            toastEl.innerHTML = '<span>🔔</span> Notifications activées';
+            toastEl.style.borderColor = 'var(--accent2, #38d9a9)';
+            toastEl.classList.add('show');
+            setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
+          }
+        }
+      });
+    }, 1500);
+  }, 500);
+})();
+
+// ============================================================
+// 6. BANNIÈRE "INSTALLER L'APPLICATION"
+//    Apparaît automatiquement sur mobile si pas encore installée
+// ============================================================
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+
+  // Afficher la bannière seulement en vue QR (côté agent)
+  const qrView = document.getElementById('qr-view');
+  const isQR = window.location.search.includes('agent=') || window.location.search.includes('qr=1');
+  if (!isQR) return;
+
+  // Délai pour ne pas afficher immédiatement à l'ouverture
+  setTimeout(_showInstallBanner, 3000);
+});
+
+function _showInstallBanner() {
+  if (!_deferredInstallPrompt) return;
+  if (document.getElementById('pwa-install-banner')) return; // déjà affiché
+
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.style.cssText = [
+    'position:fixed;bottom:70px;left:12px;right:12px;z-index:9000',
+    'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
+    'border:1px solid #4f8ef7;border-radius:14px',
+    'padding:14px 16px;display:flex;align-items:center;gap:12px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+    'animation:slideUp 0.3s ease',
+  ].join(';');
+  banner.innerHTML = [
+    '<div style="font-size:28px;flex-shrink:0">📲</div>',
+    '<div style="flex:1;min-width:0">',
+      '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
+      '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis votre écran d\'accueil</div>',
+    '</div>',
+    '<button onclick="installPWA()" style="background:#4f8ef7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">Installer</button>',
+    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:18px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>',
+  ].join('');
+  document.body.appendChild(banner);
+}
+
+async function installPWA() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  console.log('[PWA] Installation:', outcome);
+  _deferredInstallPrompt = null;
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.remove();
+}
+
+window.addEventListener('appinstalled', function() {
+  console.log('[PWA] Application installée avec succès');
+  _deferredInstallPrompt = null;
+  if (typeof showToast === 'function') showToast('Application installée ! 🎉', 'success');
+});
+
+</script>
+</body></html>`);
   w.document.close();
 }
 
@@ -8901,7 +9816,35 @@ function qrRenderPostesAPourvoir(etab, agent) {
         var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
         var isExclu = secteursExclus.includes(secteurJour);
 
-        html += '<div style="background:rgba(247,111,111,0.08);border:1.5px solid rgba(247,111,111,0.25);border-radius:10px;padding:12px;margin-bottom:8px">' +
+        // ── Vérifier si l'agent travaille déjà ce jour ──
+        var agentPlanJour = ((etab.planning[dt.getFullYear()] || {})[dt.getMonth()] || {})[agent.id] || {};
+        var shiftCeJour = agentPlanJour[dt.getDate()] || '';
+        var codesWork = ['M','S','J','NU','N','FO'];
+        var codesAbs  = ['MO','EM','AT','GR','AM','CP'];
+        var travailCeJour = codesWork.includes(shiftCeJour) || (shiftCeJour.startsWith('HS') && shiftCeJour.length > 2);
+        var absenceCeJour = codesAbs.includes(shiftCeJour);
+        var dejaRepondu   = alerte.reponses && alerte.reponses[agent.id] && alerte.reponses[agent.id][dk + '_' + m.code];
+
+        // Message de statut
+        var statusMsg = '';
+        var btnDisabled = false;
+        if (travailCeJour) {
+          statusMsg = '🔵 Vous travaillez déjà ce jour (' + shiftCeJour + ')';
+          btnDisabled = true;
+        } else if (absenceCeJour) {
+          statusMsg = '⚠️ Absence enregistrée ce jour (' + shiftCeJour + ')';
+          btnDisabled = true;
+        } else if (dejaRepondu) {
+          var rep = dejaRepondu;
+          statusMsg = rep.disponible ? '✅ Vous vous êtes proposé(e)' : '❌ Vous avez indiqué ne pas être disponible';
+          btnDisabled = true;
+        }
+
+        var disabledStyle = btnDisabled ? 'opacity:0.4;cursor:not-allowed;' : 'cursor:pointer;';
+
+        html += '<div style="background:' + (travailCeJour ? 'rgba(79,142,247,0.06)' : absenceCeJour ? 'rgba(247,169,79,0.06)' : 'rgba(247,111,111,0.08)') + ';' +
+          'border:1.5px solid ' + (travailCeJour ? 'rgba(79,142,247,0.25)' : absenceCeJour ? 'rgba(247,169,79,0.25)' : 'rgba(247,111,111,0.25)') + ';' +
+          'border-radius:10px;padding:12px;margin-bottom:8px">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
             '<div>' +
               '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
@@ -8913,18 +9856,20 @@ function qrRenderPostesAPourvoir(etab, agent) {
             '</div>' +
             (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
           '</div>' +
-          (isExclu ?
-            '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Ce secteur figure dans vos exclusions — vous pouvez quand même vous proposer.</div>' : '') +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-            '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, true)" ' +
-              'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">' +
-              '✅ Je suis disponible' +
-            '</button>' +
-            '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, false)" ' +
-              'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">' +
-              '❌ Pas disponible' +
-            '</button>' +
-          '</div>' +
+          (statusMsg ? '<div style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px;margin-bottom:8px">' + statusMsg + '</div>' : '') +
+          (isExclu && !btnDisabled ? '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Ce secteur figure dans vos exclusions — vous pouvez quand même vous proposer.</div>' : '') +
+          (btnDisabled ? '' :
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, true)" ' +
+                'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;' + disabledStyle + 'font-family:inherit">' +
+                '✅ Je suis disponible' +
+              '</button>' +
+              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, false)" ' +
+                'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;' + disabledStyle + 'font-family:inherit">' +
+                '❌ Pas disponible' +
+              '</button>' +
+            '</div>'
+          ) +
         '</div>';
       });
     });
@@ -8967,6 +9912,27 @@ function qrSeProposer(alerteId, dateKey, shiftCode, disponible) {
       affecteLe: new Date().toISOString(),
       source: 'qr_auto'
     };
+  }
+
+  // ── Créer une notification pour le cadre ──
+  if (disponible) {
+    if (!etab.notificationsRH) etab.notificationsRH = [];
+    var dt = new Date(dateKey + 'T00:00:00');
+    var dateLabel = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+    etab.notificationsRH.push({
+      id: 'NOTIF_' + Date.now(),
+      type: 'disponibilite',
+      agentId: _qrAgentId,
+      agentNom: agent.nom,
+      agentPrenom: agent.prenom || '',
+      agentSpec: agent.spec || '',
+      dateKey: dateKey,
+      dateLabel: dateLabel,
+      shiftCode: shiftCode,
+      alerteId: alerteId,
+      lu: false,
+      createdAt: new Date().toISOString()
+    });
   }
 
   DB.etablissements[_qrEtabId] = etab;
@@ -9372,15 +10338,17 @@ function saveQRDispos() {
 // CONFIG
 // ============================================================
 function switchConfigTab(tab) {
-  ['general','secteurs','horaires','roulement','rotation','postes','logins'].forEach(t => {
-    document.getElementById('config-tab-' + t).classList.toggle('hidden', t !== tab);
+  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
+    const el = document.getElementById('config-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins'][i] === tab);
+    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'][i] === tab);
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
   if (tab === 'postes') renderConfigPostes();
+  if (tab === 'interim') renderAgencesInterim();
 }
 
 function renderRotationConfig() {
@@ -10667,64 +11635,60 @@ function handleImportFile(file) {
       }
 
       // ══════════════════════════════════════════════
-      // 5. ROULEMENT  →  onglet "Roulement"
-      //    Structure réelle du fichier :
-      //    Row 0  : "ROULEMENT PARFAIT..." (titre groupe 1)
-      //    Row 1  : vide
-      //    Row 2  : "Agent" / "" / "SEMAINE 1" / ...
-      //    Row 3  : "" / "Ligne" / "L" / "M" / "ME" / "J" / "V" / "S" / "D" / ...
-      //    Row 4-12 : "Agent 1" / "L1" / R/M/M/R/R/J/J/...  (42 codes)
-      //    Row 13 : vide
-      //    Row 14 : "ROULEMENT PARFAIT..." (titre groupe 2)
-      //    Row 15 : vide
-      //    Row 16-24 : "Agent 1" / "L1" / S/R/R/M/M/...     (42 codes)
-      //
-      //    DÉTECTION DES GROUPES : on compte les blocs séparés par des lignes contenant "ROULEMENT"
+      // 5. ROULEMENT
+      //    Nouveau template : 1 onglet par spécialité "Roulement AS", "Roulement IDE" etc.
+      //    Ancien template  : 1 seul onglet "Roulement" (rétrocompatible)
+      //    Structure de chaque onglet :
+      //    - Lignes de titre groupe : col0 contient "GROUPE" ou "ROULEMENT"
+      //    - Lignes de données : col0 = "Agent N", col1 = "L1"..."L9", col2-43/29 = codes shifts
       // ══════════════════════════════════════════════
-      const wsRoul = getSheet('Roulement') || getSheet('roulement');
-      if (wsRoul) {
-        const raw = XLSX.utils.sheet_to_json(wsRoul, { header: 1, defval: '' });
-        etab.roulement = {};
+
+      // Helper : parser un onglet de roulement et retourner roulByLigne
+      function parseRoulSheet(ws) {
+        if (!ws) return {};
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         const roulByLigne = {};
         let currentGroupe = 0;
+        const validCodes = ['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ'];
 
         raw.forEach(row => {
           const c0 = (row[0] || '').toString().trim();
-          const c1Raw = row[1]; // peut être int (1,2..) ou string ('L1','Ligne')
+          const c1Raw = row[1];
           const c1Str = (c1Raw === null || c1Raw === undefined || c1Raw === '') ? '' : c1Raw.toString().trim();
 
-          // Nouveau groupe : ligne dont col0 contient "ROULEMENT" ou "GROUPE"
-          if (c0.toUpperCase().includes('ROULEMENT') || c0.toUpperCase().includes('GROUPE')) {
+          // Nouveau groupe : ligne dont col0 contient "GROUPE" (ou "ROULEMENT" pour ancien format)
+          if (c0.toUpperCase().includes('GROUPE') || c0.toUpperCase().includes('ROULEMENT')) {
             currentGroupe++;
             return;
           }
 
           // Normaliser la ligne : "1" ou 1 → "L1", "L1" → "L1"
           let ligneCode = '';
-          if (/^L\d+$/i.test(c1Str)) {
-            ligneCode = c1Str.toUpperCase();          // déjà "L1"
-          } else if (/^\d+$/.test(c1Str)) {
-            ligneCode = 'L' + c1Str;                  // "1" → "L1"
-          } else if (typeof c1Raw === 'number' && Number.isInteger(c1Raw)) {
-            ligneCode = 'L' + c1Raw;                  // entier 1 → "L1"
-          }
+          if (/^L\d+$/i.test(c1Str)) ligneCode = c1Str.toUpperCase();
+          else if (/^\d+$/.test(c1Str)) ligneCode = 'L' + c1Str;
+          else if (typeof c1Raw === 'number' && Number.isInteger(c1Raw)) ligneCode = 'L' + c1Raw;
 
-          if (!ligneCode) return; // skip entêtes, lignes vides
+          if (!ligneCode) return;
 
-          const validCodes = ['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP'];
+          // Lire tous les shifts de la ligne (jusqu'à 42 colonnes ou 28)
           const shifts = [];
-          for (let c = 2; c <= 43; c++) {
+          for (let c = 2; c < row.length && shifts.length < 42; c++) {
             const v = (row[c] || 'R').toString().trim().toUpperCase();
             shifts.push(validCodes.includes(v) ? v : 'R');
           }
-          while (shifts.length < 42) shifts.push('R');
+          while (shifts.length < 28) shifts.push('R'); // minimum 28 jours
           roulByLigne['G' + currentGroupe + '_' + ligneCode] = shifts;
         });
+        return roulByLigne;
+      }
 
-        // Associer chaque agent via groupeRot + ligneRoulement
+      // Associer les roulements aux agents
+      function applyRoulements(roulByLigne, specs) {
         let matched = 0;
         etab.agents.forEach(agent => {
-          // Normaliser la ligne agent aussi (L1, l1, 1 → L1)
+          // Filtrer par spécialité si specs est défini
+          if (specs && specs.length > 0 && !specs.includes(agent.spec)) return;
+
           let ligneAgent = (agent.ligneRoulement || 'L1').toString().trim();
           if (/^\d+$/.test(ligneAgent)) ligneAgent = 'L' + ligneAgent;
           else ligneAgent = ligneAgent.toUpperCase();
@@ -10739,12 +11703,44 @@ function handleImportFile(file) {
             warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (' + key + ')');
           }
         });
+        return matched;
+      }
 
-        const nbLignes = Object.keys(roulByLigne).length;
-        if (nbLignes > 0) {
-          imported.push('Roulement (' + nbLignes + ' lignes, ' + matched + '/' + etab.agents.length + ' agents)');
-        } else {
-          warnings.push('Aucune ligne de roulement trouvee dans l\'onglet Roulement');
+      etab.roulement = {};
+      let totalRoulLignes = 0, totalMatched = 0;
+
+      // ── Nouveau template : onglets par spécialité ──
+      const specs_roul = ['AS','IDE','AUX','ASH','Nuit'];
+      let hasSpecRoul = false;
+
+      specs_roul.forEach(spec => {
+        const ws = getSheet('Roulement ' + spec) || getSheet('roulement ' + spec);
+        if (!ws) return;
+        hasSpecRoul = true;
+        const roulByLigne = parseRoulSheet(ws);
+        const nb = Object.keys(roulByLigne).length;
+        if (nb > 0) {
+          const matched = applyRoulements(roulByLigne, [spec]);
+          totalRoulLignes += nb;
+          totalMatched += matched;
+          imported.push('Roulement ' + spec + ' (' + nb + ' lignes, ' + matched + ' agents)');
+        }
+      });
+
+      // ── Ancien template : onglet unique "Roulement" (fallback) ──
+      if (!hasSpecRoul) {
+        const wsRoul = getSheet('Roulement') || getSheet('roulement');
+        if (wsRoul) {
+          const roulByLigne = parseRoulSheet(wsRoul);
+          const nb = Object.keys(roulByLigne).length;
+          if (nb > 0) {
+            const matched = applyRoulements(roulByLigne, null);
+            totalRoulLignes += nb;
+            totalMatched += matched;
+            imported.push('Roulement (' + nb + ' lignes, ' + matched + '/' + etab.agents.length + ' agents)');
+          } else {
+            warnings.push('Aucune ligne de roulement trouvée dans l\'onglet Roulement');
+          }
         }
       }
 
@@ -11827,10 +12823,28 @@ function toggleSidebar() {
 }
 
 function initSidebarState() {
-  if (localStorage.getItem('sb_collapsed') === '1') {
+  const savedState = localStorage.getItem('sb_collapsed');
+  const isNarrow = window.innerWidth < 900;
+  // Sur tablette/mobile : sidebar collapsed par défaut sauf si l'utilisateur l'a manuellement ouverte
+  if (savedState === '1' || (isNarrow && savedState !== '0')) {
     sidebarCollapsed = false; // force toggle to true state
     toggleSidebar();
   }
+  // Redimensionnement dynamique
+  window.addEventListener('resize', () => {
+    const sb = document.getElementById('sidebar');
+    const nowMobile = window.innerWidth < 600;
+    if (!sb) return;
+    if (nowMobile) {
+      sb.style.display = 'none';
+    } else {
+      sb.style.display = '';
+      if (window.innerWidth < 900 && !sidebarCollapsed) {
+        sidebarCollapsed = false;
+        toggleSidebar();
+      }
+    }
+  });
 }
 
 // ============================================================
