@@ -6249,7 +6249,7 @@ function renderPlanning() {
       '<td colspan="2" style="position:sticky;left:0;z-index:20;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap">' +
         '<span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ' + gKey + ' — ' + nbActifsGroupe + ' agent' + (nbActifsGroupe>1?'s':'') + '</span>' +
       '</td>' +
-      '<td colspan="' + (daysInMonth + 1) + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
+      '<td colspan="' + daysInMonth + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
       '</tr>';
 
     // Alertes groupe
@@ -6298,7 +6298,7 @@ function renderPlanning() {
         '<td colspan="2" style="position:sticky;left:0;z-index:8;background:rgba(247,111,111,0.06);padding:3px 10px;border-bottom:1px solid rgba(247,111,111,0.2);white-space:nowrap">' +
           '<div style="font-size:10px;display:flex;flex-wrap:wrap;gap:12px">' + alertesGroupe.join(' &nbsp;|&nbsp; ') + '</div>' +
         '</td>' +
-        '<td colspan="' + (daysInMonth + 1) + '" style="background:rgba(247,111,111,0.06);border-bottom:1px solid rgba(247,111,111,0.2)"></td>' +
+        '<td colspan="' + daysInMonth + '" style="background:rgba(247,111,111,0.06);border-bottom:1px solid rgba(247,111,111,0.2)"></td>' +
         '</tr>';
     }
 
@@ -6443,14 +6443,23 @@ function renderPlanning() {
   const planWrap = document.getElementById('planning-container');
   const vacWrap = document.getElementById('planning-vac-scroll');
   if (planWrap && vacWrap) {
+    // Laisser vacWrap scrollable horizontalement
+    vacWrap.style.overflowX = 'auto';
+    // Sync bidirectionnel : planning -> vac et vac -> planning
+    let _syncLock = false;
     planWrap.onscroll = function() {
+      if (_syncLock) return;
+      _syncLock = true;
       vacWrap.scrollLeft = planWrap.scrollLeft;
-      const inner = document.getElementById('planning-vac-container');
-      if (inner) inner.style.transform = 'translateX(-' + planWrap.scrollLeft + 'px)';
+      _syncLock = false;
+    };
+    vacWrap.onscroll = function() {
+      if (_syncLock) return;
+      _syncLock = true;
+      planWrap.scrollLeft = vacWrap.scrollLeft;
+      _syncLock = false;
     };
   }
-  // Changer overflow sur vacWrap pour permettre le scroll synchronisé
-  if (vacWrap) vacWrap.style.overflowX = 'hidden';
   // Cacher l'ancien conteneur totaux (maintenant dans le tableau)
   const totWrap = document.getElementById('sector-daily-totals');
   if (totWrap) totWrap.style.display = 'none';
