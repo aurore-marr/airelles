@@ -9072,52 +9072,37 @@ window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _deferredInstallPrompt = e;
 
-  // Afficher la bannière pour tout le monde (agents QR et cadres/admins)
+  // Afficher la bannière seulement en vue QR (côté agent)
+  const qrView = document.getElementById('qr-view');
+  const isQR = window.location.search.includes('agent=') || window.location.search.includes('qr=1');
+  if (!isQR) return;
+
   // Délai pour ne pas afficher immédiatement à l'ouverture
   setTimeout(_showInstallBanner, 3000);
 });
 
 function _showInstallBanner() {
   if (!_deferredInstallPrompt) return;
-  if (document.getElementById('pwa-install-banner')) return;
-  // Ne pas re-proposer si déjà en mode standalone (déjà installée)
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
-
-  const isQR = document.body.getAttribute('data-qr-mode') === '1';
-  const isMobile = window.innerWidth <= 600;
+  if (document.getElementById('pwa-install-banner')) return; // déjà affiché
 
   const banner = document.createElement('div');
   banner.id = 'pwa-install-banner';
-
-  if (isQR || isMobile) {
-    // Bas d'écran — agents QR et admins mobile
-    const bottomOffset = isQR ? '12px' : '76px';
-    banner.style.cssText = [
-      'position:fixed;bottom:' + bottomOffset + ';left:12px;right:12px;z-index:9999',
-      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
-      'border:1px solid #4f8ef7;border-radius:14px',
-      'padding:14px 16px;display:flex;align-items:center;gap:12px',
-      'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
-    ].join(';');
-  } else {
-    // Coin bas-droite — admins desktop
-    banner.style.cssText = [
-      'position:fixed;bottom:24px;right:24px;z-index:9999',
-      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
-      'border:1px solid #4f8ef7;border-radius:14px',
-      'padding:14px 18px;display:flex;align-items:center;gap:12px',
-      'box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:360px',
-    ].join(';');
-  }
-
+  banner.style.cssText = [
+    'position:fixed;bottom:70px;left:12px;right:12px;z-index:9000',
+    'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
+    'border:1px solid #4f8ef7;border-radius:14px',
+    'padding:14px 16px;display:flex;align-items:center;gap:12px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+    'animation:slideUp 0.3s ease',
+  ].join(';');
   banner.innerHTML = [
-    '<div style="font-size:26px;flex-shrink:0">📲</div>',
+    '<div style="font-size:28px;flex-shrink:0">📲</div>',
     '<div style="flex:1;min-width:0">',
-    '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
-    '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis l\'\u00e9cran d\'accueil</div>',
+      '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
+      '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis votre écran d\'accueil</div>',
     '</div>',
     '<button onclick="installPWA()" style="background:#4f8ef7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">Installer</button>',
-    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:20px;cursor:pointer;padding:4px 6px;flex-shrink:0;line-height:1">\u2715</button>',
+    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:18px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>',
   ].join('');
   document.body.appendChild(banner);
 }
@@ -9685,6 +9670,8 @@ function qrOpenPlanning(agentId) {
   qrRenderBanner(etab, agent);
   // Vérifier et afficher les alertes manque de personnel
   qrCheckAlertes(etab, agentId);
+  // Bannière d'installation PWA (instructions manuelles, universelles)
+  setTimeout(function() { qrShowPWABanner(); }, 2000);
   if (isVac) {
     // Vacataire : afficher seulement les dispos, pas le planning
     qrShowTab('dispos');
@@ -9693,6 +9680,55 @@ function qrOpenPlanning(agentId) {
     qrShowTab('planning');
     qrRenderPlanning();
   }
+}
+
+function qrShowPWABanner() {
+  // Ne pas afficher si déjà installée en standalone
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  // Ne pas afficher si déjà visible ou déjà fermée dans cette session
+  if (document.getElementById('qr-pwa-banner')) return;
+  try { if (sessionStorage.getItem('qr_pwa_dismissed')) return; } catch(e) {}
+
+  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  if (!isIOS && !isAndroid) return; // desktop : le beforeinstallprompt suffit
+
+  // Si le navigateur supporte beforeinstallprompt ET qu'on a le prompt → laisser faire l'automatique
+  if (!isIOS && typeof _deferredInstallPrompt !== 'undefined' && _deferredInstallPrompt) return;
+
+  var banner = document.createElement('div');
+  banner.id = 'qr-pwa-banner';
+  banner.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:9999;' +
+    'background:linear-gradient(135deg,#0f1827,#1a2d4a);' +
+    'border:1px solid #4f8ef7;border-radius:16px;' +
+    'padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.6)';
+
+  var instructions = isIOS
+    ? '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
+        '1. Appuyez sur <strong style="color:#fff">🔗 Safari</strong> (ouvrir dans Safari si ce n'est pas déjà fait)<br>' +
+        '2. Puis <strong style="color:#fff">⬆️ Partager</strong> → <strong style="color:#fff">Sur l'écran d'accueil</strong>' +
+      '</div>'
+    : '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
+        '1. Ouvrez le lien dans <strong style="color:#fff">Chrome</strong><br>' +
+        '2. Menu <strong style="color:#fff">⋮</strong> → <strong style="color:#fff">Ajouter à l'écran d'accueil</strong>' +
+      '</div>';
+
+  banner.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);' +
+          'display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0">H</div>' +
+        '<div>' +
+          '<div style="font-weight:800;font-size:13px;color:#f1f5f9">📲 Installer l'application</div>' +
+          '<div style="font-size:11px;color:#8892aa;margin-top:1px">Accédez en 1 tap depuis votre écran d'accueil</div>' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="(function(){try{sessionStorage.setItem('qr_pwa_dismissed','1')}catch(e){}; document.getElementById('qr-pwa-banner').remove()})()" ' +
+        'style="background:transparent;border:none;color:#5a6480;font-size:22px;cursor:pointer;flex-shrink:0;line-height:1;padding:0">✕</button>' +
+    '</div>' +
+    instructions;
+
+  document.body.appendChild(banner);
 }
 
 function qrRenderPlanning() {
