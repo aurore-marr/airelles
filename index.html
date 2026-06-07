@@ -1936,6 +1936,17 @@ body[data-qr-mode="1"] #qr-view {
                   oninput="localStorage.setItem('horizon_app_url',this.value.trim());showToast('URL QR mise à jour ✓','success')">
                 <p style="font-size:11px;color:var(--text3);margin-top:4px">Si vos QR codes ouvrent la page Vercel, entrez ici l'URL de production.</p>
               </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🔔 Clé VAPID publique (notifications push)</label>
+                <input type="text" id="cfg-vapid-key" placeholder="BxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAAAA"
+                  style="font-family:monospace;font-size:11px"
+                  oninput="localStorage.setItem('horizon_vapid_key',this.value.trim());showToast('Clé VAPID mise à jour ✓','success')">
+                <p style="font-size:11px;color:var(--text3);margin-top:4px">
+                  Génère tes clés sur <strong>vapidkeys.com</strong> ou <code>npx web-push generate-vapid-keys</code>.
+                  La clé <em>privée</em> va dans ta Supabase Edge Function, jamais ici.
+                  Après modification, <strong>recharge la page</strong> pour activer.
+                </p>
+              </div>
             </div>
             <button class="btn btn-primary btn-sm mt-2" onclick="saveConfigGeneral()">💾 Enregistrer</button>
           </div>
@@ -2994,6 +3005,8 @@ body[data-qr-mode="1"] #qr-view {
     <div class="form-group"><label>Ville</label><input type="text" id="ne-ville" placeholder="Ville"></div>
     <div class="form-group"><label>Identifiant admin</label><input type="text" id="ne-login" placeholder="admin"></div>
     <div class="form-group"><label>Mot de passe admin</label><input type="password" id="ne-pwd" placeholder="••••••"></div>
+    <div class="form-group"><label>🔗 URL de l'app <span style="font-weight:400;color:var(--text3)">(pour les QR codes)</span></label><input type="url" id="ne-url" placeholder="https://monehpad.vercel.app" style="font-family:monospace;font-size:12px"></div>
+    <div class="form-group"><label>🔔 Clé VAPID publique <span style="font-weight:400;color:var(--text3)">(notifications push, optionnel)</span></label><input type="text" id="ne-vapid" placeholder="BxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAAAA" style="font-family:monospace;font-size:11px"><p style="font-size:11px;color:var(--text3);margin-top:4px">Génère tes clés sur <strong>vapidkeys.com</strong>. Laisse vide pour configurer plus tard.</p></div>
     <div class="alert alert-info mt-2"><span>ℹ️</span>Un établissement démo sera pré-configuré avec des agents et secteurs exemples.</div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-new-etab')">Annuler</button>
@@ -3257,7 +3270,15 @@ async function supaAuthSignIn(login, etabId, pwdPlain) {
 async function supaAuthSignOut() {
   try { await supa.auth.signOut(); } catch(e) {}
 }
-const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
+// ID de l'établissement par défaut — peut être surchargé via Config
+// Priorité : localStorage 'horizon_default_etab' > 'etab_airelles'
+const ETAB_ID = (function() {
+  try {
+    var stored = localStorage.getItem('horizon_default_etab');
+    if (stored && stored.trim()) return stored.trim();
+  } catch(e) {}
+  return 'etab_airelles'; // fallback historique Les Airelles
+})();
 
 // ============================================================
 // Init immédiate — charger depuis localStorage d'abord
@@ -3806,6 +3827,8 @@ async function doLogin() {
 
   DB.currentEtab = etabId;
   DB.currentUser = { ...login, supaEtabId: etabId };
+  // Mémoriser l'établissement par défaut pour éviter le fallback 'etab_airelles'
+  try { localStorage.setItem('horizon_default_etab', etabId); } catch(e) {}
   err.textContent = '';
 
   // Sauvegarder la session pour reconnexion automatique (sans mot de passe)
@@ -3900,6 +3923,13 @@ async function doLogin() {
     }, 800);
     etab.newDispos = [];
     saveToStorage();
+  }
+
+  // ── Avertissement mot de passe par défaut ──
+  if (login.mustChangePassword) {
+    setTimeout(function() {
+      showToast('⚠️ Mot de passe par défaut actif — changez-le dans Configuration → Utilisateurs', 'warning');
+    }, 1200);
   }
 
   initApp();
@@ -4043,16 +4073,30 @@ async function createNewEtab() {
   const ville = document.getElementById('ne-ville').value.trim();
   const login = document.getElementById('ne-login').value.trim();
   const pwd = document.getElementById('ne-pwd').value;
+  const appUrl = (document.getElementById('ne-url') || {}).value || '';
+  const vapidKey = (document.getElementById('ne-vapid') || {}).value || '';
   if (!nom || !login || !pwd) { showToast('Remplissez tous les champs', 'error'); return; }
   const id = 'etab_' + Date.now();
   const pwdHash = await hashPwd(pwd);
   const etab = defaultEtab(nom, ville, login, pwdHash);
   DB.etablissements[id] = etab;
+  // Sauvegarder URL et VAPID dans localStorage pour cet établissement
+  try {
+    if (appUrl) localStorage.setItem('horizon_app_url', appUrl);
+    if (vapidKey && !vapidKey.startsWith('REMPLACER')) localStorage.setItem('horizon_vapid_key', vapidKey);
+    localStorage.setItem('horizon_default_etab', id);
+  } catch(e) {}
   saveToStorage();
   populateLoginEtabs();
   document.getElementById('login-etab').value = id;
   closeModal('modal-new-etab');
-  showToast('Établissement créé ! Vous pouvez vous connecter.', 'success');
+  // Réinitialiser les champs du modal
+  ['ne-nom','ne-ville','ne-login','ne-pwd','ne-url','ne-vapid'].forEach(function(fid) {
+    var el = document.getElementById(fid); if (el) el.value = '';
+  });
+  var msg = 'Établissement créé ! Vous pouvez vous connecter.';
+  if (!vapidKey) msg += ' — Pensez à configurer la clé VAPID pour les notifications push.';
+  showToast(msg, 'success');
 }
 
 // ============================================================
@@ -8830,7 +8874,15 @@ function _handleSWMessage(event) {
 //     https://vapidkeys.com/  ou  npx web-push generate-vapid-keys
 // Remplace les valeurs ci-dessous par tes clés personnelles.
 //
-const VAPID_PUBLIC_KEY = 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+// Clé VAPID publique — configurable via Paramètres → Notifications
+// ou en dur ici pour les installations mono-établissement
+const VAPID_PUBLIC_KEY = (function() {
+  try {
+    var k = localStorage.getItem('horizon_vapid_key');
+    if (k && k.trim() && !k.startsWith('REMPLACER')) return k.trim();
+  } catch(e) {}
+  return 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+})();
 // La clé PRIVÉE reste côté serveur (Edge Function Supabase), ne jamais la mettre ici.
 
 // ── Convertit une clé VAPID base64 en Uint8Array ──
@@ -9317,9 +9369,6 @@ var _qrPinBuffer = '';
 var _qrWeekOffset = 0;
 var _qrSpecFilter = '';
 var _qrPendingAgentId = null;
-var _qrPinBuffer = '';
-var _qrWeekOffset = 0;
-var _qrSpecFilter = '';
 
 var QR_COLORS = {
   M:  { bg:'#dbeafe', fg:'#1d4ed8', dark:'#1e3a6e' },
@@ -9539,10 +9588,10 @@ function qrRenderBanner(etab, agent) {
   var sectColor = sect ? secteurCouleurCSS(sect) : '#38bdf8';
   var sectNom = sect ? sect.nom : (sectId || 'N/A');
 
-  // CA restants
+  // CA restants — on scanne TOUTE l'année civile (y compris les mois futurs déjà posés)
   var droits = calcDroitsConges ? calcDroitsConges(agent, {}, etab, today.getFullYear(), today.getMonth()) : { droitCA: 0 };
   var caAnnuel = 0;
-  for (var m = 0; m <= today.getMonth(); m++) {
+  for (var m = 0; m < 12; m++) {
     var pm = ((etab.planning[today.getFullYear()] || {})[m] || {})[agent.id] || {};
     var dim = new Date(today.getFullYear(), m+1, 0).getDate();
     for (var d = 1; d <= dim; d++) {
@@ -9660,10 +9709,10 @@ function qrOpenPlanning(agentId) {
     var secteur = agent.secteurFixe || getSecteurDuMois(agent, today.getFullYear(), today.getMonth(), etab);
     var sectObj = etab.secteurs.find(function(s){ return s.id === secteur; });
     var sectColor = sectObj ? secteurCouleurCSS(sectObj) : '#6b7fa8';
-    // Calcul CA restants
+    // Calcul CA restants — toute l'année civile
     var droits = calcDroitsConges(agent, ((etab.planning[today.getFullYear()]||{})[today.getMonth()]||{}), etab, today.getFullYear(), today.getMonth());
     var caAnnuelPris = 0;
-    for (var m = 0; m <= today.getMonth(); m++) {
+    for (var m = 0; m < 12; m++) {
       var pm = ((etab.planning[today.getFullYear()]||{})[m]||{});
       var dim = new Date(today.getFullYear(), m+1, 0).getDate();
       for (var dd = 1; dd <= dim; dd++) {
@@ -9907,8 +9956,8 @@ function qrRenderPlanning() {
 
   var wlEl = document.getElementById('qr-week-label');
   var wdEl = document.getElementById('qr-week-dates');
-  if (wlEl) wlEl.textContent = 'Semaine ' + wn;
-  if (wdEl) wdEl.textContent = ws.getDate() + ' ' + monthNames[ws.getMonth()] + ' - ' + we.getDate() + ' ' + monthNames[we.getMonth()];
+  if (wlEl) wlEl.textContent = 'Semaine ' + wn + (ws.getFullYear() !== today.getFullYear() ? ' · ' + ws.getFullYear() : '');
+  if (wdEl) wdEl.textContent = ws.getDate() + ' ' + monthNames[ws.getMonth()] + ' - ' + we.getDate() + ' ' + monthNames[we.getMonth()] + (we.getFullYear() !== today.getFullYear() ? ' ' + we.getFullYear() : '');
 
   var dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   var container = document.getElementById('qr-weeks-container');
@@ -9956,8 +10005,6 @@ function qrRenderPlanning() {
   wrapper.appendChild(grid);
   container.innerHTML = '';
   container.appendChild(wrapper);
-
-  qrRenderDispos(etab, agent);
 
   // Afficher les postes à pourvoir (alertes manque de personnel)
   qrRenderPostesAPourvoir(etab, agent);
@@ -10198,31 +10245,36 @@ function qrRenderDispos(etab, agent) {
     var btnsDiv = document.createElement('div');
     btnsDiv.style.cssText = 'display:flex;gap:4px;flex:1;justify-content:flex-end';
 
-    slots.forEach(function(s) {
-      var active = cur === s;
-      var col = slotColors[s];
-      var dis = isWork && (s === 'M' || s === 'S' || s === 'J');
-      var btn = document.createElement('button');
-      btn.disabled = dis;
-      btn.textContent = s === 'non' ? 'x' : s;
-      btn.style.cssText = [
-        'padding:5px 7px',
-        'border-radius:7px',
-        'border:2px solid ' + (active ? col : col + '44'),
-        'background:' + (active ? col + '22' : 'transparent'),
-        'color:' + (dis ? '#cbd5e1' : col),
-        'font-size:11px',
-        'font-weight:800',
-        'cursor:' + (dis ? 'not-allowed' : 'pointer'),
-        'font-family:inherit',
-        'min-width:30px',
-        'opacity:' + (dis ? 0.3 : 1)
-      ].join(';');
-      (function(dk, sl) {
-        btn.onclick = function() { toggleQRDispo(dk, sl); };
-      })(k, s);
-      btnsDiv.appendChild(btn);
-    });
+    if (isWork) {
+      // Jour deja planifie : pas de saisie dispo possible
+      var workMsg = document.createElement('div');
+      workMsg.style.cssText = 'font-size:11px;color:#64748b;font-style:italic;display:flex;align-items:center;gap:4px';
+      workMsg.textContent = '\u2022 Deja planifie (' + planSh + ')';
+      btnsDiv.appendChild(workMsg);
+    } else {
+      slots.forEach(function(s) {
+        var active = cur === s;
+        var col = slotColors[s];
+        var btn = document.createElement('button');
+        btn.textContent = s === 'non' ? 'x' : s;
+        btn.style.cssText = [
+          'padding:5px 7px',
+          'border-radius:7px',
+          'border:2px solid ' + (active ? col : col + '44'),
+          'background:' + (active ? col + '22' : 'transparent'),
+          'color:' + col,
+          'font-size:11px',
+          'font-weight:800',
+          'cursor:pointer',
+          'font-family:inherit',
+          'min-width:30px'
+        ].join(';');
+        (function(dk, sl) {
+          btn.onclick = function() { toggleQRDispo(dk, sl); };
+        })(k, s);
+        btnsDiv.appendChild(btn);
+      });
+    }
 
     row.appendChild(btnsDiv);
     el.appendChild(row);
@@ -10784,6 +10836,14 @@ function renderConfigGeneral() {
   if (cf2El) cf2El.value = etab.config.cfFrac2Seuil || 8;
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
+  // Champs localStorage (URL app + VAPID)
+  var appUrlEl = document.getElementById('cfg-app-url');
+  if (appUrlEl) appUrlEl.value = localStorage.getItem('horizon_app_url') || '';
+  var vapidEl = document.getElementById('cfg-vapid-key');
+  if (vapidEl) {
+    var vk = localStorage.getItem('horizon_vapid_key') || '';
+    vapidEl.value = vk.startsWith('REMPLACER') ? '' : vk;
+  }
   renderSpecRegles();
 }
 
@@ -12230,6 +12290,9 @@ async function clearCache() {
   const defaultHash = await hashPwd('admin123');
   {
     const freshEtab = defaultEtab(nomEtab, villeEtab, 'admin', defaultHash);
+    // Marquer le compte admin créé par défaut : mot de passe à changer à la première connexion
+    const _adminDefault = freshEtab.logins && freshEtab.logins.find(l => l.login === 'admin');
+    if (_adminDefault) _adminDefault.mustChangePassword = true;
     // Conserver les logins existants (qui sont déjà hashés)
     if (existingLogins && existingLogins.length > 0) {
       freshEtab.logins = existingLogins;
