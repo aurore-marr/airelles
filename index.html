@@ -3268,16 +3268,19 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 window.onload = async function() {
   loadTheme();
 
-  // ── Fix iOS PWA : si le raccourci a mémorisé start_url="/",
-  // on détecte qr_session et on redirige vers l'URL agent correcte.
+  // ── Fix iOS PWA : redirection automatique si session QR active ──
+  // Le raccourci mémorise start_url="/" ou "/?qr=1&etab=..." sans agent authentifié.
+  // On relit qr_session et on redirige vers l'URL complète avec agent=.
   try {
     var _p = new URLSearchParams(window.location.search);
-    if (!_p.get('agent') && !_p.get('vac') && !_p.get('qr')) {
+    var _hasAgent = !!_p.get('agent');
+    if (!_hasAgent) {
       var _raw = localStorage.getItem('qr_session');
       if (_raw) {
         var _s = JSON.parse(_raw);
         if ((Date.now() - (_s.ts||0)) < 8*3600*1000 && _s.agentId && _s.etabId) {
-          window.location.replace('/?agent='+encodeURIComponent(_s.agentId)+'&etab='+encodeURIComponent(_s.etabId));
+          var _target = '/?qr=1&etab='+encodeURIComponent(_s.etabId)+'&agent='+encodeURIComponent(_s.agentId);
+          window.location.replace(_target);
           return;
         } else {
           localStorage.removeItem('qr_session');
@@ -4024,7 +4027,6 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pwd').value = '';
   document.getElementById('login-error').textContent = '';
-  // Masquer nav mobile (sinon visible par-dessus l'écran login)
   ['mobile-header-bar','mobile-nav','mobile-more-menu'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.style.display='none';
   });
