@@ -6998,6 +6998,11 @@ function repondreConge(index, statut) {
     showToast(`Demande de ${esc(d.agentNom)} refusée`, 'info');
   }
 
+  // ── Notification push à l'agent ──
+  const _moisLabel = d.debut ? d.debut.slice(0,7) : '';
+  notifCongeValide(_qrEtabIdCadre || DB.currentEtab, d.agentId, d.agentNom, statut === 'accepte', _moisLabel)
+    .catch(function(e){ console.warn('[PWA] Notif congé agent échouée:', e); });
+
   saveToStorage();
   saveToSupabase().catch(e => console.warn('Sync congé échoué:', e));
   renderPlanning();
@@ -10269,6 +10274,9 @@ function submitQRConge() {
     if (st) { st.style.color='#f76f6f'; st.textContent='La date de fin doit être après le début'; st.style.display='block'; }
     return;
   }
+  // Anti-doublon : désactiver le bouton pendant l'envoi
+  var _submitBtn = document.querySelector('[onclick="submitQRConge()"]');
+  if (_submitBtn) { _submitBtn.disabled = true; _submitBtn.style.opacity = '0.6'; }
 
   if (!etab.demandesConges) etab.demandesConges = [];
   var agent = etab.agents.find(function(a){ return a.id===_qrAgentId; });
@@ -10308,6 +10316,24 @@ function submitQRConge() {
     if (!isDuplicate) {
       dataToSave.demandesConges.push(newDemande);
     }
+    // ── Notification cadre : nouvelle demande de congé ──
+    if (!dataToSave.notificationsRH) dataToSave.notificationsRH = [];
+    var _alreadyNotif = dataToSave.notificationsRH.some(function(n){
+      return n.type==='conge_demande' && n.agentId===newDemande.agentId && n.debut===newDemande.debut && n.fin===newDemande.fin;
+    });
+    if (!_alreadyNotif) {
+      dataToSave.notificationsRH.push({
+        id: 'NOTIF_CDG_' + Date.now(),
+        type: 'conge_demande',
+        agentId: newDemande.agentId,
+        agentNom: newDemande.agentNom,
+        typeConge: newDemande.type,
+        debut: newDemande.debut,
+        fin: newDemande.fin,
+        lu: false,
+        createdAt: new Date().toISOString()
+      });
+    }
     if (!dataToSave.newDispos) dataToSave.newDispos = [];
     dataToSave.newDispos.push({
       agentId: _qrAgentId,
@@ -10330,11 +10356,13 @@ function submitQRConge() {
     }, { onConflict: 'etab_id' });
   }).then(function() {
     if (st) { st.style.color='#38d9a9'; st.textContent='✅ Demande envoyée au cadre !'; st.style.display='block'; }
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.style.opacity = '1'; }
     qrInitDateSelects(); // reset to today
     document.getElementById('qr-conge-motif').value = '';
     setTimeout(function(){ qrRenderCongeList(); }, 300);
   }).catch(function(e) {
     if (st) { st.style.color='#f76f6f'; st.textContent='❌ Erreur réseau — réessayez'; st.style.display='block'; }
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.style.opacity = '1'; }
   });
 
   return; // early return — suite gérée dans les .then()
