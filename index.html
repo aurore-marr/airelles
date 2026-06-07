@@ -7651,11 +7651,6 @@ function deleteCurrentAgent() {
 // ============================================================
 // AGENCES INTÉRIM
 // ============================================================
-function switchConfigTab(tab) {
-  // Géré par la fonction à la ligne ~9835 — on ajoute juste le hook interim ici
-  if (tab === 'interim') setTimeout(() => renderAgencesInterim(), 50);
-}
-
 function renderAgencesInterim() {
   const etab = getEtab();
   if (!etab) return;
@@ -9889,15 +9884,17 @@ function saveQRDispos() {
 // CONFIG
 // ============================================================
 function switchConfigTab(tab) {
-  ['general','secteurs','horaires','roulement','rotation','postes','logins'].forEach(t => {
-    document.getElementById('config-tab-' + t).classList.toggle('hidden', t !== tab);
+  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
+    const el = document.getElementById('config-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins'][i] === tab);
+    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'][i] === tab);
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
   if (tab === 'postes') renderConfigPostes();
+  if (tab === 'interim') renderAgencesInterim();
 }
 
 function renderRotationConfig() {
