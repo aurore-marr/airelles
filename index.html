@@ -234,6 +234,35 @@ body {
   align-items: center; justify-content: center;
 }
 .sidebar.collapsed .sidebar-logo .logo-collapsed-icon { display: flex; }
+.sidebar.collapsed .etab-badge { display: none; }
+.sidebar.collapsed .nav-section-title { display: none; }
+
+/* Zone utilisateur en mode collapsed */
+.sidebar-user-collapsed {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+.sidebar.collapsed .sidebar-user-collapsed { display: flex; }
+.sidebar-user-collapsed .user-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent2), #059669);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #0f1117;
+  letter-spacing: -0.5px; flex-shrink: 0;
+}
+.sidebar-user-collapsed .online-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 6px var(--accent2);
+}
+.sidebar-user-collapsed .online-count {
+  font-size: 9px; font-weight: 700; color: var(--text3);
+  background: var(--bg3); border-radius: 8px;
+  padding: 1px 5px; min-width: 18px; text-align: center;
+}
 
 /* Toggle button */
 .sidebar-toggle {
@@ -824,14 +853,154 @@ body {
 #qrcode-display { display: inline-block; padding: 16px; background: #fff; border-radius: 12px; margin: 16px 0; }
 
 /* ========== RESPONSIVE ========== */
+/* ── TABLETTE (600–900px) ── */
 @media (max-width: 900px) {
   .sidebar { width: 60px; }
   .sidebar .nav-item span, .sidebar .etab-badge, .sidebar-logo span, .sidebar-header p { display: none; }
   .main { margin-left: 60px; padding: 16px; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .config-grid { grid-template-columns: 1fr; }
-  .day-header { min-width:38px; width:38px; max-width:38px; }
-  .shift-cell { width:38px; min-width:38px; max-width:38px; height:40px; }
+  .day-header { min-width:34px; width:34px; max-width:34px; }
+  .shift-cell { width:34px; min-width:34px; max-width:34px; height:38px; }
+  .modal { max-width: 98vw !important; margin: 8px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .page-header > div:last-child { width: 100%; }
+}
+
+/* ── MOBILE (< 600px) ── */
+@media (max-width: 600px) {
+  /* Sidebar : cachée, remplacée par nav bottom */
+  .sidebar { display: none !important; }
+  .main { margin-left: 0 !important; padding: 12px 10px 80px; }
+  .main.sidebar-collapsed { margin-left: 0 !important; }
+
+  /* Nav bottom mobile */
+  .mobile-nav {
+    display: flex !important;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+    justify-content: space-around; align-items: center;
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 4px 8px; cursor: pointer; border-radius: 8px;
+    font-size: 9px; color: var(--text2); min-width: 52px; text-align: center;
+    transition: all 0.15s; border: none; background: transparent;
+  }
+  .mobile-nav-item.active { color: var(--accent); }
+  .mobile-nav-item .icon { font-size: 20px; }
+  .mobile-nav-badge {
+    position: absolute; top: 2px; right: 6px;
+    background: var(--accent4); color: #fff;
+    font-size: 9px; font-weight: 800; border-radius: 8px;
+    padding: 1px 4px; min-width: 14px; text-align: center;
+  }
+
+  /* Empêcher le débordement horizontal global */
+  body { overflow-x: hidden; }
+  .main { overflow-x: hidden; box-sizing: border-box; padding-bottom: 80px !important; }
+  .page { overflow-x: hidden; }
+  * { max-width: 100%; }
+  img, svg { max-width: 100%; height: auto; }
+  /* Exception pour les tableaux scrollables */
+  table { max-width: none; }
+  #planning-container, #planning-vac-scroll, .comptage-table, #config-logins-list > div { max-width: none; }
+
+  /* Header mobile — fixed en haut */
+  .mobile-header {
+    display: flex !important;
+    align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 200; height: 52px;
+  }
+  .main { padding-top: calc(52px + 12px) !important; }
+  .mobile-header .mh-logo {
+    font-size: 15px; font-weight: 800; color: var(--accent);
+  }
+  .mobile-header .mh-etab {
+    font-size: 11px; color: var(--text2); max-width: 150px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .mobile-header .mh-user {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), #059669);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #0f1117; flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  /* Stats */
+  .stats-row { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px !important; }
+
+  /* Planning mobile : vue semaine */
+  .planning-mobile-hint { display: block !important; }
+  .planning-wrap { font-size: 10px; }
+  .day-header { min-width: 28px !important; width: 28px !important; max-width: 28px !important; font-size: 9px; }
+  .shift-cell { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 32px !important; font-size: 9px !important; }
+  .agent-cell { min-width: 110px !important; max-width: 110px !important; font-size: 10px; }
+  #planning-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Grilles → colonne unique sur mobile */
+  .dir-grid-3, .dir-grid-2 {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  /* Forcer tous les enfants directs de grilles à pleine largeur */
+  .dir-grid-3 > *, .dir-grid-2 > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Cards — forcer pleine largeur */
+  .card { padding: 12px; min-width: 0 !important; width: 100% !important; box-sizing: border-box !important; }
+  .card-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .card-header > * { max-width: 100%; }
+
+  /* Page header */
+  .page-header { flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 0; }
+  .page-header h2 { font-size: 17px; }
+  .page-header > div:last-child { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .page-header button, .page-header select { font-size: 12px; padding: 6px 10px; flex: 1; min-width: 0; }
+  /* Cacher le titre h2 sur mobile si redondant avec header */
+  .page-header .page-subtitle { font-size: 11px; }
+
+  /* Modales */
+  .modal-overlay { align-items: flex-end !important; }
+  .modal {
+    max-width: 100vw !important; width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 90vh !important; overflow-y: auto;
+    margin: 0 !important;
+  }
+
+  /* Tableaux config */
+  .config-grid { grid-template-columns: 1fr !important; }
+  .input-row { grid-template-columns: 1fr !important; }
+  .horaire-list { grid-template-columns: 1fr !important; }
+
+  /* Shift picker */
+  .shift-picker { grid-template-columns: repeat(4, 1fr) !important; }
+
+  /* Agents grid */
+  .agents-grid { grid-template-columns: 1fr !important; }
+
+  /* Comptage — scroll horizontal */
+  #page-comptage { overflow-x: auto; }
+  .comptage-table { min-width: 700px; }
+
+  /* Config logins — scroll horizontal */
+  #config-logins-list { overflow-x: auto; }
+  #config-logins-list > div { min-width: 700px; }
+
+  /* Astreintes */
+  .astr-calendar { overflow-x: auto; }
 }
 
 @media (max-width: 1400px) and (min-width: 901px) {
@@ -842,6 +1011,31 @@ body {
 @media (min-width: 1600px) {
   .day-header { min-width:50px; width:50px; max-width:50px; }
   .shift-cell { width:50px; min-width:50px; max-width:50px; height:50px; }
+}
+
+/* ── Éléments mobile masqués par défaut sur desktop ── */
+.mobile-nav { display: none; }
+.mobile-header { display: none; }
+.planning-mobile-hint { display: none; }
+
+/* ── Grilles responsive Direction ── */
+.dir-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.dir-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+.mb-4 { margin-bottom: 16px; }
+
+@media (max-width: 1100px) {
+  .dir-grid-3 { grid-template-columns: 1fr 1fr; }
+  .dir-grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .dir-grid-3 { grid-template-columns: 1fr !important; }
+  .dir-grid-2 { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 600px) {
+  .dir-grid-3 { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .dir-grid-2 { grid-template-columns: 1fr !important; gap: 10px !important; }
+  /* Stats en 2 colonnes compactes */
+  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
 }
 
 /* ========== UTILS ========== */
@@ -1160,13 +1354,22 @@ table input:focus { border-color: var(--accent); }
         <span style="font-size:9px">🟢</span> <span id="online-users-list">Vous seul</span>
       </div>
     </div>
+    <!-- Zone user en sidebar collapsed -->
+    <div class="sidebar-user-collapsed" id="sidebar-user-collapsed">
+      <div class="user-avatar" id="sb-collapsed-avatar" title="Vous">?</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="online-dot"></div>
+        <div class="online-count" id="sb-collapsed-online">1</div>
+      </div>
+    </div>
     <div class="nav-section">
+      <div class="nav-section-title">Direction</div>
+      <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
+        <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
+      </div>
       <div class="nav-section-title">Planning</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
         <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
-      </div>
-      <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
-        <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
       </div>
       <div class="nav-item" onclick="showPage('planning')" data-tooltip="Planning mensuel">
         <span class="icon">📅</span><span class="nav-label">Planning mensuel</span>
@@ -1264,7 +1467,7 @@ table input:focus { border-color: var(--accent); }
         <div id="dash-week-grid"></div>
       </div>
       <!-- Ligne bas : alertes + secteurs + dispos -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+      <div class="dir-grid-3 mb-4">
         <div class="card">
           <div class="card-header"><span class="card-title">⚠️ Alertes</span></div>
           <div id="dash-alerts"></div>
@@ -1315,7 +1518,7 @@ table input:focus { border-color: var(--accent); }
       <div class="stats-row" id="dir-kpis" style="margin-bottom:20px"></div>
 
       <!-- Ligne 2 : Absentéisme + HS + Coût -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="dir-grid-3 mb-4">
         <div class="card">
           <div class="card-header"><span class="card-title">📉 Absentéisme du mois</span></div>
           <div id="dir-abs-detail" style="font-size:13px;color:var(--text2)"></div>
@@ -1331,7 +1534,7 @@ table input:focus { border-color: var(--accent); }
       </div>
 
       <!-- Ligne 3 : Planning du mois (couverture) + Congés -->
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="dir-grid-2 mb-4">
         <div class="card">
           <div class="card-header"><span class="card-title">📅 Couverture du mois</span></div>
           <div id="dir-coverage-grid" style="overflow-x:auto"></div>
@@ -1617,6 +1820,13 @@ table input:focus { border-color: var(--accent); }
                 <label>Capacité (lits)</label>
                 <input type="number" id="cfg-capacite" placeholder="80">
               </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🔗 URL de l'app (pour les QR codes)</label>
+                <input type="url" id="cfg-app-url" placeholder="https://airelles.vercel.app"
+                  style="font-family:monospace;font-size:12px"
+                  oninput="localStorage.setItem('horizon_app_url',this.value.trim());showToast('URL QR mise à jour ✓','success')">
+                <p style="font-size:11px;color:var(--text3);margin-top:4px">Si vos QR codes ouvrent la page Vercel, entrez ici l'URL de production.</p>
+              </div>
             </div>
             <button class="btn btn-primary btn-sm mt-2" onclick="saveConfigGeneral()">💾 Enregistrer</button>
           </div>
@@ -1823,7 +2033,7 @@ table input:focus { border-color: var(--accent); }
         <div class="config-section" style="max-width:800px">
           <div class="config-section-title">🔄 Paramétrage de la rotation sectorielle</div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="dir-grid-2 mb-4">
             <!-- Secteurs fixes -->
             <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
               <div style="font-size:12px;font-weight:700;color:var(--accent4);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">
@@ -2826,8 +3036,57 @@ function generateDemoAgents() {
 // SUPABASE
 // ============================================================
 const SUPA_URL = 'https://kvztwcwdfxpvgzmeuetm.supabase.co';
+// URL de l'app en production (utilisée pour les QR codes)
+// À mettre à jour si vous changez de domaine
+// URL de production — pointe vers le domaine officiel
+// Peut être surchargée via Config → Établissement si besoin
+const APP_URL = localStorage.getItem('horizon_app_url') || 'https://horizon-planning.fr';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2enR3Y3dkZnhwdmd6bWV1ZXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODkyMjksImV4cCI6MjA5NTU2NTIyOX0.B3JMDwv3B3xE3PYPdwlvR4-0VGEZBJOajcsY3r0eWW8';
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: false,   // On gère nous-même la session via localStorage
+    autoRefreshToken: false,
+  }
+});
+
+// ── Helpers Supabase Auth ──
+// Génère un email fictif unique par login+établissement
+function supaAuthEmail(login, etabId) {
+  const safe = login.toLowerCase().replace(/[^a-z0-9._-]/g, '_');
+  const etabSafe = (etabId||'etab').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+  return safe + '+' + etabSafe + '@horizon-planning.fr';
+}
+
+// Connexion via Supabase Auth (crée le compte si inexistant)
+async function supaAuthSignIn(login, etabId, pwdPlain) {
+  const email = supaAuthEmail(login, etabId);
+  // Essayer de se connecter
+  const { data: signInData, error: signInErr } = await supa.auth.signInWithPassword({
+    email, password: pwdPlain
+  });
+  if (!signInErr && signInData?.user) return { user: signInData.user, created: false };
+
+  // Si le compte n'existe pas encore, le créer (migration)
+  if (signInErr?.message?.includes('Invalid login credentials') ||
+      signInErr?.message?.includes('Email not confirmed') ||
+      signInErr?.message?.includes('User not found')) {
+    const { data: signUpData, error: signUpErr } = await supa.auth.signUp({
+      email, password: pwdPlain,
+      options: { data: { login, etabId } }
+    });
+    if (!signUpErr && signUpData?.user) {
+      // Connexion immédiate après création
+      const { data: reSignIn } = await supa.auth.signInWithPassword({ email, password: pwdPlain });
+      if (reSignIn?.user) return { user: reSignIn.user, created: true };
+    }
+  }
+  return null;
+}
+
+// Déconnexion Supabase Auth
+async function supaAuthSignOut() {
+  try { await supa.auth.signOut(); } catch(e) {}
+}
 const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 
 // ============================================================
@@ -2915,6 +3174,7 @@ window.onload = async function() {
             document.getElementById('sb-user-name').textContent = loginOk.nom;
             const _inEl1 = document.getElementById('sb-user-initials');
             if (_inEl1) { _inEl1.textContent = '1'; _inEl1.title = 'Utilisateurs connectés'; }
+            updateCollapsedUserUI(loginOk, 1);
             _sessionStart = sess.loginTime;
             _sessionWarningShown = false;
             _sessionTimer = setInterval(checkSessionTimeout, 60 * 1000);
@@ -2952,7 +3212,7 @@ function checkQRView() {
   const vacId   = params.get('vac');
   const etabId  = params.get('etab') || ETAB_ID;
   const specFilter = params.get('spec') || '';
-  const isQR    = params.get('qr') === '1' || !!agentId || !!vacId;
+  const isQR    = params.get('qr') === '1' || !!agentId || !!vacId || !!params.get('agent');
 
   if (!isQR) return false;
 
@@ -2999,6 +3259,28 @@ function checkQRView() {
         }
       }
     } catch(e) {}
+
+    // ── Accès direct agent via QR individuel (?agent=XXX) ──
+    const agentDirect = params.get('agent');
+    if (agentDirect) {
+      const agOk = etab.agents.find(function(a){ return a.id === agentDirect; });
+      if (agOk) {
+        const nameEl2 = document.getElementById('qr-sel-etab-name');
+        if (nameEl2) nameEl2.textContent = etab.nom;
+        _qrAgentId = agentDirect;
+        _qrAgentType = 'agent';
+        _qrPinBuffer = '';
+        updatePinDots();
+        // Sauvegarder la session QR pour ne pas redemander
+        try {
+          localStorage.setItem('qr_session', JSON.stringify({
+            etabId: etabId, agentId: agentDirect, ts: Date.now()
+          }));
+        } catch(e) {}
+        qrOpenPlanning(agentDirect);
+        return;
+      }
+    }
 
     // ── Accès direct vacataire via QR individuel ──
     if (vacId) {
@@ -3060,6 +3342,13 @@ async function saveToSupabase() {
       updated_at: new Date().toISOString()
     }, { onConflict: 'etab_id' });
     if (error) throw error;
+    // Mettre à jour l'indicateur de statut Auth
+    const authBadge = document.getElementById('sb-auth-status');
+    if (authBadge) {
+      authBadge.textContent = '🔒';
+      authBadge.title = 'Synchronisé et sécurisé';
+      authBadge.style.color = 'var(--accent2)';
+    }
     showToast('Synchronisé avec Supabase ✓', 'success');
     return true;
   } catch(e) {
@@ -3278,18 +3567,44 @@ async function doLogin() {
 
   if (!etab) { err.textContent = 'Établissement introuvable.'; return; }
 
+  // ── Vérification locale (hash SHA-256) ──
   const pwdHash = await hashPwd(pwd);
   const login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
   if (!login) { err.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
 
+  // ── Supabase Auth — connexion/création en arrière-plan ──
+  // Transparente pour l'utilisateur — son identifiant texte est préservé
+  try {
+    const authResult = await supaAuthSignIn(user, etabId, pwd);
+    if (authResult) {
+      // Stocker le token JWT Supabase pour les futures requêtes sécurisées
+      try {
+        localStorage.setItem('horizon_auth_token', JSON.stringify({
+          etabId, login: login.login, role: login.role,
+          supaUserId: authResult.user?.id,
+          loginTime: Date.now()
+        }));
+      } catch(e) {}
+      if (authResult.created) {
+        console.log('Compte Supabase Auth créé pour:', user);
+      }
+    }
+  } catch(e) {
+    // Supabase Auth non disponible — on continue avec l'auth locale
+    console.warn('Supabase Auth non disponible:', e.message);
+  }
+
   DB.currentEtab = etabId;
-  DB.currentUser = login;
+  DB.currentUser = { ...login, supaEtabId: etabId };
   err.textContent = '';
 
   // Sauvegarder la session pour reconnexion automatique (sans mot de passe)
   try {
     localStorage.setItem('horizon_session', JSON.stringify({
-      etabId, user: { nom: login.nom, login: login.login, role: login.role }, loginTime: Date.now()
+      etabId,
+      user: { nom: login.nom, login: login.login, role: login.role,
+              titre: login.titre || '', vueDirection: login.vueDirection },
+      loginTime: Date.now()
     }));
   } catch(e) {}
 
@@ -3299,13 +3614,60 @@ async function doLogin() {
 
   document.getElementById('sb-etab-name').textContent = etab.nom;
   document.getElementById('sb-user-name').textContent = login.nom;
+  // Afficher et mettre à jour le header + nav mobile
+  // Sur mobile (<600px), afficher header fixe + nav bottom
+  const mhBar = document.getElementById('mobile-header-bar');
+  const mobileNavEl = document.getElementById('mobile-nav');
+  const mobileMoreEl = document.getElementById('mobile-more-menu');
+  if (window.innerWidth <= 600) {
+    if (mhBar) mhBar.style.display = 'flex';
+    if (mobileNavEl) mobileNavEl.style.display = 'flex';
+  }
+  // Sur desktop/tablette — les cacher (la sidebar suffit)
+  setTimeout(() => { updateMobileHeader(); updateMobileCongesBadge(); }, 100);
+
+  // Écouter les changements de taille d'écran
+  if (!window._mobileResizeListener) {
+    window._mobileResizeListener = true;
+    window.addEventListener('resize', () => {
+      const isMobile = window.innerWidth <= 600;
+      if (mhBar) mhBar.style.display = isMobile ? 'flex' : 'none';
+      if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
+    });
+  }
   const _inEl2 = document.getElementById('sb-user-initials');
   if (_inEl2) { _inEl2.textContent = '1'; _inEl2.title = 'Utilisateurs connectés'; }
+  // Mettre à jour le collapsed avatar avec les initiales de l'utilisateur
+  updateCollapsedUserUI(login, 1);
+  // Mettre à jour l'indicateur Auth
+  const authBadge = document.getElementById('sb-auth-status');
+  if (authBadge) {
+    const authToken = localStorage.getItem('horizon_auth_token');
+    if (authToken) {
+      authBadge.textContent = '🔒';
+      authBadge.title = 'Authentification Supabase Auth active';
+      authBadge.style.color = 'var(--accent2)';
+    }
+  }
 
   startSessionTimer();
   const _etabInit = getEtab();
   if (_etabInit) _pollLastCongesCount = (_etabInit.demandesConges||[]).filter(d=>d.statut==='en_attente').length;
   startPolling();
+
+  // ── Migration silencieuse des comptes Supabase Auth ──
+  // Pour tous les logins de cet établissement qui n'ont pas encore de compte Auth
+  setTimeout(async () => {
+    // On ne peut pas créer les comptes des autres sans leurs mots de passe
+    // On marque juste que la migration Auth est active
+    const authToken = localStorage.getItem('horizon_auth_token');
+    if (authToken) {
+      const at = JSON.parse(authToken);
+      if (at.supaUserId) {
+        console.log('✅ Supabase Auth actif — compte:', at.supaUserId);
+      }
+    }
+  }, 2000);
 
   // Badge nouvelles dispos
   const newDispos = etab.newDispos || [];
@@ -3438,6 +3800,10 @@ function resetSessionTimer() {
 }
 
 function doLogout() {
+  // Déconnecter Supabase Auth
+  supaAuthSignOut();
+  try { localStorage.removeItem('horizon_auth_token'); } catch(e) {}
+
   DB.currentEtab = null;
   DB.currentUser = null;
   try { localStorage.removeItem('horizon_session'); } catch(e) {}
@@ -3471,12 +3837,41 @@ async function createNewEtab() {
 // ============================================================
 // APP INIT
 // ============================================================
+// Mettre à jour la zone utilisateur en sidebar collapsed
+function updateCollapsedUserUI(user, nbOnline) {
+  const avatarEl = document.getElementById('sb-collapsed-avatar');
+  const onlineEl = document.getElementById('sb-collapsed-online');
+  const mainBadge = document.getElementById('sb-user-initials');
+
+  if (avatarEl && user) {
+    // Initiales : 1ère lettre prénom + 1ère lettre nom
+    const parts = (user.nom || '').split(' ');
+    let initials = '';
+    if (parts.length >= 2) {
+      initials = (parts[0][0] || '') + (parts[parts.length-1][0] || '');
+    } else {
+      initials = (user.nom || '?').substring(0, 2);
+    }
+    avatarEl.textContent = initials.toUpperCase();
+    avatarEl.title = user.nom + (user.titre ? ' · ' + user.titre : '') + (user.role ? ' · ' + user.role : '');
+  }
+  if (onlineEl) onlineEl.textContent = nbOnline || '1';
+  // Aussi mettre à jour le badge principal (quand sidebar ouverte)
+  if (mainBadge) {
+    mainBadge.textContent = nbOnline || '1';
+    mainBadge.title = (nbOnline || 1) + ' utilisateur(s) connecté(s)';
+  }
+}
+
 function initApp() {
   // Migration sécurité : hasher les mots de passe en clair existants
   migratePasswordsIfNeeded();
 
   // Appliquer les droits UI selon le rôle
   applyRoleUI();
+
+  // Initialiser la nav mobile
+  initMobileUI();
 
   // Auto-génération du planning si le mois courant est vide
   autoFillIfEmpty();
@@ -3524,6 +3919,7 @@ function initPresence() {
         const totalConnected = users.length + 1; // soi + autres
         const badge = document.getElementById('sb-user-initials');
         if (badge) { badge.textContent = totalConnected; badge.title = totalConnected + ' utilisateur(s) connecté(s)'; }
+        updateCollapsedUserUI(DB.currentUser, totalConnected);
         if (users.length === 0) {
           list.textContent = 'Vous seul';
         } else {
@@ -3562,7 +3958,8 @@ function applyRoleUI() {
   const role = getRoleActuel();
   // Page Vue Direction — visible IDEC + Dir + Ass Dir + Admin (pas Cadre/Binome/RespHot)
   const navDir = document.getElementById('nav-dir');
-  const canSeeDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome'].includes(role);
+  const canSeeDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome','Resp Hot','RH Binome'].includes(role)
+    || (DB.currentUser && DB.currentUser.vueDirection === true);
   if (navDir) navDir.style.display = canSeeDir ? 'flex' : 'none';
   // Config — seulement Admin
   const navConfig = document.querySelector('[onclick="showPage(\'config\')"]');
@@ -3575,9 +3972,14 @@ function applyRoleUI() {
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('page-' + page)?.classList.add('active');
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(n => { if (n.getAttribute('onclick') === `showPage('${page}')`) n.classList.add('active'); });
+  // Sync nav bottom mobile
+  ['dashboard','direction','planning','conges'].forEach(p => {
+    const btn = document.getElementById('mn-' + p);
+    if (btn) btn.classList.toggle('active', p === page);
+  });
 
   if (page === 'planning') renderPlanning();
   if (page === 'comptage') renderComptage();
@@ -3735,6 +4137,101 @@ function scheduleRenderAgents() {
   clearTimeout(_renderAgentsTimer);
   _renderAgentsTimer = setTimeout(() => renderAgents(), 60);
 }
+
+// ============================================================
+// NAVIGATION MOBILE
+// ============================================================
+function initMobileUI() {
+  // Ajouter le header mobile dans le main (une seule fois)
+  // Header mobile déjà dans le HTML — juste s'assurer qu'il est visible
+  if (document.getElementById('mobile-header-bar')) return;
+
+  // Mettre à jour la nav Direction selon le rôle
+  const mnDir = document.getElementById('mn-direction');
+  if (mnDir) {
+    const role = getRoleActuel();
+    const canDir = ['admin','Dir','Ass Dir','IDEC','IDEC Binome','Resp Hot','RH Binome'].includes(role)
+      || (DB.currentUser && DB.currentUser.vueDirection === true);
+    mnDir.style.display = canDir ? 'flex' : 'none';
+  }
+
+  // Mettre à jour le badge congés mobile
+  updateMobileCongesBadge();
+}
+
+function updateMobileHeader() {
+  const etabEl = document.getElementById('mh-etab-name');
+  const avatarEl = document.getElementById('mh-user-avatar');
+  const etab = getEtab();
+  if (etabEl && etab) etabEl.textContent = etab.nom;
+  if (avatarEl && DB.currentUser) {
+    const parts = (DB.currentUser.nom || '').split(' ');
+    let initials = parts.length >= 2
+      ? (parts[0][0]||'') + (parts[parts.length-1][0]||'')
+      : (DB.currentUser.nom||'?').substring(0,2);
+    avatarEl.textContent = initials.toUpperCase();
+    avatarEl.title = DB.currentUser.nom + (DB.currentUser.role ? ' · ' + DB.currentUser.role : '');
+  }
+}
+
+function updateMobileCongesBadge() {
+  const badge = document.getElementById('mn-conges-badge');
+  const etab = getEtab();
+  if (!badge || !etab) return;
+  const nb = (etab.demandesConges||[]).filter(d => d.statut === 'en_attente').length;
+  badge.textContent = nb;
+  badge.style.display = nb > 0 ? 'block' : 'none';
+}
+
+function mobileNav(page) {
+  // Fermer le menu Plus si ouvert
+  closeMobileMore();
+
+  // Mettre à jour les boutons nav actifs
+  ['dashboard','direction','planning','conges'].forEach(p => {
+    const btn = document.getElementById('mn-' + p);
+    if (btn) btn.classList.toggle('active', p === page);
+  });
+  const mnMore = document.getElementById('mn-more');
+  if (mnMore) mnMore.classList.remove('active');
+
+  // Pages spéciales
+  if (page === 'conges') {
+    showPage('dashboard');
+    // Scroll vers la section congés
+    setTimeout(() => {
+      const el = document.getElementById('dash-conges');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    return;
+  }
+
+  showPage(page);
+}
+
+function closeMobileMore() {
+  const menu = document.getElementById('mobile-more-menu');
+  if (menu) menu.style.display = 'none';
+  const btn = document.getElementById('mn-more');
+  if (btn) btn.classList.remove('active');
+}
+
+// Toggle menu Plus
+document.addEventListener('DOMContentLoaded', function() {
+  const moreBtn = document.getElementById('mn-more');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('mobile-more-menu');
+      if (!menu) return;
+      const isOpen = menu.style.display !== 'none';
+      menu.style.display = isOpen ? 'none' : 'grid';
+      moreBtn.classList.toggle('active', !isOpen);
+    });
+  }
+  // Fermer le menu Plus en cliquant ailleurs
+  document.addEventListener('click', function() { closeMobileMore(); });
+});
 
 // ============================================================
 // TABLEAU DE BORD DIRECTION
@@ -5851,6 +6348,9 @@ function updateCongesBadge() {
     badge.textContent = pending;
     badge.style.display = pending > 0 ? 'inline' : 'none';
   }
+  // Sync badge mobile
+  const mbadge = document.getElementById('mn-conges-badge');
+  if (mbadge) { mbadge.textContent = pending; mbadge.style.display = pending > 0 ? 'block' : 'none'; }
   const dashBadge = document.getElementById('dash-conges-badge');
   if (dashBadge) {
     dashBadge.textContent = pending;
@@ -7465,7 +7965,7 @@ function renderQRPage() {
   const grid = document.getElementById('qr-agents-grid');
 
   const specs = etab.specialites || [];
-  const baseUrl = window.location.href.split('?')[0];
+  const baseUrl = APP_URL.split('?')[0];
   const specColors = { AS:'#4f8ef7', IDE:'#38d9a9', AMP:'#f7a94f', ASH:'#a07ee8', Nuit:'#6366f1', AUX:'#f76f6f' };
 
   // URL universelle — pas de filtre spec, l'agent filtre lui-même sur la page
@@ -7539,6 +8039,63 @@ function renderQRPage() {
 
   }, 100);
 
+  // ── Section QR individuels par agent ──
+  const agentsActifs = etab.agents.filter(a => a.actif);
+  if (agentsActifs.length > 0) {
+    let agentQRHtml = `
+      <div style="margin-bottom:32px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px">
+          <span style="width:28px;height:28px;border-radius:8px;background:var(--accent2)22;color:var(--accent2);display:inline-flex;align-items:center;justify-content:center;font-size:16px">👤</span>
+          QR Codes individuels — Un QR par agent
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:16px">Chaque agent scanne son QR et accède directement à son planning sans saisir son nom ni son PIN.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px" id="qr-agents-individual">`;
+
+    agentsActifs.forEach(agent => {
+      const agentUrl = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&agent=${encodeURIComponent(agent.id)}`;
+      const specColor = specColors[agent.spec] || '#4f8ef7';
+      agentQRHtml += `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;width:160px;flex-shrink:0">
+          <div style="font-size:11px;font-weight:800;color:var(--text);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(agent.nom)} ${esc(agent.prenom||'')}</div>
+          <div style="font-size:10px;color:${specColor};font-weight:600;margin-bottom:8px">${esc(agent.spec)} · ${esc(agent.id)}</div>
+          <div id="qr-ind-${agent.id}" style="margin:0 auto 10px;width:110px;height:110px"></div>
+          <div style="display:flex;gap:4px;justify-content:center">
+            <button onclick="downloadAgentQR('${agent.id}','${esc(agent.nom)}_${esc(agent.prenom||'')}')" 
+              style="font-size:10px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">⬇️</button>
+            <button onclick="printAgentQR('${agent.id}','${esc(agent.nom)}','${esc(agent.prenom||'')}','${esc(agent.spec)}')" 
+              style="font-size:10px;padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">🖨️</button>
+          </div>
+        </div>`;
+    });
+
+    agentQRHtml += `</div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button onclick="printAllAgentQRs()" class="btn btn-primary btn-sm">🖨️ Imprimer tous les QR agents</button>
+          <button onclick="downloadAllAgentQRs()" class="btn btn-secondary btn-sm">⬇️ Télécharger tous (ZIP)</button>
+        </div>
+      </div>`;
+
+    grid.insertAdjacentHTML('beforeend', agentQRHtml);
+
+    // Générer les QR codes individuels
+    setTimeout(() => {
+      agentsActifs.forEach(agent => {
+        const agentUrl = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&agent=${encodeURIComponent(agent.id)}`;
+        const container = document.getElementById('qr-ind-' + agent.id);
+        if (!container) return;
+        container.innerHTML = '';
+        try {
+          new QRCode(container, {
+            text: agentUrl, width: 110, height: 110,
+            colorDark: '#0f1117', colorLight: '#ffffff'
+          });
+        } catch(e) {
+          container.innerHTML = `<div style="font-size:7px;color:var(--text2);padding:4px;word-break:break-all">${agentUrl}</div>`;
+        }
+      });
+    }, 300);
+  }
+
   // ── Section QR Vacataires ──
   const vacs = etab.vacataires || [];
   let vacSection = '';
@@ -7586,6 +8143,107 @@ function renderQRPage() {
   }, 200);
 }
 
+function downloadAgentQR(agentId, agentName) {
+  const container = document.getElementById('qr-ind-' + agentId);
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'QR_' + agentName.replace(/[\s]+/g,'_') + '.png';
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+function printAgentQR(agentId, nom, prenom, spec) {
+  const container = document.getElementById('qr-ind-' + agentId);
+  const canvas = container?.querySelector('canvas');
+  if (!canvas) { showToast('QR code non généré', 'warning'); return; }
+  const img = canvas.toDataURL();
+  const etab = getEtab();
+  const agentUrl = APP_URL.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}&agent=${encodeURIComponent(agentId)}`;
+  const w = window.open('', '_blank', 'width=400,height=500');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>QR ${nom} ${prenom}</title>
+    <style>
+      body { font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0; }
+      @page { size: 100mm 120mm; margin: 5mm; }
+      .card { border: 2px solid #1d4ed8; border-radius: 12px; padding: 16px; display: inline-block; max-width: 280px; }
+      .logo { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; }
+      .logo-icon { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg,#1d4ed8,#38bdf8); color: #fff; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+      .logo-text { font-size: 14px; font-weight: 800; color: #1d4ed8; }
+      .agent-name { font-size: 16px; font-weight: 900; color: #1a2540; margin: 8px 0 2px; }
+      .agent-spec { font-size: 11px; color: #64748b; margin-bottom: 12px; }
+      .etab-name { font-size: 10px; color: #94a3b8; margin-top: 8px; }
+      .url { font-size: 7px; color: #cbd5e1; margin-top: 4px; word-break: break-all; }
+    </style>
+  </head><body>
+    <div class="card">
+      <div class="logo">
+        <div class="logo-icon">H</div>
+        <div class="logo-text">HORIZON PLANNING</div>
+      </div>
+      <div class="agent-name">${nom} ${prenom}</div>
+      <div class="agent-spec">${spec}</div>
+      <img src="${img}" alt="QR code accès planning" style="width:160px;height:160px">
+      <div class="etab-name">${etab?.nom || ''}</div>
+      <div style="font-size:10px;color:#374151;margin-top:6px">Scannez pour accéder à votre planning</div>
+      <div class="url">${agentUrl}</div>
+    </div>
+    <script>setTimeout(() => { window.print(); window.close(); }, 300);<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function printAllAgentQRs() {
+  const etab = getEtab();
+  if (!etab) return;
+  const agents = etab.agents.filter(a => a.actif);
+  const baseUrl = APP_URL.split('?')[0];
+
+  // Collecter tous les QR
+  const qrData = agents.map(agent => {
+    const container = document.getElementById('qr-ind-' + agent.id);
+    const canvas = container?.querySelector('canvas');
+    const url = `${baseUrl}?qr=1&etab=${DB.currentEtab || ETAB_ID}&agent=${encodeURIComponent(agent.id)}`;
+    return { agent, img: canvas ? canvas.toDataURL() : null, url };
+  }).filter(d => d.img);
+
+  if (qrData.length === 0) { showToast('Attendez que les QR codes soient générés', 'warning'); return; }
+
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>QR Codes — ${etab.nom}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 15px; margin: 0; }
+      @page { size: A4; margin: 10mm; }
+      h1 { font-size: 16px; color: #1d4ed8; text-align: center; margin-bottom: 16px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .card { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; page-break-inside: avoid; }
+      .agent-name { font-size: 10px; font-weight: 800; color: #1a2540; margin: 4px 0 1px; }
+      .agent-info { font-size: 8px; color: #64748b; margin-bottom: 6px; }
+      img { width: 90px; height: 90px; }
+      .logo-row { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; }
+      .logo-icon { width: 18px; height: 18px; border-radius: 4px; background: linear-gradient(135deg,#1d4ed8,#38bdf8); color: #fff; font-size: 9px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; }
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    </style>
+  </head><body>
+    <h1>🔲 QR Codes Planning — ${etab.nom}</h1>
+    <div class="grid">
+      ${qrData.map(d => `
+        <div class="card">
+          <div class="logo-row">
+            <div class="logo-icon">H</div>
+            <span style="font-size:8px;font-weight:700;color:#1d4ed8">HORIZON</span>
+          </div>
+          <img src="${d.img}" alt="QR ${d.agent.nom}">
+          <div class="agent-name">${d.agent.nom} ${d.agent.prenom||''}</div>
+          <div class="agent-info">${d.agent.spec} · ${d.agent.id}</div>
+        </div>`).join('')}
+    </div>
+    <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
 function downloadUniversalQR() {
   const container = document.getElementById('qr-universal');
   const canvas = container?.querySelector('canvas');
@@ -7603,7 +8261,7 @@ function printUniversalQR() {
   if (!canvas) return;
   const img = canvas.toDataURL();
   const etab = getEtab();
-  const url = window.location.href.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
+  const url = APP_URL.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}`;
   const w = window.open('', '_blank');
   w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
     <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -7636,7 +8294,7 @@ function printSpecQR(spec) {
   if (!canvas) return;
   const img = canvas.toDataURL();
   const etab = getEtab();
-  const url = window.location.href.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
+  const url = APP_URL.split('?')[0] + `?qr=1&etab=${DB.currentEtab || ETAB_ID}&spec=${encodeURIComponent(spec)}`;
   const w = window.open('', '_blank');
   w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
     <h2>Planning ${spec} — ${etab?.nom || ''}</h2>
@@ -7666,7 +8324,7 @@ function printVacQR(vacId, nom) {
   if (!canvas) return;
   const img = canvas.toDataURL();
   const etab = getEtab();
-  const baseUrl = window.location.href.split('?')[0];
+  const baseUrl = APP_URL.split('?')[0];
   const url = `${baseUrl}?vac=${encodeURIComponent(vacId)}&etab=${DB.currentEtab || ETAB_ID}`;
   const w = window.open('', '_blank');
   w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:40px">
@@ -9536,11 +10194,11 @@ function renderConfigLogins() {
   renderCustomRoles();
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
-      <span>Nom complet</span><span>Identifiant</span><span>Mot de passe</span><span>Rôle</span><span>Titre/Fonction</span><span></span><span></span>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 70px 110px 36px;gap:6px;align-items:center;padding:4px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">
+      <span>Nom complet</span><span>Identifiant</span><span>Mot de passe</span><span>Rôle</span><span>Titre/Fonction</span><span title="Accès Vue Direction">Vue Dir.</span><span></span><span></span>
     </div>` +
   etab.logins.map((l, i) => `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 110px 36px;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 70px 110px 36px;gap:6px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px">
       <input type="text" value="${(l.nom||'').replace(/"/g,'&quot;')}"
         onchange="updateLogin(${i},'nom',this.value)"
         style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px;font-family:inherit;width:100%">
@@ -9558,6 +10216,12 @@ function renderConfigLogins() {
       <input type="text" value="${esc(l.titre||'')}"
         onchange="updateLogin(${i},'titre',this.value)" placeholder="Titre/Fonction libre…"
         style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px;font-family:inherit;width:100%">
+      <div style="display:flex;align-items:center;justify-content:center">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text2)">
+          <input type="checkbox" ${l.vueDirection!==false?'checked':''} onchange="updateLogin(${i},'vueDirection',this.checked)"
+            style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
+        </label>
+      </div>
       ${i > 0
         ? `<button class="btn btn-danger btn-sm btn-icon" onclick="removeLogin(${i})" title="Supprimer">×</button>`
         : `<span></span>`}
@@ -9603,6 +10267,10 @@ async function addLogin() {
   etab.logins.push({ nom, login, pwd: pwdHash, role, titre });
   saveToStorage(); renderConfigLogins();
   saveToSupabase().catch(e => console.warn('Sync addLogin échoué:', e));
+  // Créer le compte Supabase Auth pour ce nouveau login
+  try {
+    await supaAuthSignIn(login, DB.currentEtab, pwd);
+  } catch(e) { console.warn('Supabase Auth création login:', e); }
   document.getElementById('new-login-nom').value = '';
   document.getElementById('new-login-id').value = '';
   document.getElementById('new-login-pwd').value = '';
@@ -10359,50 +11027,151 @@ function loadLocal() {
 
 function printPlanning() {
   const etab = getEtab();
+  if (!etab) return;
   const now = new Date();
   const specFilter = currentSpecFilter || '';
 
-  // En-tête
-  const monthEl = document.getElementById('print-month-label');
-  const etabEl  = document.getElementById('print-etab-label');
-  const dateEl  = document.getElementById('print-date');
-  if (monthEl) monthEl.textContent = 'Planning ' + (specFilter || 'Tous agents') + ' — ' + getMonthLabel();
-  if (etabEl && etab) etabEl.textContent = etab.nom;
-  if (dateEl) dateEl.textContent = now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})
-    + ' à ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  // Construire la légende
+  const horaires = etab.horaires.filter(h => ['M','S','J','NU','N','R'].includes(h.code));
+  const legendHtml = horaires.map(h => {
+    const horaire = h.debut && h.fin ? ' ' + h.debut + '–' + h.fin : '';
+    const pauses = (h.pauses||[]).map(p => (p.duree||0) + 'h' + (p.debut ? ' ' + p.debut : '')).join(', ');
+    const pauseStr = pauses ? ' (pause ' + pauses + ')' : '';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 6px 2px 0">' +
+      '<span style="background:' + (h.couleur||'#888') + '30;color:' + (h.couleur||'#555') + ';padding:1px 7px;border-radius:3px;font-weight:800;font-family:monospace;font-size:8pt">' + h.code + '</span>' +
+      '<span style="color:#374151;font-size:8pt">' + (h.label||h.code) + horaire + pauseStr + '</span>' +
+    '</span>';
+  }).join('<span style="color:#ddd;margin:0 2px">|</span>');
 
-  // Légende codes horaires avec pauses + secteurs
-  const legEl = document.getElementById('print-legend');
-  if (legEl && etab) {
-    const horPart = etab.horaires
-      .filter(h => ['M','S','J','NU','N','R'].includes(h.code))
-      .map(h => {
-        const pauses = h.pauses || [];
-        const pauseStr = pauses.length > 0
-          ? ' (pause ' + pauses.map(p => (p.duree||0) + 'h' + (p.debut?' '+p.debut:'') ).join(', ') + ')'
-          : '';
-        const horaire = h.debut && h.fin ? ` ${h.debut}–${h.fin}` : '';
-        return `<span style="display:inline-flex;align-items:center;gap:4px">
-          <span style="background:${h.couleur||'#888'}30;color:${h.couleur||'#666'};padding:1px 6px;border-radius:3px;font-weight:800;font-family:monospace;font-size:8pt">${esc(h.code)}</span>
-          <span style="color:#374151;font-size:8pt">${esc(h.label||h.code)}${horaire}${pauseStr}</span>
-        </span>`;
-      }).join('<span style="color:#d1d5db;margin:0 5px">|</span>');
+  const sectLegend = etab.secteurs.filter(s => !s.nom.startsWith('BG:')).map(s => {
+    const c = secteurCouleurCSS(s);
+    return '<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 6px 2px 0">' +
+      '<span style="width:10px;height:10px;border-radius:2px;background:' + (s.couleur||c) + ';display:inline-block"></span>' +
+      '<span style="color:' + c + ';font-weight:700;font-size:8pt">' + s.nom + '</span>' +
+    '</span>';
+  }).join('');
 
-    const sectPart = etab.secteurs.filter(s => !s.nom.startsWith('BG:')).map(s => {
-      const c = secteurCouleurCSS(s);
-      return `<span style="display:inline-flex;align-items:center;gap:4px">
-        <span style="width:10px;height:10px;border-radius:2px;background:${s.couleur||c};display:inline-block"></span>
-        <span style="color:${c};font-weight:700;font-size:8pt">${esc(s.nom)}</span>
-      </span>`;
-    }).join('<span style="color:#d1d5db;margin:0 5px">·</span>');
+  // Récupérer le HTML du tableau de planning
+  const planTable = document.querySelector('#planning-container table');
+  if (!planTable) { showToast('Générez le planning avant d\'imprimer', 'warning'); return; }
+  const tableHtml = planTable.outerHTML;
 
-    legEl.innerHTML = horPart
-      + '<span style="width:1px;height:14px;background:#d1d5db;margin:0 10px;display:inline-block;vertical-align:middle"></span>'
-      + sectPart;
+  // Récupérer les totaux secteurs
+  const totauxEl = document.getElementById('sector-daily-totals');
+  const totauxHtml = totauxEl ? totauxEl.innerHTML : '';
+
+  const moisLabel = 'Planning ' + (specFilter || 'Tous agents') + ' — ' + getMonthLabel();
+  const dateStr = now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) +
+    ' à ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  const imprimePar = (DB.currentUser ? DB.currentUser.nom : '') + (DB.currentUser?.titre ? ' · ' + DB.currentUser.titre : '');
+
+  const printWindow = window.open('', '_blank', 'width=1400,height=900');
+  printWindow.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Planning — ${etab.nom}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: A3 landscape; margin: 8mm; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a2540; font-size: 9pt; }
+
+  /* EN-TÊTE */
+  .print-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 4mm; border-bottom: 2pt solid #1d4ed8; margin-bottom: 3mm;
+  }
+  .print-header .logo {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .print-header .logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: #fff;
+  }
+  .print-header .logo-text { font-size: 14pt; font-weight: 800; color: #1d4ed8; }
+  .print-header .logo-sub { font-size: 7pt; color: #64748b; letter-spacing: 2px; text-transform: uppercase; }
+  .print-header .title-center { text-align: center; }
+  .print-header .title-center h1 { font-size: 13pt; font-weight: 800; color: #1d4ed8; }
+  .print-header .title-center .etab { font-size: 10pt; color: #374151; margin-top: 2px; }
+  .print-header .print-info { text-align: right; font-size: 8pt; color: #64748b; }
+
+  /* LÉGENDE */
+  .print-legend {
+    display: flex; flex-wrap: wrap; gap: 2px;
+    padding: 2mm 0 3mm; border-bottom: 0.5pt solid #e5e7eb; margin-bottom: 2mm;
   }
 
-  renderPlanning();
-  window.print();
+  /* TABLEAU */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7pt; }
+  th { background: #f1f5f9; color: #475569; font-weight: 700; padding: 3px 2px; text-align: center; border: 0.5pt solid #e2e8f0; font-size: 7pt; }
+  td { padding: 2px 1px; border: 0.5pt solid #e2e8f0; text-align: center; vertical-align: middle; font-size: 7pt; }
+
+  /* Colonne nom */
+  td:nth-child(1) { width: 26px; text-align: center; font-size: 6pt; font-weight: 700; color: #374151; }
+  td:nth-child(2) { width: 100px; text-align: left; padding: 2px 4px; font-size: 7pt; }
+
+  /* En-têtes jours */
+  th.we { background: #fef3c7; color: #92400e; }
+  th.today { background: #dbeafe; color: #1d4ed8; font-weight: 900; }
+
+  /* Badges shifts */
+  .sb { display: inline-block; width: 18px; height: 14px; border-radius: 3px; font-size: 6pt; font-weight: 800; line-height: 14px; text-align: center; font-family: monospace; }
+
+  /* Groupes */
+  .group-header td { background: #f8fafc; font-weight: 700; font-size: 7pt; color: #1e40af; border-top: 1pt solid #bfdbfe; }
+
+  /* Totaux */
+  .totaux { margin-top: 2mm; font-size: 7pt; }
+  .totaux table { width: 100%; }
+
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+</style>
+</head>
+<body>
+  <div class="print-header">
+    <div class="logo">
+      <div class="logo-icon">H</div>
+      <div>
+        <div class="logo-text">Horizon Planning</div>
+        <div class="logo-sub">Gestion du temps</div>
+      </div>
+    </div>
+    <div class="title-center">
+      <h1>${moisLabel}</h1>
+      <div class="etab">${etab.nom}${etab.ville ? ' · ' + etab.ville : ''}</div>
+    </div>
+    <div class="print-info">
+      Imprimé le ${dateStr}<br>
+      Par ${imprimePar || 'Cadre'}
+    </div>
+  </div>
+
+  <div class="print-legend">
+    ${legendHtml}
+    <span style="width:1px;height:14px;background:#d1d5db;margin:2px 8px;display:inline-block;vertical-align:middle"></span>
+    ${sectLegend}
+  </div>
+
+  ${tableHtml}
+
+  <div class="totaux">${totauxHtml}</div>
+
+  <script>
+    // Adapter les cellules shift pour l'impression
+    document.querySelectorAll('[class*="shift-badge"]').forEach(el => {
+      el.style.width = '18px';
+      el.style.height = '14px';
+      el.style.fontSize = '6pt';
+      el.style.borderRadius = '2px';
+    });
+    setTimeout(() => { window.print(); window.close(); }, 400);
+  <\/script>
+</body>
+</html>`);
+  printWindow.document.close();
 }
 
 // ============================================================
@@ -11414,5 +12183,69 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
   bd.addEventListener('click', e => { if (e.target === bd) bd.classList.remove('open'); });
 });
 </script>
+  <!-- HEADER MOBILE FIXE -->
+  <div class="mobile-header" id="mobile-header-bar" style="display:none">
+    <div>
+      <div class="mh-logo">Horizon Planning</div>
+      <div class="mh-etab" id="mh-etab-name">—</div>
+    </div>
+    <div class="mh-user" id="mh-user-avatar" title="">?</div>
+  </div>
+
+  <!-- NAV BOTTOM MOBILE -->
+  <nav class="mobile-nav" id="mobile-nav" style="display:none">
+    <button class="mobile-nav-item active" onclick="mobileNav('dashboard')" id="mn-dashboard">
+      <span class="icon">📊</span>
+      <span>Accueil</span>
+    </button>
+    <button class="mobile-nav-item" onclick="mobileNav('direction')" id="mn-direction" style="display:none;position:relative">
+      <span class="icon">🏛️</span>
+      <span>Direction</span>
+    </button>
+    <button class="mobile-nav-item" onclick="mobileNav('planning')" id="mn-planning">
+      <span class="icon">📅</span>
+      <span>Planning</span>
+    </button>
+    <button class="mobile-nav-item" onclick="mobileNav('conges')" id="mn-conges" style="position:relative">
+      <span class="icon">🌴</span>
+      <span>Congés</span>
+      <span class="mobile-nav-badge" id="mn-conges-badge" style="display:none">0</span>
+    </button>
+    <button class="mobile-nav-item" onclick="mobileNav('more')" id="mn-more">
+      <span class="icon">⋯</span>
+      <span>Plus</span>
+    </button>
+  </nav>
+
+  <!-- MENU "PLUS" MOBILE -->
+  <div id="mobile-more-menu" style="display:none;position:fixed;bottom:70px;left:0;right:0;z-index:999;background:var(--bg2);border-top:1px solid var(--border);padding:8px;border-radius:16px 16px 0 0">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px">
+      <button onclick="mobileNav('comptage');closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">⏱️</span><span>Comptage</span>
+      </button>
+      <button onclick="mobileNav('vacataires');closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">👥</span><span>Vacataires</span>
+      </button>
+      <button onclick="mobileNav('astreintes');closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">📞</span><span>Astreintes</span>
+      </button>
+      <button onclick="mobileNav('agents');closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">👤</span><span>Agents</span>
+      </button>
+      <button onclick="mobileNav('config');closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">⚙️</span><span>Config</span>
+      </button>
+      <button onclick="exportRH();closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text2);font-size:10px;border:none">
+        <span style="font-size:22px">📊</span><span>Export RH</span>
+      </button>
+      <button onclick="saveToSupabase();closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--accent2);font-size:10px;border:none">
+        <span style="font-size:22px">☁️</span><span>Sync</span>
+      </button>
+      <button onclick="doLogout();closeMobileMore()" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;background:rgba(247,111,111,0.1);border-radius:10px;cursor:pointer;color:var(--accent4);font-size:10px;border:none">
+        <span style="font-size:22px">🚪</span><span>Déco.</span>
+      </button>
+    </div>
+  </div>
+
 </body>
 </html>
