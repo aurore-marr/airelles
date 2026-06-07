@@ -9606,6 +9606,11 @@ function qrOpenPlanning(agentId) {
     localStorage.setItem('qr_session', JSON.stringify({ agentId: agentId, etabId: _qrEtabId, ts: Date.now() }));
   } catch(e) {}
 
+  // ── Envoyer le manifest dynamique au Service Worker (fix iOS PWA start_url) ──
+  // iOS Safari lit /manifest.json via HTTP au moment de l'ajout à l'écran d'accueil.
+  // Le SW intercepte cette requête et retourne le manifest personnalisé de l'agent.
+  _sendAgentManifestToSW(agentId, _qrEtabId);
+
   // Peupler les types de congé avec les codes de l'établissement
   qrPopulateAbsenceTypes(etab);
 
@@ -9724,6 +9729,51 @@ function qrInjectAgentManifest(agentId, etabId) {
     link.href = url;
     document.head.appendChild(link);
   }
+}
+
+// ── Envoyer le manifest agent au Service Worker via postMessage ──
+// Le SW intercepte GET /manifest.json et retourne ce manifest.
+// iOS Safari relit /manifest.json au moment de "Ajouter à l'écran d'accueil",
+// ce qui permet d'injecter un start_url personnalisé même si le raccourci
+// a été créé depuis une URL générique.
+function _sendAgentManifestToSW(agentId, etabId) {
+  if (!('serviceWorker' in navigator)) return;
+  var etab = DB.etablissements[etabId];
+  if (!etab) return;
+
+  var agent = (etab.agents || []).find(function(a){ return a.id === agentId; })
+           || (etab.vacataires || []).find(function(v){ return v.id === agentId; });
+  var agentName = agent ? (agent.nom + (agent.prenom ? ' ' + agent.prenom : '')) : 'Mon Planning';
+  var etabName  = etab.nom || 'Horizon Planning';
+
+  var startUrl = '/?agent=' + encodeURIComponent(agentId) + '&etab=' + encodeURIComponent(etabId);
+
+  var manifest = {
+    name: agentName + ' — ' + etabName,
+    short_name: agentName.split(' ')[0] || 'Planning',
+    description: 'Planning de ' + agentName,
+    start_url: startUrl,
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#0f1117',
+    theme_color: '#4f8ef7',
+    lang: 'fr',
+    icons: [
+      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  };
+
+  // Envoyer au SW actif (ou attendre qu'il soit prêt)
+  navigator.serviceWorker.ready.then(function(reg) {
+    if (reg.active) {
+      reg.active.postMessage({ type: 'SET_AGENT_MANIFEST', manifest: manifest });
+    }
+  }).catch(function(err) {
+    console.warn('[PWA] SW non prêt pour manifest agent:', err);
+  });
 }
 
 function qrShowPWABanner() {
@@ -10394,6 +10444,12 @@ function qrRenderCongeList() {
 function qrBack() {
   _qrAgentId = null;
   try { localStorage.removeItem('qr_session'); } catch(e) {}
+  // Effacer le manifest agent du SW pour revenir au manifest générique
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.active) reg.active.postMessage({ type: 'CLEAR_AGENT_MANIFEST' });
+    }).catch(function(){});
+  }
   var screenPlan = document.getElementById('qr-screen-planning');
   var screenSel = document.getElementById('qr-screen-select');
   var nameSec = document.getElementById('qr-name-section');
