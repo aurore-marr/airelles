@@ -2559,6 +2559,7 @@ body[data-qr-mode="1"] #qr-view {
   <!-- ECRAN 2 : Planning -->
   <div id="qr-screen-planning" style="display:none;min-height:100vh;background:#0f1117;max-width:440px;margin:0 auto">
 
+    <!-- HEADER fixe -->
     <div style="background:linear-gradient(135deg,#0f1827,#1d3a6e);padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e3050">
       <button onclick="qrBack()" style="background:#1e2d4a;border:1px solid #1e3050;color:#7dd3fc;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0">&#9664;</button>
       <div style="flex:1;min-width:0">
@@ -2566,50 +2567,65 @@ body[data-qr-mode="1"] #qr-view {
         <div id="qr-plan-info" style="font-size:11px;color:#7dd3fc;margin-top:1px"></div>
       </div>
       <button onclick="qrLogout()" title="Se déconnecter" style="background:#1e2d4a;border:1px solid #1e3050;color:#f87171;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0">🔓</button>
-      <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;flex-shrink:0">
-        <option value="1">1 mois</option>
-        <option value="2">2 mois</option>
-        <option value="3" selected>3 mois</option>
-        <option value="6">6 mois</option>
-        <option value="12">12 mois</option>
-      </select>
     </div>
 
     <!-- Bandeau secteur + CA restants -->
     <div id="qr-agent-banner" style="background:#161b27;padding:10px 16px;display:flex;gap:10px;border-bottom:1px solid #1e3050;flex-wrap:wrap"></div>
-    <!-- Zone alertes manque de personnel -->
-    <div id="qr-alertes-zone" style="display:none;padding:12px 16px"></div>
-    <!-- Postes à pourvoir (affichés dans planning) -->
-    <div id="qr-postes-pourvoir" style="display:none;padding:12px 16px;border-top:1px solid #1e3050"></div>
 
-    <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
+    <!-- NAV 4 onglets -->
+    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex;z-index:100;max-width:440px;margin:0 auto">
+      <button onclick="qrShowTab('alertes')" id="qr-tab-alertes" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">🔔</span>Alertes<span id="qr-alertes-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 5px;margin-top:1px">0</span>
+      </button>
+      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:10px 4px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#128197;</span>Planning
+      </button>
+      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#9989;</span>Dispos
+      </button>
+      <button onclick="qrShowTab('conges')" id="qr-tab-conges" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#127965;</span>Congés
+      </button>
+    </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
-      <button onclick="qrNavWeek(-1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9664;</button>
-      <div style="text-align:center">
-        <div id="qr-week-label" style="font-size:15px;font-weight:800;color:#38bdf8"></div>
-        <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8;margin-top:1px"></div>
+    <!-- TAB ALERTES -->
+    <div id="qr-tab-alertes-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
+      <div id="qr-alertes-zone" style="display:block"></div>
+      <div id="qr-postes-pourvoir" style="display:block;margin-top:8px"></div>
+      <div id="qr-alertes-empty" style="display:none;text-align:center;padding:40px 20px;color:#475569">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <div style="font-size:14px;font-weight:700;color:#38d9a9">Aucune alerte</div>
+        <div style="font-size:12px;color:#6b7fa8;margin-top:4px">Pas de manque de personnel signalé</div>
       </div>
-      <button onclick="qrNavWeek(1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9654;</button>
     </div>
 
-    <div id="qr-weeks-container" style="padding:12px 16px;padding-bottom:80px;overflow-y:auto"></div>
-
-    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex;z-index:100">
-      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:13px 8px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#128197;</span>Planning
-      </button>
-      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:13px 8px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#9989;</span>Dispos
-      </button>
-      <button onclick="qrShowTab('conges')" id="qr-tab-conges" style="flex:1;padding:13px 8px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#127965;</span>Congés
-      </button>
+    <!-- TAB PLANNING -->
+    <div id="qr-tab-planning-content" style="display:block;padding-bottom:80px;overflow-y:auto">
+      <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
+        <button onclick="qrNavWeek(-1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9664;</button>
+        <div style="text-align:center">
+          <div id="qr-week-label" style="font-size:15px;font-weight:800;color:#38bdf8"></div>
+          <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8;margin-top:1px"></div>
+        </div>
+        <button onclick="qrNavWeek(1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9654;</button>
+      </div>
+      <div id="qr-weeks-container" style="padding:12px 16px"></div>
+      <div style="padding:0 16px 12px;display:flex;justify-content:flex-end">
+        <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none">
+          <option value="1">1 mois</option>
+          <option value="2">2 mois</option>
+          <option value="3" selected>3 mois</option>
+          <option value="6">6 mois</option>
+          <option value="12">12 mois</option>
+        </select>
+      </div>
     </div>
 
-    <div id="qr-tab-dispos-content" style="display:none;padding:12px 16px 80px">
+    <!-- TAB DISPOS -->
+    <div id="qr-tab-dispos-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
       <div style="font-size:12px;color:#6b7fa8;margin-bottom:14px;padding:10px 14px;background:#161b27;border-radius:10px">
-        Appuie sur un creneau pour indiquer ta disponibilite sur les 14 prochains jours
+        Indique ta disponibilite sur les 14 prochains jours. Les jours deja planifies sont affichés en lecture seule.
       </div>
       <div id="qr-dispo-form"></div>
       <button onclick="saveQRDispos()" style="width:100%;margin-top:16px;padding:16px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">
@@ -9756,18 +9772,25 @@ function qrOpenPlanning(agentId) {
   }
 
   qrRenderBanner(etab, agent);
-  // Vérifier et afficher les alertes manque de personnel
+  // Calculer le nombre d'alertes et mettre à jour le badge
   qrCheckAlertes(etab, agentId);
-  // Bannière d'installation PWA (instructions manuelles, universelles)
+  var nbAlertes = ((etab.alertesPersonnel||[]).filter(function(a){
+    if (!a.destinataires || !a.destinataires.includes(agentId)) return false;
+    var fin = new Date(a.annee, a.mois + 1, 15);
+    return fin >= new Date();
+  })).length;
+  var badge = document.getElementById('qr-alertes-badge');
+  if (badge) {
+    if (nbAlertes > 0) { badge.textContent = nbAlertes; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+  // Bannière d'installation PWA
   qrInjectAgentManifest(agentId, _qrEtabId);
   setTimeout(function() { qrShowPWABanner(); }, 2000);
   if (isVac) {
-    // Vacataire : afficher seulement les dispos, pas le planning
     qrShowTab('dispos');
-    qrRenderDispos(etab, agent);
   } else {
     qrShowTab('planning');
-    qrRenderPlanning();
   }
 }
 
@@ -10282,31 +10305,54 @@ function qrRenderDispos(etab, agent) {
 }
 
 function qrShowTab(tab) {
-  var plan = document.getElementById('qr-weeks-container');
-  var disp = document.getElementById('qr-tab-dispos-content');
-  var cong = document.getElementById('qr-tab-conges-content');
-  var tplan = document.getElementById('qr-tab-planning');
-  var tdisp = document.getElementById('qr-tab-dispos');
-  var tcong = document.getElementById('qr-tab-conges');
-  var ctr = document.getElementById('qr-counters');
-  var nav = document.querySelector('#qr-screen-planning > div:nth-child(4)');
+  // Tous les contenus
+  var contents = {
+    alertes : document.getElementById('qr-tab-alertes-content'),
+    planning: document.getElementById('qr-tab-planning-content'),
+    dispos  : document.getElementById('qr-tab-dispos-content'),
+    conges  : document.getElementById('qr-tab-conges-content')
+  };
+  // Tous les boutons nav
+  var btns = {
+    alertes : document.getElementById('qr-tab-alertes'),
+    planning: document.getElementById('qr-tab-planning'),
+    dispos  : document.getElementById('qr-tab-dispos'),
+    conges  : document.getElementById('qr-tab-conges')
+  };
+  // Couleurs actives par onglet
+  var colors = { alertes:'#ef4444', planning:'#38bdf8', dispos:'#38bdf8', conges:'#f59e0b' };
 
-  // Reset all
-  [plan,disp,cong].forEach(function(el){ if(el) el.style.display='none'; });
-  [tplan,tdisp,tcong].forEach(function(el){ if(el){ el.style.color='#6b7fa8'; el.style.borderTopColor='transparent'; } });
+  // Tout masquer / reset
+  Object.keys(contents).forEach(function(k){
+    if (contents[k]) contents[k].style.display = 'none';
+  });
+  Object.keys(btns).forEach(function(k){
+    if (btns[k]) { btns[k].style.color = '#6b7fa8'; btns[k].style.borderTopColor = 'transparent'; }
+  });
 
-  if (tab === 'planning') {
-    if (plan) plan.style.display='block';
-    if (ctr) ctr.style.display='flex';
-    if (tplan) { tplan.style.color='#38bdf8'; tplan.style.borderTopColor='#38bdf8'; }
+  // Activer l'onglet demandé
+  if (contents[tab]) contents[tab].style.display = 'block';
+  if (btns[tab]) { btns[tab].style.color = colors[tab] || '#38bdf8'; btns[tab].style.borderTopColor = colors[tab] || '#38bdf8'; }
+
+  // Actions spécifiques par onglet
+  if (tab === 'alertes') {
+    var etab = DB.etablissements[_qrEtabId];
+    var agent = etab && etab.agents.find(function(a){ return a.id === _qrAgentId; });
+    if (etab && agent) qrRenderPostesAPourvoir(etab, agent);
+    // Afficher état vide si pas d'alertes
+    var zone = document.getElementById('qr-alertes-zone');
+    var postes = document.getElementById('qr-postes-pourvoir');
+    var empty = document.getElementById('qr-alertes-empty');
+    var hasContent = (zone && zone.innerHTML.trim()) || (postes && postes.innerHTML.trim());
+    if (empty) empty.style.display = hasContent ? 'none' : 'block';
+  } else if (tab === 'planning') {
+    qrRenderPlanning();
   } else if (tab === 'dispos') {
-    if (disp) disp.style.display='block';
-    if (ctr) ctr.style.display='none';
-    if (tdisp) { tdisp.style.color='#38bdf8'; tdisp.style.borderTopColor='#38bdf8'; }
+    var etab2 = DB.etablissements[_qrEtabId];
+    var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                        || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+    if (etab2 && agent2) qrRenderDispos(etab2, agent2);
   } else if (tab === 'conges') {
-    if (cong) cong.style.display='block';
-    if (ctr) ctr.style.display='none';
-    if (tcong) { tcong.style.color='#f59e0b'; tcong.style.borderTopColor='#f59e0b'; }
     qrRenderCongeList();
     qrInitDateSelects();
   }
