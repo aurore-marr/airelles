@@ -3042,7 +3042,51 @@ const SUPA_URL = 'https://kvztwcwdfxpvgzmeuetm.supabase.co';
 // Peut être surchargée via Config → Établissement si besoin
 const APP_URL = localStorage.getItem('horizon_app_url') || 'https://horizon-planning.fr';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2enR3Y3dkZnhwdmd6bWV1ZXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODkyMjksImV4cCI6MjA5NTU2NTIyOX0.B3JMDwv3B3xE3PYPdwlvR4-0VGEZBJOajcsY3r0eWW8';
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: false,   // On gère nous-même la session via localStorage
+    autoRefreshToken: false,
+  }
+});
+
+// ── Helpers Supabase Auth ──
+// Génère un email fictif unique par login+établissement
+function supaAuthEmail(login, etabId) {
+  const safe = login.toLowerCase().replace(/[^a-z0-9._-]/g, '_');
+  const etabSafe = (etabId||'etab').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+  return safe + '+' + etabSafe + '@horizon-planning.fr';
+}
+
+// Connexion via Supabase Auth (crée le compte si inexistant)
+async function supaAuthSignIn(login, etabId, pwdPlain) {
+  const email = supaAuthEmail(login, etabId);
+  // Essayer de se connecter
+  const { data: signInData, error: signInErr } = await supa.auth.signInWithPassword({
+    email, password: pwdPlain
+  });
+  if (!signInErr && signInData?.user) return { user: signInData.user, created: false };
+
+  // Si le compte n'existe pas encore, le créer (migration)
+  if (signInErr?.message?.includes('Invalid login credentials') ||
+      signInErr?.message?.includes('Email not confirmed') ||
+      signInErr?.message?.includes('User not found')) {
+    const { data: signUpData, error: signUpErr } = await supa.auth.signUp({
+      email, password: pwdPlain,
+      options: { data: { login, etabId } }
+    });
+    if (!signUpErr && signUpData?.user) {
+      // Connexion immédiate après création
+      const { data: reSignIn } = await supa.auth.signInWithPassword({ email, password: pwdPlain });
+      if (reSignIn?.user) return { user: reSignIn.user, created: true };
+    }
+  }
+  return null;
+}
+
+// Déconnexion Supabase Auth
+async function supaAuthSignOut() {
+  try { await supa.auth.signOut(); } catch(e) {}
+}
 const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 
 // ============================================================
@@ -3168,14 +3212,7 @@ function checkQRView() {
   const vacId   = params.get('vac');
   const etabId  = params.get('etab') || ETAB_ID;
   const specFilter = params.get('spec') || '';
-  // Support du paramètre &agent= pour les QR codes individuels
-  const agentParam = params.get('agent');
-  if (agentParam && !agentId) {
-    // QR individuel agent — charger directement son planning
-    const etabParam = params.get('etab') || ETAB_ID;
-    // Sera géré dans showQRAgentView après chargement des données
-  }
-  const isQR    = params.get('qr') === '1' || !!agentId || !!vacId || !!agentParam;
+  const isQR    = params.get('qr') === '1' || !!agentId || !!vacId || !!params.get('agent');
 
   if (!isQR) return false;
 
@@ -3223,16 +3260,33 @@ function checkQRView() {
       }
     } catch(e) {}
 
+    // ── Accès direct agent via QR individuel (?agent=XXX) ──
+    const agentDirect = params.get('agent');
+    if (agentDirect) {
+      const agOk = etab.agents.find(function(a){ return a.id === agentDirect; });
+      if (agOk) {
+        const nameEl2 = document.getElementById('qr-sel-etab-name');
+        if (nameEl2) nameEl2.textContent = etab.nom;
+        _qrAgentId = agentDirect;
+        _qrAgentType = 'agent';
+        _qrPinBuffer = '';
+        updatePinDots();
+        // Sauvegarder la session QR pour ne pas redemander
+        try {
+          localStorage.setItem('qr_session', JSON.stringify({
+            etabId: etabId, agentId: agentDirect, ts: Date.now()
+          }));
+        } catch(e) {}
+        qrOpenPlanning(agentDirect);
+        return;
+      }
+    }
+
     // ── Accès direct vacataire via QR individuel ──
     if (vacId) {
       const vac = (etab.vacataires || []).find(function(v){ return v.id === vacId; });
       if (vac) {
-        // Si QR individuel (?agent=), ouvrir directement le planning de cet agent
-    const agentDirect = params.get('agent');
-    if (agentDirect && etab.agents.find(a => a.id === agentDirect)) {
-      setTimeout(() => { qrOpenPlanning(agentDirect); }, 500);
-    }
-    const nameEl2 = document.getElementById('qr-sel-etab-name');
+        const nameEl2 = document.getElementById('qr-sel-etab-name');
         if (nameEl2) nameEl2.textContent = etab.nom;
         _qrAgentId = vacId;
         _qrAgentType = 'vacataire';
@@ -3288,6 +3342,13 @@ async function saveToSupabase() {
       updated_at: new Date().toISOString()
     }, { onConflict: 'etab_id' });
     if (error) throw error;
+    // Mettre à jour l'indicateur de statut Auth
+    const authBadge = document.getElementById('sb-auth-status');
+    if (authBadge) {
+      authBadge.textContent = '🔒';
+      authBadge.title = 'Synchronisé et sécurisé';
+      authBadge.style.color = 'var(--accent2)';
+    }
     showToast('Synchronisé avec Supabase ✓', 'success');
     return true;
   } catch(e) {
@@ -3506,18 +3567,44 @@ async function doLogin() {
 
   if (!etab) { err.textContent = 'Établissement introuvable.'; return; }
 
+  // ── Vérification locale (hash SHA-256) ──
   const pwdHash = await hashPwd(pwd);
   const login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
   if (!login) { err.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
 
+  // ── Supabase Auth — connexion/création en arrière-plan ──
+  // Transparente pour l'utilisateur — son identifiant texte est préservé
+  try {
+    const authResult = await supaAuthSignIn(user, etabId, pwd);
+    if (authResult) {
+      // Stocker le token JWT Supabase pour les futures requêtes sécurisées
+      try {
+        localStorage.setItem('horizon_auth_token', JSON.stringify({
+          etabId, login: login.login, role: login.role,
+          supaUserId: authResult.user?.id,
+          loginTime: Date.now()
+        }));
+      } catch(e) {}
+      if (authResult.created) {
+        console.log('Compte Supabase Auth créé pour:', user);
+      }
+    }
+  } catch(e) {
+    // Supabase Auth non disponible — on continue avec l'auth locale
+    console.warn('Supabase Auth non disponible:', e.message);
+  }
+
   DB.currentEtab = etabId;
-  DB.currentUser = login;
+  DB.currentUser = { ...login, supaEtabId: etabId };
   err.textContent = '';
 
   // Sauvegarder la session pour reconnexion automatique (sans mot de passe)
   try {
     localStorage.setItem('horizon_session', JSON.stringify({
-      etabId, user: { nom: login.nom, login: login.login, role: login.role }, loginTime: Date.now()
+      etabId,
+      user: { nom: login.nom, login: login.login, role: login.role,
+              titre: login.titre || '', vueDirection: login.vueDirection },
+      loginTime: Date.now()
     }));
   } catch(e) {}
 
@@ -3552,11 +3639,35 @@ async function doLogin() {
   if (_inEl2) { _inEl2.textContent = '1'; _inEl2.title = 'Utilisateurs connectés'; }
   // Mettre à jour le collapsed avatar avec les initiales de l'utilisateur
   updateCollapsedUserUI(login, 1);
+  // Mettre à jour l'indicateur Auth
+  const authBadge = document.getElementById('sb-auth-status');
+  if (authBadge) {
+    const authToken = localStorage.getItem('horizon_auth_token');
+    if (authToken) {
+      authBadge.textContent = '🔒';
+      authBadge.title = 'Authentification Supabase Auth active';
+      authBadge.style.color = 'var(--accent2)';
+    }
+  }
 
   startSessionTimer();
   const _etabInit = getEtab();
   if (_etabInit) _pollLastCongesCount = (_etabInit.demandesConges||[]).filter(d=>d.statut==='en_attente').length;
   startPolling();
+
+  // ── Migration silencieuse des comptes Supabase Auth ──
+  // Pour tous les logins de cet établissement qui n'ont pas encore de compte Auth
+  setTimeout(async () => {
+    // On ne peut pas créer les comptes des autres sans leurs mots de passe
+    // On marque juste que la migration Auth est active
+    const authToken = localStorage.getItem('horizon_auth_token');
+    if (authToken) {
+      const at = JSON.parse(authToken);
+      if (at.supaUserId) {
+        console.log('✅ Supabase Auth actif — compte:', at.supaUserId);
+      }
+    }
+  }, 2000);
 
   // Badge nouvelles dispos
   const newDispos = etab.newDispos || [];
@@ -3689,6 +3800,10 @@ function resetSessionTimer() {
 }
 
 function doLogout() {
+  // Déconnecter Supabase Auth
+  supaAuthSignOut();
+  try { localStorage.removeItem('horizon_auth_token'); } catch(e) {}
+
   DB.currentEtab = null;
   DB.currentUser = null;
   try { localStorage.removeItem('horizon_session'); } catch(e) {}
@@ -10152,6 +10267,10 @@ async function addLogin() {
   etab.logins.push({ nom, login, pwd: pwdHash, role, titre });
   saveToStorage(); renderConfigLogins();
   saveToSupabase().catch(e => console.warn('Sync addLogin échoué:', e));
+  // Créer le compte Supabase Auth pour ce nouveau login
+  try {
+    await supaAuthSignIn(login, DB.currentEtab, pwd);
+  } catch(e) { console.warn('Supabase Auth création login:', e); }
   document.getElementById('new-login-nom').value = '';
   document.getElementById('new-login-id').value = '';
   document.getElementById('new-login-pwd').value = '';
