@@ -3268,17 +3268,16 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 window.onload = async function() {
   loadTheme();
 
-  // ── Redirection automatique session QR agent ──
-  // Le raccourci iOS mémorise start_url "/" sans paramètres.
-  // On relit qr_session et on redirige vers /?agent=...&etab=... si valide.
+  // ── Fix iOS PWA : si le raccourci a mémorisé start_url="/",
+  // on détecte qr_session et on redirige vers l'URL agent correcte.
   try {
-    const _qrp = new URLSearchParams(window.location.search);
-    if (!_qrp.get('agent') && !_qrp.get('vac') && !_qrp.get('qr')) {
-      const _sqr = localStorage.getItem('qr_session');
-      if (_sqr) {
-        const _sq = JSON.parse(_sqr);
-        if ((Date.now() - (_sq.ts || 0)) < 8 * 3600 * 1000 && _sq.agentId && _sq.etabId) {
-          window.location.replace('/?agent=' + encodeURIComponent(_sq.agentId) + '&etab=' + encodeURIComponent(_sq.etabId));
+    var _p = new URLSearchParams(window.location.search);
+    if (!_p.get('agent') && !_p.get('vac') && !_p.get('qr')) {
+      var _raw = localStorage.getItem('qr_session');
+      if (_raw) {
+        var _s = JSON.parse(_raw);
+        if ((Date.now() - (_s.ts||0)) < 8*3600*1000 && _s.agentId && _s.etabId) {
+          window.location.replace('/?agent='+encodeURIComponent(_s.agentId)+'&etab='+encodeURIComponent(_s.etabId));
           return;
         } else {
           localStorage.removeItem('qr_session');
@@ -4025,13 +4024,10 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pwd').value = '';
   document.getElementById('login-error').textContent = '';
-  // Masquer la nav mobile (sinon elle reste visible par-dessus l'écran de login)
-  var _mh = document.getElementById('mobile-header-bar');
-  var _mn = document.getElementById('mobile-nav');
-  var _mm = document.getElementById('mobile-more-menu');
-  if (_mh) _mh.style.display = 'none';
-  if (_mn) _mn.style.display = 'none';
-  if (_mm) _mm.style.display = 'none';
+  // Masquer nav mobile (sinon visible par-dessus l'écran login)
+  ['mobile-header-bar','mobile-nav','mobile-more-menu'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
 }
 
 function showNewEtab() { openModal('modal-new-etab'); }
@@ -12202,9 +12198,6 @@ async function clearCache() {
     setTimeout(() => {
       document.getElementById('app').style.display = 'none';
       document.getElementById('login-screen').style.display = 'flex';
-      var _mh2=document.getElementById('mobile-header-bar'); if(_mh2)_mh2.style.display='none';
-      var _mn2=document.getElementById('mobile-nav'); if(_mn2)_mn2.style.display='none';
-      var _mm2=document.getElementById('mobile-more-menu'); if(_mm2)_mm2.style.display='none';
       populateLoginEtabs();
       // Auto-sélectionner l'établissement
       const sel = document.getElementById('login-etab');
