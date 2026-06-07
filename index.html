@@ -6199,16 +6199,17 @@ function renderPlanning() {
   if (!planning[currentYear][currentMonth]) planning[currentYear][currentMonth] = {};
   const planMonth = planning[currentYear][currentMonth];
 
-  // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
-    <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   // Calcul dynamique largeur colonnes jour selon écran disponible
-  // Colonnes fixes : Poste(60) + Nom(150) + Total(80) = 290px
+  // Colonnes fixes : Poste(60) + Nom(150) = 210px
   const _container = document.getElementById('planning-container');
   const _availW = Math.max(600, (_container ? _container.offsetWidth : window.innerWidth - 80) - 294);
   const _dayW = Math.max(28, Math.min(46, Math.floor(_availW / daysInMonth)));
   window._planningDayColW = _dayW; // exposé pour les vacataires
+
+  // Header row — thead sticky
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+    <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
+    <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
