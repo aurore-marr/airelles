@@ -1452,11 +1452,14 @@ body[data-qr-mode="1"] #qr-view {
         <div class="online-count" id="sb-collapsed-online">1</div>
       </div>
     </div>
+    <div class="sidebar-nav-scroll">
     <div class="nav-section">
       <div class="nav-section-title">Direction</div>
       <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
         <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
       </div>
+    </div>
+    <div class="nav-section">
       <div class="nav-section-title">Planning</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
         <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
@@ -1500,7 +1503,8 @@ body[data-qr-mode="1"] #qr-view {
       <div class="nav-item" onclick="showPage('import')" data-tooltip="Import / Export">
         <span class="icon">📂</span><span class="nav-label">Import / Export</span>
       </div>
-    </div>
+    </div><!-- end nav-section Paramétrage -->
+    </div><!-- end sidebar-nav-scroll -->
     <div class="sidebar-footer">
       <!-- Actions footer groupées en ligne compacte -->
       <div style="display:flex;align-items:center;gap:2px;padding:4px 0">
@@ -4017,9 +4021,11 @@ async function doLogin() {
       if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
       // Recalcule l'offset de la toolbar planning si elle est visible
       const tb = document.getElementById('planning-toolbar');
+      const leg = document.getElementById('planning-legend');
       if (tb) {
-        const h = tb.getBoundingClientRect().height;
-        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+        const hTb = tb.getBoundingClientRect().height;
+        const hLeg = leg ? leg.getBoundingClientRect().height : 0;
+        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
       }
     });
   }
@@ -6169,13 +6175,13 @@ function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
 
-  // Figer la ligne des dates : mesure la hauteur réelle de la toolbar sticky
+  // Figer la ligne des dates : mesure toolbar + légende
   (function updateToolbarOffset() {
     const tb = document.getElementById('planning-toolbar');
-    if (tb) {
-      const h = tb.getBoundingClientRect().height;
-      document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
-    }
+    const leg = document.getElementById('planning-legend');
+    const hTb = tb ? tb.getBoundingClientRect().height : 52;
+    const hLeg = leg ? leg.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
   })();
 
   // Auto-générer si mois vide
@@ -6492,6 +6498,17 @@ function renderPlanning() {
     }).join('');
 
     legendEl.innerHTML = horPart + '<span style="width:1px;height:16px;background:var(--border);margin:0 8px;display:inline-block"></span>' + sectPart;
+
+    // Recalcule l'offset sticky APRÈS rendu de la légende
+    requestAnimationFrame(function() {
+      const tb = document.getElementById('planning-toolbar');
+      const leg = document.getElementById('planning-legend');
+      if (tb) {
+        const hTb = tb.getBoundingClientRect().height;
+        const hLeg = leg ? leg.getBoundingClientRect().height : 0;
+        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
+      }
+    });
   }
 
   // Sector daily totals
@@ -13895,7 +13912,8 @@ function autoFillMonth() {
   if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
 
   etab.agents.filter(a => a.actif).forEach(agent => {
-    if (!planMonth[agent.id]) planMonth[agent.id] = {};
+    // Réinitialiser le planning de l'agent pour ce mois avant de regénérer
+    planMonth[agent.id] = {};
 
     // Déterminer secteur + roulement effectif pour ce mois
     // Agents avec poste nommé → utiliser le roulement du poste
@@ -13941,10 +13959,7 @@ function autoFillMonth() {
         shift = alts[0] || 'R';
       }
 
-      // Ne pas écraser les jours déjà saisis manuellement
-      if (!planMonth[agent.id][d]) {
-        planMonth[agent.id][d] = shift;
-      }
+      planMonth[agent.id][d] = shift;
     }
   });
 
@@ -13952,7 +13967,7 @@ function autoFillMonth() {
   renderPlanning();
   renderComptage();
   renderDashboard();
-  showToast('Planning généré — les saisies manuelles existantes ont été préservées', 'success');
+  showToast('Planning généré avec succès', 'success');
 }
 
 // ============================================================
