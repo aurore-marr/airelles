@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Horizon Planning — Planning Établissements de Santé</title>
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f8ef7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horizon Planning">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -119,7 +126,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 48px 40px;
-  width: 420px;
+  width: min(420px, calc(100vw - 32px));
   box-shadow: var(--shadow-lg);
   position: relative;
   z-index: 1;
@@ -418,10 +425,10 @@ body {
   background: var(--bg3);
   font-size: 10px; font-weight: 600; color: var(--text2);
   text-align: center; padding: 6px 4px;
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: var(--planning-toolbar-h, 52px); z-index: 10;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; z-index: 32; background: var(--bg3); }
+.planning-table th.agent-col { text-align: left; padding-left: 10px; min-width: 140px; position: sticky; left: 0; top: var(--planning-toolbar-h, 52px); z-index: 32; background: var(--bg3); }
 .agent-cell {
   padding: 5px 8px; background: var(--bg2);
   position: sticky; left: 0; z-index: 15;
@@ -569,7 +576,7 @@ body {
   #planning-vac-section { display: none !important; }
 
   /* Supprimer les sticky (cause problèmes d'impression) */
-  .agent-cell, .agent-cell-poste, th { position: static !important; }
+  .agent-cell, .agent-cell-poste, th { position: static !important; top: auto !important; }
 
   /* Couleurs */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -1026,6 +1033,47 @@ body {
   .astr-calendar { overflow-x: auto; }
 }
 
+/* ── Login très petit écran ── */
+@media (max-width: 480px) {
+  .login-box { padding: 28px 20px; border-radius: 16px; }
+  .login-logo h1 { font-size: 18px; }
+}
+
+/* ── Tablette : forcer scroll horizontal sur le planning ── */
+@media (max-width: 900px) {
+  .planning-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .planning-table { min-width: 800px; }
+}
+
+/* ── Très petit écran (< 400px) : stats en 1 colonne ── */
+@media (max-width: 400px) {
+  .stats-row { grid-template-columns: 1fr !important; }
+  .stat-value { font-size: 20px !important; }
+}
+
+/* ── Import/Export grid responsive ── */
+@media (max-width: 700px) {
+  #page-import > div { display: flex !important; flex-direction: column !important; }
+}
+
+/* ── Astreintes stats grid responsive ── */
+@media (max-width: 600px) {
+  #astr-stats-row { grid-template-columns: 1fr !important; }
+  .planning-toolbar { gap: 5px !important; }
+  .month-nav .month-label { min-width: 110px !important; font-size: 13px !important; }
+  .planning-toolbar button, .planning-toolbar select { font-size: 10px !important; padding: 5px 7px !important; }
+}
+
+/* ── Toast sur mobile : décalé au-dessus de la nav bottom ── */
+@media (max-width: 600px) {
+  .toast { bottom: 80px !important; left: 12px; right: 12px; font-size: 12px !important; }
+}
+
+/* ── Search input pleine largeur sur mobile ── */
+@media (max-width: 600px) {
+  .search-input { width: 100% !important; }
+}
+
 @media (max-width: 1400px) and (min-width: 901px) {
   .day-header { min-width:40px; width:40px; max-width:40px; }
   .shift-cell { width:40px; min-width:40px; max-width:40px; height:42px; }
@@ -1224,7 +1272,7 @@ table input:focus { border-color: var(--accent); }
 .agents-empty { grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text2); font-size: 14px; }
 
 .toast {
-  position: fixed; bottom: 24px; right: 24px;
+  position: fixed; bottom: 24px; right: 24px; max-width: calc(100vw - 32px);
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 10px; padding: 12px 18px;
   font-size: 13px; font-weight: 500;
@@ -1275,6 +1323,17 @@ table input:focus { border-color: var(--accent); }
   transition: all 0.15s; user-select: none;
 }
 .excl-toggle.selected { background: rgba(247,111,111,0.2); border-color: #f76f6f; color: #f76f6f; }
+
+/* ========== MODE QR AGENT : masquer la nav admin mobile ========== */
+body[data-qr-mode="1"] .mobile-header,
+body[data-qr-mode="1"] .mobile-nav,
+body[data-qr-mode="1"] #mobile-more-menu {
+  display: none !important;
+}
+/* En mode QR, le qr-view ne doit pas avoir de padding-top imposé par .main */
+body[data-qr-mode="1"] #qr-view {
+  padding-top: 0 !important;
+}
 
 </style>
 </head>
@@ -1615,7 +1674,7 @@ table input:focus { border-color: var(--accent); }
     <!-- PLANNING -->
     <div id="page-planning" class="page">
       <!-- Barre de navigation mois + filtres (sans header titre) -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+      <div id="planning-toolbar" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,0.25)">
         <!-- Boutons action -->
         <button class="btn btn-success btn-sm" onclick="autoFillMonth()" style="font-size:11px">✨ Générer</button>
         <button class="btn btn-secondary btn-sm" onclick="openHistory()" style="font-size:11px">📋 Historique</button>
@@ -2240,7 +2299,7 @@ table input:focus { border-color: var(--accent); }
         <h2>Import / Export</h2>
         <p>Importer votre configuration Excel ou exporter vos données</p>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
         <div class="card">
           <div class="card-header"><span class="card-title">📂 Importer depuis Excel</span></div>
           <div class="import-zone" id="import-zone" onclick="document.getElementById('file-import').click()">
@@ -2327,7 +2386,7 @@ table input:focus { border-color: var(--accent); }
       </div>
 
       <!-- Stats rapides -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px" id="astr-stats-row"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px" id="astr-stats-row"></div>
 
       <!-- Format import Excel attendu -->
       <div class="card">
@@ -3329,6 +3388,15 @@ function checkQRView() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('qr-view').style.display = 'block';
 
+  // ── Mode agent QR : masquer la nav mobile admin ──
+  var _mhBar = document.getElementById('mobile-header-bar');
+  var _mobileNavEl = document.getElementById('mobile-nav');
+  var _mobileMoreEl = document.getElementById('mobile-more-menu');
+  if (_mhBar) _mhBar.style.display = 'none';
+  if (_mobileNavEl) _mobileNavEl.style.display = 'none';
+  if (_mobileMoreEl) _mobileMoreEl.style.display = 'none';
+  document.body.setAttribute('data-qr-mode', '1');
+
   const pinSec = document.getElementById('qr-pin-section');
   if (pinSec) {
     pinSec.insertAdjacentHTML('beforebegin',
@@ -3746,9 +3814,17 @@ async function doLogin() {
   if (!window._mobileResizeListener) {
     window._mobileResizeListener = true;
     window.addEventListener('resize', () => {
+      // Ne jamais montrer la nav admin en mode QR agent
+      if (document.body.getAttribute('data-qr-mode') === '1') return;
       const isMobile = window.innerWidth <= 600;
       if (mhBar) mhBar.style.display = isMobile ? 'flex' : 'none';
       if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
+      // Recalcule l'offset de la toolbar planning si elle est visible
+      const tb = document.getElementById('planning-toolbar');
+      if (tb) {
+        const h = tb.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+      }
     });
   }
   const _inEl2 = document.getElementById('sb-user-initials');
@@ -5209,6 +5285,15 @@ function renderDashAbsences() {
 function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
+
+  // Figer la ligne des dates : mesure la hauteur réelle de la toolbar sticky
+  (function updateToolbarOffset() {
+    const tb = document.getElementById('planning-toolbar');
+    if (tb) {
+      const h = tb.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+    }
+  })();
 
   // Auto-générer si mois vide
   autoFillIfEmpty();
@@ -8667,6 +8752,392 @@ function printAgentQR(agentId, nom, prenom, spec) {
   w.document.close();
 }
 
+/* ============================================================
+   HORIZON PLANNING — Intégration PWA + Notifications Push
+   ============================================================ */
+
+// ============================================================
+// 1. ENREGISTREMENT DU SERVICE WORKER
+// ============================================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(reg) {
+        console.log('[PWA] Service Worker enregistré:', reg.scope);
+        // Écouter les messages du SW (clic sur notification → navigation)
+        navigator.serviceWorker.addEventListener('message', _handleSWMessage);
+      })
+      .catch(function(err) {
+        console.warn('[PWA] Service Worker échec:', err);
+      });
+  });
+}
+
+// ── Message reçu depuis le SW après clic sur une notification ──
+function _handleSWMessage(event) {
+  const msg = event.data;
+  if (!msg || msg.type !== 'NOTIF_CLICK') return;
+  console.log('[PWA] Navigation depuis notification:', msg.notifType);
+  if (msg.notifType === 'conge') {
+    // Ouvrir la modal des congés si on est dans l'app cadre
+    if (typeof showPage === 'function') showPage('conges');
+    if (typeof openCongesModal === 'function') openCongesModal();
+  } else if (msg.notifType === 'planning' || msg.notifType === 'shift') {
+    if (typeof showPage === 'function') showPage('planning');
+  } else if (msg.notifType === 'alerte') {
+    if (typeof showPage === 'function') showPage('vacataires');
+  }
+}
+
+// ============================================================
+// 2. CLÉS VAPID
+// ============================================================
+// ⚠️  IMPORTANT : Génère tes propres clés VAPID sur :
+//     https://vapidkeys.com/  ou  npx web-push generate-vapid-keys
+// Remplace les valeurs ci-dessous par tes clés personnelles.
+//
+const VAPID_PUBLIC_KEY = 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+// La clé PRIVÉE reste côté serveur (Edge Function Supabase), ne jamais la mettre ici.
+
+// ── Convertit une clé VAPID base64 en Uint8Array ──
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(function(c) { return c.charCodeAt(0); }));
+}
+
+// ============================================================
+// 3. ABONNEMENT AUX NOTIFICATIONS PUSH
+//    Appelé quand un agent ouvre son planning QR
+// ============================================================
+async function subscribePushNotifications(agentId, agentName, etabId) {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[PWA] Push non supporté sur ce navigateur');
+    return false;
+  }
+
+  // Clé VAPID non configurée → skip silencieux
+  if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith('REMPLACER')) {
+    console.warn('[PWA] Clé VAPID non configurée — notifications push désactivées');
+    return false;
+  }
+
+  try {
+    // Demander la permission si pas encore accordée
+    let permission = Notification.permission;
+    if (permission === 'denied') {
+      console.log('[PWA] Notifications refusées par l\'utilisateur');
+      return false;
+    }
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') return false;
+
+    // Récupérer le service worker actif
+    const reg = await navigator.serviceWorker.ready;
+
+    // Vérifier si déjà abonné
+    let subscription = await reg.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    // Sauvegarder l'abonnement dans Supabase
+    const subJson = subscription.toJSON();
+    const { error } = await supa
+      .from('push_subscriptions')
+      .upsert({
+        agent_id:  agentId,
+        etab_id:   etabId,
+        agent_name: agentName || agentId,
+        endpoint:  subJson.endpoint,
+        p256dh:    subJson.keys.p256dh,
+        auth:      subJson.keys.auth,
+      }, { onConflict: 'endpoint' });
+
+    if (error) {
+      console.error('[PWA] Erreur sauvegarde abonnement:', error);
+      return false;
+    }
+
+    console.log('[PWA] ✅ Abonnement push enregistré pour:', agentName || agentId);
+    return true;
+
+  } catch(err) {
+    console.error('[PWA] Erreur abonnement push:', err);
+    return false;
+  }
+}
+
+// ── Désabonnement (ex: agent supprimé) ──
+async function unsubscribePushNotifications(agentId, etabId) {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.getSubscription();
+    if (subscription) {
+      await subscription.unsubscribe();
+      await supa
+        .from('push_subscriptions')
+        .delete()
+        .eq('agent_id', agentId)
+        .eq('etab_id', etabId);
+      console.log('[PWA] Désabonnement effectué');
+    }
+  } catch(err) {
+    console.warn('[PWA] Erreur désabonnement:', err);
+  }
+}
+
+// ============================================================
+// 4. ENVOI DE NOTIFICATIONS (côté cadre)
+//    Appeler ces fonctions depuis l'interface de gestion
+// ============================================================
+
+/**
+ * Envoyer une notification à un ou plusieurs agents
+ * @param {Object} options
+ * @param {string} options.etabId       - ID de l'établissement
+ * @param {string|null} options.agentId - null = tous les agents de l'établissement
+ * @param {string} options.type         - 'planning' | 'conge' | 'alerte' | 'shift'
+ * @param {string} options.title        - Titre de la notification
+ * @param {string} options.body         - Corps du message
+ * @param {string|null} options.url     - URL de destination (optionnel)
+ */
+async function sendPushNotification(options) {
+  const { etabId, agentId, type, title, body, url } = options;
+  if (!etabId || !title) return;
+
+  try {
+    // Récupérer les abonnements concernés
+    let query = supa.from('push_subscriptions').select('*').eq('etab_id', etabId);
+    if (agentId) query = query.eq('agent_id', agentId);
+    const { data: subs, error } = await query;
+
+    if (error || !subs || subs.length === 0) {
+      console.log('[PWA] Aucun abonnement trouvé pour', etabId, agentId || '(tous)');
+      return;
+    }
+
+    console.log('[PWA] Envoi notification à', subs.length, 'abonné(s)');
+
+    // Appel à la Supabase Edge Function qui envoie vraiment les push
+    const { data: result, error: fnError } = await supa.functions.invoke('send-push', {
+      body: {
+        subscriptions: subs,
+        payload: {
+          title: title,
+          body:  body || '',
+          type:  type  || 'general',
+          url:   url   || '/',
+          etabId: etabId,
+          agentId: agentId || null,
+        }
+      }
+    });
+
+    if (fnError) {
+      console.error('[PWA] Erreur Edge Function:', fnError);
+      return;
+    }
+
+    // Logger l'envoi
+    await supa.from('notifications_log').insert({
+      etab_id:  etabId,
+      agent_id: agentId || null,
+      type:     type || 'general',
+      title:    title,
+      body:     body || '',
+      success:  true,
+    });
+
+    console.log('[PWA] ✅ Notifications envoyées:', result);
+    return result;
+
+  } catch(err) {
+    console.error('[PWA] Erreur envoi push:', err);
+  }
+}
+
+// ── Raccourcis pour les 4 types de notifications de l'app ──
+
+function notifNouveauPlanning(etabId, moisLabel) {
+  return sendPushNotification({
+    etabId,
+    agentId: null, // tous les agents
+    type: 'planning',
+    title: 'Planning mis à jour',
+    body: 'Le planning ' + (moisLabel || '') + ' vient d\'être publié.',
+    url: '/?qr=1&etab=' + etabId,
+  });
+}
+
+function notifCongeValide(etabId, agentId, agentName, accepted, mois) {
+  return sendPushNotification({
+    etabId,
+    agentId,
+    type: 'conge',
+    title: accepted ? '✅ Congé validé' : '❌ Congé refusé',
+    body: (accepted ? 'Votre demande de congé' : 'Votre demande de congé') +
+          (mois ? ' (' + mois + ')' : '') +
+          (accepted ? ' a été accordée.' : ' a été refusée par le cadre.'),
+    url: '/?agent=' + agentId + '&etab=' + etabId,
+  });
+}
+
+function notifAlerteManque(etabId, dateLabel, posteLabel) {
+  return sendPushNotification({
+    etabId,
+    agentId: null, // tous
+    type: 'alerte',
+    title: '🚨 Appel à volontaires',
+    body: 'Poste à pourvoir : ' + (posteLabel || '') + ' le ' + (dateLabel || '') + '. Êtes-vous disponible ?',
+    url: '/?qr=1&etab=' + etabId,
+  });
+}
+
+function notifModifShift(etabId, agentId, agentName, dateLabel, ancienShift, nouveauShift) {
+  return sendPushNotification({
+    etabId,
+    agentId,
+    type: 'shift',
+    title: '🔄 Modification de planning',
+    body: 'Votre shift du ' + (dateLabel || '') + ' a été modifié : ' +
+          (ancienShift || '—') + ' → ' + (nouveauShift || '—'),
+    url: '/?agent=' + agentId + '&etab=' + etabId,
+  });
+}
+
+// ============================================================
+// 5. AUTO-ABONNEMENT À L'OUVERTURE DU PLANNING QR
+//    Ce bloc s'exécute automatiquement côté agent
+// ============================================================
+(function _autoSubscribeQR() {
+  // Attendre que l'app QR soit prête (polling léger)
+  let _checkCount = 0;
+  const _checkInterval = setInterval(function() {
+    _checkCount++;
+    if (_checkCount > 60) { clearInterval(_checkInterval); return; } // timeout 30s
+
+    // Détecter qu'un agent est connecté en vue QR
+    const qrView = document.getElementById('qr-view');
+    if (!qrView || qrView.style.display === 'none') return;
+
+    // Vérifier que _qrAgentId est rempli (défini dans le code principal)
+    if (typeof _qrAgentId === 'undefined' || !_qrAgentId) return;
+    if (typeof _qrEtabId  === 'undefined' || !_qrEtabId)  return;
+
+    clearInterval(_checkInterval);
+
+    // Trouver le nom de l'agent
+    let agentName = _qrAgentId;
+    try {
+      const etab = DB && DB.etablissements && DB.etablissements[_qrEtabId];
+      if (etab) {
+        const ag = (etab.agents || []).find(function(a) { return a.id === _qrAgentId; })
+                || (etab.vacataires || []).find(function(v) { return v.id === _qrAgentId; });
+        if (ag) agentName = ag.nom || ag.name || _qrAgentId;
+      }
+    } catch(e) {}
+
+    // Petit délai pour ne pas perturber le chargement initial
+    setTimeout(function() {
+      subscribePushNotifications(_qrAgentId, agentName, _qrEtabId).then(function(ok) {
+        if (ok) {
+          // Afficher un toast discret
+          const toastEl = document.getElementById('toast');
+          if (toastEl) {
+            toastEl.innerHTML = '<span>🔔</span> Notifications activées';
+            toastEl.style.borderColor = 'var(--accent2, #38d9a9)';
+            toastEl.classList.add('show');
+            setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
+          }
+        }
+      });
+    }, 1500);
+  }, 500);
+})();
+
+// ============================================================
+// 6. BANNIÈRE "INSTALLER L'APPLICATION"
+//    Apparaît automatiquement sur mobile si pas encore installée
+// ============================================================
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+
+  // Afficher la bannière pour tout le monde (agents QR et cadres/admins)
+  // Délai pour ne pas afficher immédiatement à l'ouverture
+  setTimeout(_showInstallBanner, 3000);
+});
+
+function _showInstallBanner() {
+  if (!_deferredInstallPrompt) return;
+  if (document.getElementById('pwa-install-banner')) return;
+  // Ne pas re-proposer si déjà en mode standalone (déjà installée)
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+
+  const isQR = document.body.getAttribute('data-qr-mode') === '1';
+  const isMobile = window.innerWidth <= 600;
+
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+
+  if (isQR || isMobile) {
+    // Bas d'écran — agents QR et admins mobile
+    const bottomOffset = isQR ? '12px' : '76px';
+    banner.style.cssText = [
+      'position:fixed;bottom:' + bottomOffset + ';left:12px;right:12px;z-index:9999',
+      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
+      'border:1px solid #4f8ef7;border-radius:14px',
+      'padding:14px 16px;display:flex;align-items:center;gap:12px',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+    ].join(';');
+  } else {
+    // Coin bas-droite — admins desktop
+    banner.style.cssText = [
+      'position:fixed;bottom:24px;right:24px;z-index:9999',
+      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
+      'border:1px solid #4f8ef7;border-radius:14px',
+      'padding:14px 18px;display:flex;align-items:center;gap:12px',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:360px',
+    ].join(';');
+  }
+
+  banner.innerHTML = [
+    '<div style="font-size:26px;flex-shrink:0">📲</div>',
+    '<div style="flex:1;min-width:0">',
+    '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
+    '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis l\'\u00e9cran d\'accueil</div>',
+    '</div>',
+    '<button onclick="installPWA()" style="background:#4f8ef7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">Installer</button>',
+    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:20px;cursor:pointer;padding:4px 6px;flex-shrink:0;line-height:1">\u2715</button>',
+  ].join('');
+  document.body.appendChild(banner);
+}
+
+async function installPWA() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  console.log('[PWA] Installation:', outcome);
+  _deferredInstallPrompt = null;
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.remove();
+}
+
+window.addEventListener('appinstalled', function() {
+  console.log('[PWA] Application installée avec succès');
+  _deferredInstallPrompt = null;
+  if (typeof showToast === 'function') showToast('Application installée ! 🎉', 'success');
+});
+
 function printAllAgentQRs() {
   const etab = getEtab();
   if (!etab) return;
@@ -8847,6 +9318,14 @@ function showQRAgentView(etabId, agentId) {
   document.getElementById('app').style.display = 'none';
   var qrView = document.getElementById('qr-view');
   qrView.style.display = 'block';
+  // Masquer la nav admin mobile
+  var _b = document.getElementById('mobile-header-bar');
+  var _n = document.getElementById('mobile-nav');
+  var _m = document.getElementById('mobile-more-menu');
+  if (_b) _b.style.display = 'none';
+  if (_n) _n.style.display = 'none';
+  if (_m) _m.style.display = 'none';
+  document.body.setAttribute('data-qr-mode', '1');
   _qrEtabId = etabId;
   _qrAgentId = agentId || null;
 
@@ -12382,10 +12861,28 @@ function toggleSidebar() {
 }
 
 function initSidebarState() {
-  if (localStorage.getItem('sb_collapsed') === '1') {
+  const savedState = localStorage.getItem('sb_collapsed');
+  const isNarrow = window.innerWidth < 900;
+  // Sur tablette/mobile : sidebar collapsed par défaut sauf si l'utilisateur l'a manuellement ouverte
+  if (savedState === '1' || (isNarrow && savedState !== '0')) {
     sidebarCollapsed = false; // force toggle to true state
     toggleSidebar();
   }
+  // Redimensionnement dynamique
+  window.addEventListener('resize', () => {
+    const sb = document.getElementById('sidebar');
+    const nowMobile = window.innerWidth < 600;
+    if (!sb) return;
+    if (nowMobile) {
+      sb.style.display = 'none';
+    } else {
+      sb.style.display = '';
+      if (window.innerWidth < 900 && !sidebarCollapsed) {
+        sidebarCollapsed = false;
+        toggleSidebar();
+      }
+    }
+  });
 }
 
 // ============================================================
