@@ -1781,9 +1781,9 @@ body[data-qr-mode="1"] #qr-view {
       <div id="print-legend" style="display:none"></div>
 
       <!-- Légende horaires + planning -->
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card" style="padding:0">
         <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
-        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%;isolation:isolate"></div>
+        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%"></div>
       </div>
       <!-- Totaux secteurs (maintenant en tfoot dans le même tableau) -->
       <div id="sector-daily-totals" style="display:none"></div>
@@ -6207,7 +6207,7 @@ function renderPlanning() {
   window._planningDayColW = _dayW; // exposé pour les vacataires
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:var(--planning-toolbar-h, 52px);z-index:30"><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
