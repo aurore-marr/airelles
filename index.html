@@ -8726,14 +8726,12 @@ function printAgentQR(agentId, nom, prenom, spec) {
       <div class="url">${agentUrl}</div>
     </div>
     <script>setTimeout(() => { window.print(); window.close(); }, 300);<\/script>
-  
-<script>
+  </body></html>`);
+  w.document.close();
+}
+
 /* ============================================================
    HORIZON PLANNING — Intégration PWA + Notifications Push
-   
-   INSTRUCTIONS D'INTÉGRATION :
-   Copier ce bloc JUSTE AVANT </body> dans index.html
-   (après tous les autres scripts)
    ============================================================ */
 
 // ============================================================
@@ -9102,11 +9100,6 @@ window.addEventListener('appinstalled', function() {
   _deferredInstallPrompt = null;
   if (typeof showToast === 'function') showToast('Application installée ! 🎉', 'success');
 });
-
-</script>
-</body></html>`);
-  w.document.close();
-}
 
 function printAllAgentQRs() {
   const etab = getEtab();
