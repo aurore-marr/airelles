@@ -1518,6 +1518,9 @@ body[data-qr-mode="1"] #qr-view {
         <button onclick="saveToSupabase()" title="Sync Supabase"
           style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--accent2);font-size:16px;transition:background 0.15s"
           onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">☁️</button>
+        <button onclick="openModalLegal()" title="Mentions légales &amp; CGU"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--text2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">ℹ️</button>
       </div>
       <div id="session-timer" style="font-size:10px;color:var(--text3);padding:2px 8px 4px;text-align:center;font-family:'DM Mono',monospace">🕐 8h00</div>
     </div>
@@ -1611,7 +1614,19 @@ body[data-qr-mode="1"] #qr-view {
       </div>
 
       <!-- KPIs principaux -->
-      <div class="stats-row" id="dir-kpis" style="margin-bottom:20px"></div>
+      <div class="stats-row" id="dir-kpis" style="margin-bottom:8px"></div>
+
+      <!-- Comparatif M vs M-1 -->
+      <div id="dir-comparatif" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+      <!-- Onglets direction -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+        <button onclick="dirShowTab('mensuel')" id="dir-tab-mensuel" class="dir-tab active-tab" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📊 Mois en cours</button>
+        <button onclick="dirShowTab('absenteisme')" id="dir-tab-absenteisme" class="dir-tab" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">📉 Absentéisme 12 mois</button>
+      </div>
+
+      <!-- TAB MENSUEL -->
+      <div id="dir-tab-mensuel-content">
 
       <!-- Ligne 2 : Absentéisme + HS + Coût -->
       <div class="dir-grid-3 mb-4">
@@ -1657,6 +1672,25 @@ body[data-qr-mode="1"] #qr-view {
         <div class="card-header"><span class="card-title">📬 Alertes envoyées (suivi)</span></div>
         <div id="dir-alertes-suivi"></div>
       </div>
+
+      </div><!-- /dir-tab-mensuel-content -->
+
+      <!-- TAB ABSENTÉISME 12 MOIS -->
+      <div id="dir-tab-absenteisme-content" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title">📉 Absentéisme sur 12 mois glissants</span>
+            <button onclick="exportAbsenteismeCSV()" class="btn btn-secondary btn-sm">⬇️ Export CSV</button>
+          </div>
+          <div id="dir-abs-12m-chart" style="margin-bottom:16px"></div>
+          <div id="dir-abs-12m-table" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">👤 Détail par agent (12 mois)</span></div>
+          <div id="dir-abs-12m-agents" style="overflow-x:auto"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- NOTIFICATIONS RH -->
@@ -1664,11 +1698,29 @@ body[data-qr-mode="1"] #qr-view {
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <h2>🔔 Notifications RH</h2>
-          <p style="color:var(--text2);font-size:13px">Disponibilités agents et réponses aux alertes</p>
+          <p style="color:var(--text2);font-size:13px">Disponibilités, messages agents et réponses aux alertes</p>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="marquerToutesLues()">✓ Tout marquer comme lu</button>
       </div>
-      <div id="notif-rh-list" style="max-width:700px"></div>
+
+      <!-- Onglets Notifications -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+        <button onclick="notifTab('notifs')" id="notif-tab-notifs" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔔 Notifications</button>
+        <button onclick="notifTab('messages')" id="notif-tab-messages" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+          💬 Messages agents
+          <span id="notif-msg-badge" style="display:none;background:#a78bfa;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 6px;margin-left:4px">0</span>
+        </button>
+      </div>
+
+      <!-- TAB Notifications -->
+      <div id="notif-tab-notifs-content" style="max-width:700px">
+        <div id="notif-rh-list"></div>
+      </div>
+
+      <!-- TAB Messages agents -->
+      <div id="notif-tab-messages-content" style="display:none;max-width:700px">
+        <div id="cadre-messages-list"></div>
+      </div>
     </div>
 
     <!-- PLANNING -->
@@ -1910,6 +1962,7 @@ body[data-qr-mode="1"] #qr-view {
         <div class="tab" onclick="switchConfigTab('postes')">Postes IDE/ASH</div>
         <div class="tab" onclick="switchConfigTab('logins')">Accès cadres</div>
         <div class="tab" onclick="switchConfigTab('interim')">🏢 Agences intérim</div>
+        <div class="tab" id="config-tab-options-btn" onclick="switchConfigTab('options')" style="display:none">🔑 Options souscrites</div>
       </div>
 
       <div id="config-tab-general">
@@ -2271,7 +2324,13 @@ body[data-qr-mode="1"] #qr-view {
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
             <div class="form-group" style="margin:0"><label>Nom complet</label><input type="text" id="new-login-nom" placeholder="M. Dupont"></div>
             <div class="form-group" style="margin:0"><label>Identifiant</label><input type="text" id="new-login-id" placeholder="mdupont"></div>
-            <div class="form-group" style="margin:0"><label>Mot de passe</label><input type="password" id="new-login-pwd" placeholder="••••••"></div>
+            <div class="form-group" style="margin:0">
+              <label>Mot de passe <span style="font-size:10px;color:var(--text3);font-weight:400">(12 car. min, 1 maj, 1 chiffre, 1 spécial)</span></label>
+              <input type="password" id="new-login-pwd" placeholder="Ex: Monpwd@2026!"
+                oninput="showPasswordErrors(validatePasswordStrength(this.value),'pwd-strength-hint')"
+                style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box">
+              <div id="pwd-strength-hint" style="display:none;margin-top:4px"></div>
+            </div>
             <div class="form-group" style="margin:0">
               <label>Rôle</label>
               <select id="new-login-role" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none;width:100%">
@@ -2299,6 +2358,14 @@ body[data-qr-mode="1"] #qr-view {
               <button class="btn btn-secondary btn-sm" onclick="addCustomRole()">+ Ajouter ce rôle</button>
             </div>
             <p style="font-size:11px;color:var(--text3);margin-top:6px">Les rôles créés ici apparaîtront dans le sélecteur "Rôle" ci-dessus. Droits identiques à "Cadre".</p>
+          </div>
+
+          <!-- Routage messages par spécialité -->
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">💬 Routage des messages agents</div>
+            <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Associez chaque spécialité à un cadre. Les messages des agents seront automatiquement dirigés vers le cadre responsable.</p>
+            <div id="msg-routing-list"></div>
+            <button class="btn btn-secondary btn-sm" onclick="renderMsgRouting()" style="margin-top:8px">🔄 Rafraîchir</button>
           </div>
         </div>
       </div>
@@ -2356,6 +2423,20 @@ body[data-qr-mode="1"] #qr-view {
           <div id="save-status" class="text-xs text-muted mt-2"></div>
         </div>
       </div>
+
+      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
+      <div id="config-tab-options" class="hidden">
+        <div class="config-section" style="max-width:600px">
+          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Activez ou désactivez les modules selon l'abonnement du client.
+            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
+          </p>
+          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ASTREINTES -->
@@ -2586,6 +2667,9 @@ body[data-qr-mode="1"] #qr-view {
       <button onclick="qrShowTab('conges')" id="qr-tab-conges" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
         <span style="font-size:15px">&#127965;</span>Congés
       </button>
+      <button onclick="qrShowTab('messages')" id="qr-tab-messages" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#128172;</span>Message<span id="qr-msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 5px;margin-top:1px">0</span>
+      </button>
     </div>
 
     <!-- TAB ALERTES -->
@@ -2619,6 +2703,36 @@ body[data-qr-mode="1"] #qr-view {
           <option value="6">6 mois</option>
           <option value="12">12 mois</option>
         </select>
+      </div>
+    </div>
+
+    <!-- TAB MESSAGES -->
+    <div id="qr-tab-messages-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
+      <!-- Nouveau message -->
+      <div style="background:#161b27;border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#38bdf8;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">✏️ Nouveau message</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#6b7fa8;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Objet</label>
+          <input id="qr-msg-sujet" type="text" placeholder="Ex: Question planning, Demande échange..." maxlength="80"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#6b7fa8;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Message</label>
+          <textarea id="qr-msg-corps" rows="4" placeholder="Écrivez votre message ici..."
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;resize:none;box-sizing:border-box"></textarea>
+        </div>
+        <div id="qr-msg-destinataire-info" style="font-size:11px;color:#6b7fa8;margin-bottom:10px;padding:8px 10px;background:rgba(56,189,248,0.08);border-radius:8px;border:1px solid rgba(56,189,248,0.15)">
+          📨 Votre message sera envoyé au cadre responsable de votre spécialité
+        </div>
+        <button onclick="qrEnvoyerMessage()" style="width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">
+          📨 Envoyer
+        </button>
+        <div id="qr-msg-status" style="display:none;text-align:center;font-size:13px;font-weight:600;margin-top:10px"></div>
+      </div>
+      <!-- Historique messages -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">📬 Mes messages</div>
+        <div id="qr-msg-list"></div>
       </div>
     </div>
 
@@ -3478,12 +3592,20 @@ function checkQRView() {
     _qrEtabId = etabId;
 
     // ── Restaurer session QR si encore valide (8h) ──
+    // Si l'URL contient un ?agent= différent de la session, on ignore la session
+    // pour permettre au cadre de tester différents agents sans être bloqué
     try {
       const savedQR = localStorage.getItem('qr_session');
       if (savedQR) {
         const s = JSON.parse(savedQR);
         const elapsed = Date.now() - (s.ts || 0);
-        if (elapsed < 8 * 60 * 60 * 1000 && s.etabId === etabId && s.agentId) {
+        const agentInUrl = params.get('agent');
+        // Ignorer la session si l'URL pointe vers un agent différent
+        const sessionValide = elapsed < 8 * 60 * 60 * 1000
+          && s.etabId === etabId
+          && s.agentId
+          && (!agentInUrl || agentInUrl === s.agentId);
+        if (sessionValide) {
           const agOk = etab.agents.find(function(a){ return a.id === s.agentId; })
                     || (etab.vacataires||[]).find(function(v){ return v.id === s.agentId; });
           if (agOk) {
@@ -3494,6 +3616,15 @@ function checkQRView() {
           }
         } else {
           localStorage.removeItem('qr_session');
+          // Session expirée : afficher message clair au lieu d'écran blanc
+          var pinSec = document.getElementById('qr-pin-section');
+          if (pinSec) {
+            var expMsg = document.createElement('div');
+            expMsg.style.cssText = 'text-align:center;padding:14px 16px;background:#fef2f2;border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5';
+            expMsg.innerHTML = '<div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:4px">⏱️ Session expirée</div>' +
+              '<div style="font-size:12px;color:#6b7fa8">Votre session de 8h a expiré. Reconnectez-vous avec votre PIN.</div>';
+            pinSec.insertAdjacentElement('beforebegin', expMsg);
+          }
         }
       }
     } catch(e) {}
@@ -3949,6 +4080,11 @@ async function doLogin() {
   }
 
   initApp();
+  // ── Appliquer options souscrites ──
+  applyOptions();
+  updateOptionsTabVisibility();
+  // ── Onboarding nouvel établissement ──
+  setTimeout(showOnboardingIfNeeded, 800);
 }
 
 // ============================================================
@@ -3964,11 +4100,20 @@ let _sessionWarningShown = false;
 // ============================================================
 let _pollTimer = null;
 let _pollLastCongesCount = -1;
+let _lastActivity = Date.now();
+const POLL_INACTIVITY_LIMIT = 30 * 60 * 1000; // 30min sans activité = pause polling
+
+// Réinitialiser le timer d'activité sur toute interaction
+['click','keydown','mousemove','touchstart','scroll'].forEach(function(ev) {
+  document.addEventListener(ev, function() { _lastActivity = Date.now(); }, { passive: true });
+});
 
 function startPolling() {
   if (_pollTimer) clearInterval(_pollTimer);
   _pollTimer = setInterval(async function() {
     if (!DB.currentUser) { clearInterval(_pollTimer); return; }
+    // Pause si inactif depuis plus de 30min
+    if (Date.now() - _lastActivity > POLL_INACTIVITY_LIMIT) return;
     const etab = getEtab();
     if (!etab || !etab.id) return;
     try {
@@ -4060,6 +4205,377 @@ function resetSessionTimer() {
   if (_sessionStart) {
     _sessionStart = Date.now();
     _sessionWarningShown = false;
+  }
+}
+
+
+// ══════════════════════════════════════════════════════
+// MENTIONS LÉGALES / CGU
+// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// MESSAGERIE — côté cadre
+// ══════════════════════════════════════════════════════════════
+
+// ── Onglets page Notifications ──
+function notifTab(tab) {
+  ['notifs','messages'].forEach(function(t) {
+    var c = document.getElementById('notif-tab-' + t + '-content');
+    var b = document.getElementById('notif-tab-' + t);
+    if (c) c.style.display = t === tab ? 'block' : 'none';
+    if (b) {
+      b.style.color = t === tab ? 'var(--accent1)' : 'var(--text2)';
+      b.style.borderBottomColor = t === tab ? 'var(--accent1)' : 'transparent';
+      b.style.fontWeight = t === tab ? '700' : '600';
+    }
+  });
+  if (tab === 'messages') renderCadreMessages();
+}
+
+// ── Afficher les messages reçus côté cadre ──
+function renderCadreMessages() {
+  var etab = getEtab();
+  var el = document.getElementById('cadre-messages-list');
+  if (!el || !etab) return;
+
+  var currentLogin = DB.currentUser ? DB.currentUser.login : null;
+  var msgs = (etab.messagesRH || []).filter(function(m) {
+    // Afficher si destinataire direct OU si cadre sans filtrage spécialité
+    return !m.destLogin || m.destLogin === currentLogin || DB.currentUser.role === 'admin';
+  }).slice().reverse();
+
+  // Badge
+  var badge = document.getElementById('notif-msg-badge');
+  var nonLus = msgs.filter(function(m){ return !m.lu; }).length;
+  if (badge) {
+    badge.textContent = nonLus;
+    badge.style.display = nonLus > 0 ? 'inline' : 'none';
+  }
+
+  if (msgs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:40px;margin-bottom:8px">💬</div><div style="font-size:13px">Aucun message reçu</div></div>';
+    return;
+  }
+
+  el.innerHTML = msgs.map(function(m, idx) {
+    var dt = new Date(m.createdAt);
+    var dateLabel = dt.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    var hasReponse = m.reponse && m.reponse.corps;
+    var realIdx = (etab.messagesRH || []).findIndex(function(x){ return x.id === m.id; });
+    return '<div style="background:var(--bg2);border:1px solid ' + (m.lu ? 'var(--border)' : 'var(--accent1)') + ';border-radius:12px;padding:14px 16px;margin-bottom:12px' + (m.lu ? '' : ';box-shadow:0 0 0 1px var(--accent1)20') + '">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">' + esc(m.sujet) + (m.lu ? '' : ' <span style="background:var(--accent1);color:#fff;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;vertical-align:middle">NOUVEAU</span>') + '</div>' +
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px">De : <strong>' + esc(m.agentNom) + '</strong> · <span style="color:var(--accent1)">' + esc(m.agentSpec) + '</span> · ' + dateLabel + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px">' + esc(m.corps) + '</div>' +
+      (!hasReponse ?
+        '<div style="display:flex;flex-direction:column;gap:6px">' +
+          '<textarea id="rep-' + realIdx + '" rows="2" placeholder="Votre réponse…" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;outline:none;resize:none;box-sizing:border-box"></textarea>' +
+          '<button onclick="cadreRepondreMsg(' + realIdx + ')" class="btn btn-primary btn-sm" style="align-self:flex-end">↩️ Répondre</button>' +
+        '</div>'
+      :
+        '<div style="padding:8px 12px;background:rgba(56,217,169,0.08);border-radius:8px;border-left:2px solid var(--accent2)">' +
+          '<div style="font-size:10px;font-weight:700;color:var(--accent2);margin-bottom:3px">↩️ Vous avez répondu</div>' +
+          '<div style="font-size:12px;color:var(--text2)">' + esc(m.reponse.corps) + '</div>' +
+        '</div>'
+      ) +
+    '</div>';
+  }).join('');
+
+  // Marquer tous comme lus
+  var modified = false;
+  (etab.messagesRH || []).forEach(function(m) {
+    if (!m.lu && (!m.destLogin || m.destLogin === currentLogin || (DB.currentUser && DB.currentUser.role === 'admin'))) {
+      m.lu = true; modified = true;
+    }
+  });
+  if (modified) {
+    saveToStorage();
+    saveToSupabase().catch(function(){});
+  }
+}
+
+// ── Répondre à un message ──
+function cadreRepondreMsg(idx) {
+  var etab = getEtab();
+  if (!etab || !etab.messagesRH || !etab.messagesRH[idx]) return;
+  var msg = etab.messagesRH[idx];
+  var repEl = document.getElementById('rep-' + idx);
+  if (!repEl || !repEl.value.trim()) { showToast('Saisissez une réponse', 'warning'); return; }
+
+  msg.reponse = {
+    corps: repEl.value.trim(),
+    auteurLogin: DB.currentUser ? DB.currentUser.login : '',
+    auteurNom: DB.currentUser ? DB.currentUser.nom : 'Cadre',
+    createdAt: new Date().toISOString()
+  };
+  msg.lu = true;
+
+  saveToStorage();
+  saveToSupabase().then(function() {
+    showToast('Réponse envoyée ✓', 'success');
+    renderCadreMessages();
+    // Mettre à jour le badge dans la nav
+    updateNotifBadge();
+  }).catch(function() {
+    showToast('⚠️ Erreur sync — réponse sauvegardée localement', 'warning');
+    renderCadreMessages();
+  });
+}
+
+// ── Config routage messages — afficher les selects spécialité → cadre ──
+function renderMsgRouting() {
+  var etab = getEtab();
+  var el = document.getElementById('msg-routing-list');
+  if (!el || !etab) return;
+
+  var specs = etab.specialites || [];
+  var logins = (etab.logins || []).filter(function(l){ return l.login; });
+
+  if (specs.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Aucune spécialité configurée. Ajoutez-en dans la section Spécialités.</div>';
+    return;
+  }
+
+  el.innerHTML = specs.map(function(spec) {
+    // Trouver le cadre actuellement associé à cette spécialité
+    var current = logins.find(function(l) {
+      return l.specsResponsables && l.specsResponsables.includes(spec);
+    });
+    var currentLogin = current ? current.login : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)22">' +
+      '<span style="min-width:80px;font-size:13px;font-weight:600;color:var(--text)">' + esc(spec) + '</span>' +
+      '<select onchange="saveMsgRouting(\"' + spec + '\",this.value)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:12px;outline:none">' +
+        '<option value="">— Aucun (cadre par défaut) —</option>' +
+        logins.map(function(l) {
+          return '<option value="' + l.login + '"' + (l.login === currentLogin ? ' selected' : '') + '>' + esc(l.nom) + ' (' + esc(l.role) + ')</option>';
+        }).join('') +
+      '</select>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Sauvegarder l'association spécialité → cadre ──
+function saveMsgRouting(spec, loginCadre) {
+  var etab = getEtab();
+  if (!etab || !etab.logins) return;
+  // Retirer cette spécialité de tous les logins
+  etab.logins.forEach(function(l) {
+    if (l.specsResponsables) {
+      l.specsResponsables = l.specsResponsables.filter(function(s){ return s !== spec; });
+    }
+  });
+  // Ajouter au login sélectionné
+  if (loginCadre) {
+    var target = etab.logins.find(function(l){ return l.login === loginCadre; });
+    if (target) {
+      if (!target.specsResponsables) target.specsResponsables = [];
+      target.specsResponsables.push(spec);
+    }
+  }
+  saveToStorage();
+  saveToSupabase().catch(function(){});
+  showToast('Routage ' + spec + ' mis à jour ✓', 'success');
+}
+
+// ── Mettre à jour le badge messages dans la nav notifications ──
+function updateMsgBadge() {
+  var etab = getEtab();
+  if (!etab) return;
+  var currentLogin = DB.currentUser ? DB.currentUser.login : null;
+  var nonLus = (etab.messagesRH || []).filter(function(m) {
+    return !m.lu && (!m.destLogin || m.destLogin === currentLogin || (DB.currentUser && DB.currentUser.role === 'admin'));
+  }).length;
+  var badge = document.getElementById('notif-msg-badge');
+  if (badge) { badge.textContent = nonLus; badge.style.display = nonLus > 0 ? 'inline' : 'none'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SYSTÈME D'OPTIONS PAR ÉTABLISSEMENT
+// ══════════════════════════════════════════════════════════════
+
+const HORIZON_OPTIONS = [
+  { id: 'qr_agents',    label: '📱 QR Codes agents',      desc: 'Vue mobile agents, disponibilités, messagerie', defaultOn: true },
+  { id: 'vue_direction',label: '🏛️ Vue Direction',         desc: 'KPIs, comparatif M vs M-1, absentéisme 12 mois, export CSV', defaultOn: true },
+  { id: 'vacataires',   label: '👥 Module vacataires',     desc: 'Planning vacataires, agences intérim, alertes manque de personnel', defaultOn: true },
+  { id: 'notifications_push', label: '🔔 Notifications push', desc: 'Alertes temps réel sur mobile via VAPID', defaultOn: false },
+  { id: 'messagerie',   label: '💬 Messagerie interne',    desc: 'Messages agents → cadre avec routage par spécialité', defaultOn: false },
+  { id: 'astreintes',   label: '\uD83D\uDCDE Planning astreintes',   desc: 'Planning IDEC et directeurs d\u2019astreinte annuel', defaultOn: true },
+  { id: 'comptage_hs',  label: '⏱️ Comptage & HS',         desc: 'Comptage temps, heures supplémentaires, export RH', defaultOn: true },
+];
+
+// Vérifier si une option est active pour l'établissement courant
+function hasOption(optionId) {
+  var etab = getEtab();
+  if (!etab) return true; // Par défaut tout est actif
+  // Si options non configurées, tout est actif (rétrocompatibilité)
+  if (!etab.options) return true;
+  return etab.options[optionId] !== false;
+}
+
+// Vérifier si l'utilisateur courant est admin Horizon Studio
+function isHorizonAdmin() {
+  return DB.currentUser && DB.currentUser.login === 'admin' && DB.currentUser.role === 'admin';
+}
+
+// Afficher/masquer le tab options selon le rôle
+function updateOptionsTabVisibility() {
+  var btn = document.getElementById('config-tab-options-btn');
+  if (btn) btn.style.display = isHorizonAdmin() ? 'block' : 'none';
+}
+
+// Rendre le formulaire d'options
+function renderOptions() {
+  var el = document.getElementById('options-list');
+  if (!el) return;
+  var etab = getEtab();
+  if (!etab) return;
+  if (!etab.options) etab.options = {};
+
+  el.innerHTML = HORIZON_OPTIONS.map(function(opt) {
+    var active = etab.options[opt.id] !== false;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">' +
+      '<div style="flex:1">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text)">' + opt.label + '</div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:2px">' + opt.desc + '</div>' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;margin-left:16px">' +
+        '<span style="font-size:12px;color:' + (active ? 'var(--accent2)' : 'var(--text3)') + '">' + (active ? 'Actif' : 'Inactif') + '</span>' +
+        '<input type="checkbox" id="opt-' + opt.id + '" ' + (active ? 'checked' : '') +
+          ' style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent2)">' +
+      '</label>' +
+    '</div>';
+  }).join('');
+}
+
+function saveOptions() {
+  var etab = getEtab();
+  if (!etab) return;
+  if (!etab.options) etab.options = {};
+  HORIZON_OPTIONS.forEach(function(opt) {
+    var cb = document.getElementById('opt-' + opt.id);
+    if (cb) etab.options[opt.id] = cb.checked;
+  });
+  saveToStorage();
+  saveToSupabase().catch(function(){});
+  showToast('Options enregistrées ✓', 'success');
+  applyOptions();
+}
+
+// Appliquer les options : masquer/afficher les sections selon les options actives
+function applyOptions() {
+  var etab = getEtab();
+  if (!etab || !etab.options) return;
+
+  // QR Codes
+  var navQR = document.querySelector('[onclick="showPage(\'qr\')"]');
+  if (navQR) navQR.style.display = hasOption('qr_agents') ? '' : 'none';
+
+  // Vue Direction
+  var navDir = document.getElementById('nav-dir');
+  if (navDir) navDir.style.display = hasOption('vue_direction') ? '' : 'none';
+
+  // Vacataires
+  var navVac = document.querySelector('[onclick="showPage(\'vacataires\')"]');
+  if (navVac) navVac.style.display = hasOption('vacataires') ? '' : 'none';
+
+  // Astreintes
+  var navAstr = document.querySelector('[onclick="showPage(\'astreintes\')"]');
+  if (navAstr) navAstr.style.display = hasOption('astreintes') ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════════
+// VALIDATION MOT DE PASSE FORT (cadres)
+// ══════════════════════════════════════════════════════════════
+
+function validatePasswordStrength(pwd) {
+  var errors = [];
+  if (pwd.length < 12)           errors.push('12 caractères minimum');
+  if (!/[A-Z]/.test(pwd))        errors.push('1 majuscule minimum');
+  if (!/[0-9]/.test(pwd))        errors.push('1 chiffre minimum');
+  if (!/[^A-Za-z0-9]/.test(pwd)) errors.push('1 caractère spécial minimum (ex: @#$!%)');
+  return errors;
+}
+
+function showPasswordErrors(errors, containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  if (errors.length === 0) {
+    el.innerHTML = '<span style="color:var(--accent2);font-size:11px">✓ Mot de passe sécurisé</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--accent4);font-size:11px">⚠️ ' + errors.join(' · ') + '</span>';
+  }
+  el.style.display = 'block';
+}
+
+function openModalLegal() {
+  legalTab('mentions');
+  openModal('modal-legal');
+}
+
+function legalTab(tab) {
+  ['mentions','cgu','rgpd'].forEach(function(t) {
+    var content = document.getElementById('legal-content-' + t);
+    var btn = document.getElementById('legal-tab-' + t);
+    if (content) content.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = (t === tab) ? 'var(--accent1)' : 'var(--text2)';
+      btn.style.borderBottomColor = (t === tab) ? 'var(--accent1)' : 'transparent';
+      btn.style.fontWeight = (t === tab) ? '700' : '600';
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// ONBOARDING
+// ══════════════════════════════════════════════════════
+var _obStep = 1;
+var _obMaxSteps = 3;
+
+function showOnboardingIfNeeded() {
+  try {
+    var etabId = DB.currentEtab || ETAB_ID;
+    var key = 'horizon_onboarding_done_' + etabId;
+    if (!localStorage.getItem(key)) {
+      _obStep = 1;
+      obRender();
+      openModal('modal-onboarding');
+    }
+  } catch(e) {}
+}
+
+function closeOnboarding() {
+  try {
+    var noShow = document.getElementById('ob-no-show');
+    if (noShow && noShow.checked) {
+      var etabId = DB.currentEtab || ETAB_ID;
+      localStorage.setItem('horizon_onboarding_done_' + etabId, '1');
+    }
+  } catch(e) {}
+  closeModal('modal-onboarding');
+}
+
+function obNav(delta) {
+  _obStep = Math.max(1, Math.min(_obMaxSteps, _obStep + delta));
+  obRender();
+}
+
+function obRender() {
+  for (var i = 1; i <= _obMaxSteps; i++) {
+    var step = document.getElementById('ob-step-' + i);
+    if (step) step.style.display = (i === _obStep) ? 'block' : 'none';
+    var dot = document.getElementById('ob-dot-' + i);
+    if (dot) dot.style.background = (i === _obStep) ? 'var(--accent1)' : 'var(--border)';
+  }
+  var prev = document.getElementById('ob-btn-prev');
+  var next = document.getElementById('ob-btn-next');
+  if (prev) prev.style.visibility = _obStep > 1 ? 'visible' : 'hidden';
+  if (next) {
+    next.textContent = _obStep < _obMaxSteps ? 'Suivant →' : '✓ Commencer';
+    next.onclick = _obStep < _obMaxSteps
+      ? function() { obNav(1); }
+      : function() { closeOnboarding(); };
   }
 }
 
@@ -4269,6 +4785,7 @@ function showPage(page) {
     checkNouvellesDemandesConges();
   }
   if (page === 'direction') renderDirectionDashboard();
+  if (page === 'notifications') { updateMsgBadge(); updateMobileNotifBadge(); }
   if (page === 'notifications') { renderNotificationsRH(); marquerToutesLues(); }
   if (page === 'agents') { updateAgentSpecTabs(); renderAgents(); }
   if (page === 'vacataires') renderVacataires();
@@ -4463,6 +4980,8 @@ function updateMobileCongesBadge() {
   const nb = (etab.demandesConges||[]).filter(d => d.statut === 'en_attente').length;
   badge.textContent = nb;
   badge.style.display = nb > 0 ? 'block' : 'none';
+  // Aussi mettre à jour le badge notif
+  if (typeof updateMobileNotifBadge === 'function') updateMobileNotifBadge();
 }
 
 function mobileNav(page) {
@@ -4480,7 +4999,6 @@ function mobileNav(page) {
   // Pages spéciales
   if (page === 'conges') {
     showPage('dashboard');
-    // Scroll vers la section congés
     setTimeout(() => {
       const el = document.getElementById('dash-conges');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -4489,6 +5007,19 @@ function mobileNav(page) {
   }
 
   showPage(page);
+}
+
+function updateMobileNotifBadge() {
+  var etab = getEtab();
+  var badge = document.getElementById('mn-notif-badge');
+  if (!badge || !etab) return;
+  var nb = ((etab.notificationsRH||[]).filter(function(n){ return !n.lu; }).length)
+         + ((etab.messagesRH||[]).filter(function(m){
+              var u = DB.currentUser;
+              return !m.lu && (!m.destLogin || m.destLogin === (u && u.login) || (u && u.role === 'admin'));
+            }).length);
+  badge.textContent = nb;
+  badge.style.display = nb > 0 ? 'block' : 'none';
 }
 
 function closeMobileMore() {
@@ -4641,6 +5172,266 @@ function initDirectionSelects() {
   }
 }
 
+// ── Gestion onglets Vue Direction ──
+function dirShowTab(tab) {
+  ['mensuel','absenteisme'].forEach(function(t) {
+    var content = document.getElementById('dir-tab-' + t + '-content');
+    var btn = document.getElementById('dir-tab-' + t);
+    if (content) content.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = (t === tab) ? 'var(--accent1)' : 'var(--text2)';
+      btn.style.borderBottomColor = (t === tab) ? 'var(--accent1)' : 'transparent';
+      btn.style.fontWeight = (t === tab) ? '700' : '600';
+    }
+  });
+  if (tab === 'absenteisme') renderAbsenteisme12Mois();
+}
+
+// ── Calculer les stats d'un mois donné ──
+function calcStatsMois(annee, mois, etab) {
+  var planMonth = ((etab.planning[annee] || {})[mois]) || {};
+  var daysInMonth = new Date(annee, mois + 1, 0).getDate();
+  var agents = etab.agents.filter(function(a) { return a.actif; });
+  var codesWork = ['M','S','J','NU','N'];
+  var codesAbs  = ['MO','AM','EM','AT','GR'];
+  var codesCA   = ['CA','CF','RC','FO','CP'];
+
+  var totalJoursTrav = 0, totalJoursAbs = 0, totalJoursCA = 0, totalHS = 0;
+  var agentsAvecAbs = new Set(), agentsAvecHS = new Set();
+  var absByCode = {};
+
+  agents.forEach(function(ag) {
+    var agPlan = planMonth[ag.id] || {};
+    for (var d = 1; d <= daysInMonth; d++) {
+      var sh = agPlan[d] || '';
+      if (codesWork.includes(sh) || (sh.startsWith('HS') && sh.length > 2)) totalJoursTrav++;
+      if (codesAbs.includes(sh)) { totalJoursAbs++; agentsAvecAbs.add(ag.id); absByCode[sh] = (absByCode[sh]||0)+1; }
+      if (codesCA.includes(sh)) totalJoursCA++;
+    }
+    var hs = ((etab.heuresSup || {})[ag.id] || []).filter(function(e) {
+      var dd = new Date(e.date);
+      return dd.getFullYear() === annee && dd.getMonth() === mois;
+    }).reduce(function(s,e) { return s + (e.heures||0); }, 0);
+    if (hs > 0) { totalHS += hs; agentsAvecHS.add(ag.id); }
+  });
+
+  var theorique = agents.length * daysInMonth * 0.714;
+  var tauxCouv = theorique > 0 ? Math.min(100, Math.round(totalJoursTrav / theorique * 100)) : 0;
+  var tauxAbs = agents.length > 0 ? Math.round(agentsAvecAbs.size / agents.length * 100) : 0;
+
+  // Coût vacataires
+  var txH = etab.config.tauxHoraireVac || 18;
+  var coutVac = 0, nbVacJours = 0;
+  Object.entries(etab.affectationsVac || {}).forEach(function([dk, aff]) {
+    var parts = dk.split('-').map(Number);
+    if (parts[0] === annee && parts[1] - 1 === mois) {
+      Object.values(aff).forEach(function(a) {
+        if (a && a.shift) {
+          var hor = etab.horaires.find(function(h){ return h.code === a.shift; });
+          coutVac += (hor ? (hor.duree||10) : 10) * txH;
+          nbVacJours++;
+        }
+      });
+    }
+  });
+
+  return { totalJoursTrav, totalJoursAbs, totalJoursCA, totalHS, tauxCouv, tauxAbs,
+           agentsAvecAbs: agentsAvecAbs.size, agentsAvecHS: agentsAvecHS.size,
+           coutVac, nbVacJours, absByCode, agents: agents.length, daysInMonth };
+}
+
+// ── Comparatif M vs M-1 ──
+function renderComparatif(annee, mois, etab) {
+  var el = document.getElementById('dir-comparatif');
+  if (!el) return;
+
+  var prevMois = mois === 0 ? 11 : mois - 1;
+  var prevAnnee = mois === 0 ? annee - 1 : annee;
+  var curr = calcStatsMois(annee, mois, etab);
+  var prev = calcStatsMois(prevAnnee, prevMois, etab);
+  var moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var prevLabel = moisLabels[prevMois] + ' ' + prevAnnee;
+
+  function delta(curr, prev, higherIsBetter) {
+    if (prev === 0) return '';
+    var diff = curr - prev;
+    var pct = Math.round(Math.abs(diff) / prev * 100);
+    if (diff === 0) return '<span style="color:var(--text3);font-size:10px">= vs ' + prevLabel + '</span>';
+    var good = higherIsBetter ? diff > 0 : diff < 0;
+    var arrow = diff > 0 ? '↑' : '↓';
+    var color = good ? '#38d9a9' : '#f76f6f';
+    return '<span style="color:' + color + ';font-size:10px;font-weight:700">' + arrow + ' ' + pct + '% vs ' + prevLabel + '</span>';
+  }
+
+  var items = [
+    { label: 'Couverture', curr: curr.tauxCouv + '%', prev: prev.tauxCouv + '%', d: delta(curr.tauxCouv, prev.tauxCouv, true), color: '#4f8ef7' },
+    { label: 'Absentéisme', curr: curr.tauxAbs + '%', prev: prev.tauxAbs + '%', d: delta(curr.tauxAbs, prev.tauxAbs, false), color: '#f7a94f' },
+    { label: 'Jours absences', curr: curr.totalJoursAbs + 'j', prev: prev.totalJoursAbs + 'j', d: delta(curr.totalJoursAbs, prev.totalJoursAbs, false), color: '#f76f6f' },
+    { label: 'HS', curr: curr.totalHS + 'h', prev: prev.totalHS + 'h', d: delta(curr.totalHS, prev.totalHS, false), color: '#a07ee8' },
+    { label: 'Coût vacataires', curr: curr.coutVac.toLocaleString('fr-FR') + '€', prev: prev.coutVac.toLocaleString('fr-FR') + '€', d: delta(curr.coutVac, prev.coutVac, false), color: '#38d9a9' }
+  ];
+
+  el.innerHTML = items.map(function(item) {
+    return '<div style="flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + item.label + '</div>' +
+      '<div style="display:flex;align-items:baseline;gap:8px">' +
+        '<span style="font-size:20px;font-weight:900;color:' + item.color + '">' + item.curr + '</span>' +
+        '<span style="font-size:11px;color:var(--text3)">vs ' + item.prev + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px">' + item.d + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Absentéisme 12 mois glissants ──
+function renderAbsenteisme12Mois() {
+  var etab = getEtab();
+  if (!etab) return;
+  var moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var codesAbs = ['MO','AM','EM','AT','GR'];
+  var absColors = { MO:'#94a3b8', AM:'#fb923c', EM:'#f97316', AT:'#f59e0b', GR:'#6b7280' };
+  var now = new Date();
+  var mois12 = [];
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    mois12.push({ annee: d.getFullYear(), mois: d.getMonth() });
+  }
+
+  var stats = mois12.map(function(m) {
+    return Object.assign({ label: moisLabels[m.mois] + ' ' + m.annee, labelCourt: moisLabels[m.mois] }, calcStatsMois(m.annee, m.mois, etab));
+  });
+
+  // ── Graphique barres HTML ──
+  var maxAbs = Math.max.apply(null, stats.map(function(s){ return s.totalJoursAbs; })) || 1;
+  var chartEl = document.getElementById('dir-abs-12m-chart');
+  if (chartEl) {
+    chartEl.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding:0 4px">' +
+      stats.map(function(s) {
+        var h = Math.round((s.totalJoursAbs / maxAbs) * 80);
+        var col = s.tauxAbs > 10 ? '#f76f6f' : s.tauxAbs > 5 ? '#f7a94f' : '#38d9a9';
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
+          '<div style="font-size:9px;color:var(--text3);font-weight:600">' + (s.totalJoursAbs || '') + '</div>' +
+          '<div style="width:100%;background:' + col + ';border-radius:3px 3px 0 0;min-height:2px;height:' + h + 'px;transition:height 0.3s"></div>' +
+          '<div style="font-size:9px;color:var(--text3);writing-mode:vertical-rl;transform:rotate(180deg);height:36px;overflow:hidden">' + s.labelCourt + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--bg3);border-radius:8px">' +
+      '<span style="font-size:11px;color:#38d9a9">■ ≤5% absence</span>' +
+      '<span style="font-size:11px;color:#f7a94f">■ 5–10%</span>' +
+      '<span style="font-size:11px;color:#f76f6f">■ >10%</span>' +
+    '</div>';
+  }
+
+  // ── Tableau récap mensuel ──
+  var tableEl = document.getElementById('dir-abs-12m-table');
+  if (tableEl) {
+    var header = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:var(--bg3)">' +
+      '<th style="padding:8px;text-align:left;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border)">Mois</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Jours abs.</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Agents abs.</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Taux abs.</th>' +
+      codesAbs.map(function(c){ return '<th style="padding:8px;text-align:center;color:' + (absColors[c]||'#888') + ';border-bottom:1px solid var(--border)">' + c + '</th>'; }).join('') +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">HS (h)</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Couverture</th>' +
+      '</tr></thead><tbody>';
+
+    var rows = stats.map(function(s) {
+      var tauxColor = s.tauxAbs > 10 ? '#f76f6f' : s.tauxAbs > 5 ? '#f7a94f' : '#38d9a9';
+      return '<tr style="border-bottom:1px solid var(--border)22">' +
+        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + s.label + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:700;color:var(--text)">' + s.totalJoursAbs + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;color:var(--text2)">' + s.agentsAvecAbs + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:700;color:' + tauxColor + '">' + s.tauxAbs + '%</td>' +
+        codesAbs.map(function(c){ return '<td style="padding:7px 8px;text-align:center;color:' + (absColors[c]||'#888') + '">' + (s.absByCode[c]||0) + '</td>'; }).join('') +
+        '<td style="padding:7px 8px;text-align:center;color:var(--accent2);font-weight:600">' + (s.totalHS||0) + 'h</td>' +
+        '<td style="padding:7px 8px;text-align:center;color:var(--text2)">' + s.tauxCouv + '%</td>' +
+      '</tr>';
+    }).join('');
+
+    tableEl.innerHTML = header + rows + '</tbody></table>';
+  }
+
+  // ── Tableau par agent ──
+  var agentsEl = document.getElementById('dir-abs-12m-agents');
+  if (agentsEl) {
+    var agents = etab.agents.filter(function(a){ return a.actif; });
+    // Calculer total absences par agent sur 12 mois
+    var agentStats = agents.map(function(ag) {
+      var total = 0, byCode = {};
+      mois12.forEach(function(m) {
+        var agPlan = (((etab.planning[m.annee]||{})[m.mois])||{})[ag.id] || {};
+        var dim = new Date(m.annee, m.mois+1, 0).getDate();
+        for (var d = 1; d <= dim; d++) {
+          var sh = agPlan[d] || '';
+          if (codesAbs.includes(sh)) { total++; byCode[sh] = (byCode[sh]||0)+1; }
+        }
+      });
+      return { ag: ag, total: total, byCode: byCode };
+    }).filter(function(x){ return x.total > 0; })
+      .sort(function(a,b){ return b.total - a.total; });
+
+    if (agentStats.length === 0) {
+      agentsEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px">Aucune absence sur les 12 derniers mois ✓</div>';
+      return;
+    }
+
+    var agHeader = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:var(--bg3)">' +
+      '<th style="padding:8px;text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">Agent</th>' +
+      '<th style="padding:8px;text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">Spécialité</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Total 12m</th>' +
+      codesAbs.map(function(c){ return '<th style="padding:8px;text-align:center;color:' + (absColors[c]||'#888') + ';border-bottom:1px solid var(--border)">' + c + '</th>'; }).join('') +
+      '</tr></thead><tbody>';
+
+    var agRows = agentStats.map(function(x) {
+      return '<tr style="border-bottom:1px solid var(--border)22">' +
+        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + esc(x.ag.prenom||'') + ' ' + esc(x.ag.nom) + '</td>' +
+        '<td style="padding:7px 8px;color:var(--text2)">' + esc(x.ag.spec||'') + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:800;color:' + (x.total > 15 ? '#f76f6f' : x.total > 7 ? '#f7a94f' : 'var(--text)') + '">' + x.total + '</td>' +
+        codesAbs.map(function(c){ return '<td style="padding:7px 8px;text-align:center;color:' + (absColors[c]||'#888') + '">' + (x.byCode[c]||0) + '</td>'; }).join('') +
+      '</tr>';
+    }).join('');
+
+    agentsEl.innerHTML = agHeader + agRows + '</tbody></table>';
+  }
+}
+
+// ── Export CSV absentéisme ──
+function exportAbsenteismeCSV() {
+  var etab = getEtab();
+  if (!etab) return;
+  var moisLabels = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var codesAbs = ['MO','AM','EM','AT','GR'];
+  var now = new Date();
+  var mois12 = [];
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    mois12.push({ annee: d.getFullYear(), mois: d.getMonth() });
+  }
+  var stats = mois12.map(function(m) {
+    return Object.assign({ label: moisLabels[m.mois] + ' ' + m.annee }, calcStatsMois(m.annee, m.mois, etab));
+  });
+
+  var header = ['Mois','Jours absences','Agents absents','Taux absentéisme (%)'].concat(codesAbs).concat(['HS (h)','Couverture (%)','Coût vacataires (€)']).join(';');
+  var rows = stats.map(function(s) {
+    return [s.label, s.totalJoursAbs, s.agentsAvecAbs, s.tauxAbs]
+      .concat(codesAbs.map(function(c){ return s.absByCode[c]||0; }))
+      .concat([s.totalHS||0, s.tauxCouv, s.coutVac]).join(';');
+  });
+
+  var csv = '\uFEFF' + [header].concat(rows).join('\n'); // BOM pour Excel
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'absenteisme_' + etab.nom.replace(/\s/g,'_') + '_' + now.getFullYear() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Export CSV téléchargé ✓', 'success');
+}
+
 function renderDirectionDashboard() {
   const etab = getEtab();
   if (!etab) return;
@@ -4732,6 +5523,9 @@ function renderDirectionDashboard() {
       <div style="font-size:11px;color:var(--text2);margin-top:8px">${nbVacJours} affectation(s) · ${txHoraireVac}€/h</div>
     </div>
   `;
+
+  // ── Comparatif M vs M-1 ──
+  renderComparatif(annee, mois, etab);
 
   // ── Absentéisme détail ──
   const absEl = document.getElementById('dir-abs-detail');
@@ -8520,57 +9314,24 @@ function envoyerAlertePersonnel(mois, annee) {
   }, 1500);
 }
 
-// ── Côté QR : afficher les alertes actives pour cet agent ──
+// ── Côté QR : marquer les alertes comme vues (appelé à l'ouverture) ──
 function qrCheckAlertes(etab, agentId) {
   if (!etab || !etab.alertesPersonnel) return;
-  const maintenant = new Date();
-
-  // Filtrer les alertes actives (mois courant ou futur, non expirées > 30j)
-  const alertesAgent = etab.alertesPersonnel.filter(a => {
-    if (!a.destinataires.includes(agentId)) return false;
-    // Alerte valide si dans le mois concerné ou le mois précédent/suivant
-    const finValidite = new Date(a.annee, a.mois + 1, 15); // 15 du mois suivant
-    return maintenant < finValidite;
+  var maintenant = new Date();
+  var alertesAgent = etab.alertesPersonnel.filter(function(a) {
+    if (!a.destinataires || !a.destinataires.includes(agentId)) return false;
+    return maintenant < new Date(a.annee, a.mois + 1, 15);
   });
-
   if (alertesAgent.length === 0) return;
-
-  // Marquer comme vu
-  alertesAgent.forEach(a => {
-    if (!a.vues[agentId]) {
-      a.vues[agentId] = new Date().toISOString();
-    }
+  var modifie = false;
+  alertesAgent.forEach(function(a) {
+    if (!a.vues) a.vues = {};
+    if (!a.vues[agentId]) { a.vues[agentId] = new Date().toISOString(); modifie = true; }
   });
-  saveToStorage();
-  saveToSupabase().catch(() => {});
-
-  // Afficher le bandeau dans la vue QR
-  const bannerZone = document.getElementById('qr-alertes-zone');
-  if (!bannerZone) return;
-
-  const html = alertesAgent.map(a => {
-    const moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][a.mois];
-    const colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
-    const jours = (a.joursManquants || []).slice(0, 5);
-    return `<div style="background:rgba(247,111,111,0.12);border:1.5px solid rgba(247,111,111,0.4);border-radius:12px;padding:14px 16px;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:800;color:#f76f6f;margin-bottom:6px">🚨 Alerte remplacement — ${moisLabel} ${a.annee}</div>
-      <div style="font-size:12px;color:#e8ecf4;margin-bottom:10px;line-height:1.5">${esc(a.message)}</div>
-      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">Jours concernés :</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-        ${jours.map(j => {
-          const dt = new Date(j.date + 'T00:00:00');
-          const dl = dt.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
-          const badges = j.manq.map(m => `<span style="background:${colors[m.code]||'#888'}30;color:${colors[m.code]||'#888'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${m.code}</span>`).join('');
-          return `<div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:4px 8px;font-size:11px;color:#e8ecf4">${dl} ${badges}</div>`;
-        }).join('')}
-        ${a.joursManquants.length > 5 ? `<span style="font-size:10px;color:#6b7fa8">+${a.joursManquants.length-5} autre(s)</span>` : ''}
-      </div>
-      <div style="font-size:11px;color:#6b7fa8">Si vous êtes disponible, contactez votre cadre • Envoyé par ${esc(a.envoyeePar)}</div>
-    </div>`;
-  }).join('');
-
-  bannerZone.innerHTML = html;
-  bannerZone.style.display = 'block';
+  if (modifie) {
+    saveToStorage();
+    saveToSupabase().catch(function(){});
+  }
 }
 
 // Compter les alertes non vues (pour badge)
@@ -8587,20 +9348,27 @@ function countAlertesNonVues(etab, agentId) {
 // Suivi des "vues" dans la Vue Direction
 function renderAlertesSuivi() {
   const etab = getEtab();
-  if (!etab || !etab.alertesPersonnel || etab.alertesPersonnel.length === 0) return '';
-  const dernieres = etab.alertesPersonnel.slice(-5).reverse();
-  return dernieres.map(a => {
+  if (!etab || !etab.alertesPersonnel || etab.alertesPersonnel.length === 0) return '<div style="font-size:12px;color:var(--text3);padding:8px 0">Aucune alerte envoyée.</div>';
+  const toutes = [...etab.alertesPersonnel].reverse(); // toutes, plus récentes en premier
+  return toutes.map(a => {
     const nbVues = Object.keys(a.vues || {}).length;
     const reponses = Object.values(a.reponses || {});
     const nbDispo = reponses.filter(r => Object.values(r).some(v => v.disponible)).length;
     const nbNonDispo = reponses.filter(r => Object.values(r).some(v => !v.disponible)).length;
     const moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][a.mois];
-    return `<div style="padding:8px 0;border-bottom:1px solid var(--border)22">
-      <div style="font-size:12px;font-weight:600;color:var(--text)">📢 ${moisLabel} ${a.annee} — ${a.destinataires.length} destinataires</div>
+    const finValidite = new Date(a.annee, a.mois + 1, 15);
+    const expirée = new Date() >= finValidite;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)22">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:12px;font-weight:600;color:${expirée ? 'var(--text3)' : 'var(--text)'}">
+          📢 ${moisLabel} ${a.annee} — ${a.destinataires.length} dest. ${expirée ? '<span style="font-size:10px;color:var(--text3)">(expirée)</span>' : ''}
+        </div>
+        <button onclick="supprimerAlerte('${a.id}')" style="background:rgba(247,111,111,0.12);border:1px solid rgba(247,111,111,0.3);color:var(--accent4);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;flex-shrink:0">🗑️ Supprimer</button>
+      </div>
       <div style="display:flex;gap:12px;margin-top:4px;font-size:11px">
         <span style="color:var(--text3)">${nbVues} vue(s)</span>
         ${nbDispo>0?`<span style="color:var(--accent2);font-weight:700">✅ ${nbDispo} disponible(s)</span>`:''}
-        ${nbNonDispo>0?`<span style="color:var(--accent4)">❌ ${nbNonDispo} non disponible(s)</span>`:''}
+        ${nbNonDispo>0?`<span style="color:var(--accent4)">❌ ${nbNonDispo} non dispo</span>`:''}
       </div>
       ${nbDispo>0 ? `<div style="margin-top:6px;font-size:11px;color:var(--text2)">${
         Object.entries(a.reponses||{}).filter(([id,r])=>Object.values(r).some(v=>v.disponible)).map(([id,r])=>{
@@ -8610,6 +9378,19 @@ function renderAlertesSuivi() {
       }</div>` : ''}
     </div>`;
   }).join('');
+}
+
+function supprimerAlerte(alerteId) {
+  const etab = getEtab();
+  if (!etab || !etab.alertesPersonnel) return;
+  if (!confirm('Supprimer cette alerte ? Elle disparaîtra pour tous les agents.')) return;
+  etab.alertesPersonnel = etab.alertesPersonnel.filter(a => a.id !== alerteId);
+  saveToStorage();
+  saveToSupabase().catch(e => console.warn('Sync suppression alerte:', e));
+  // Rafraîchir le suivi
+  const suiviEl = document.getElementById('dir-alertes-suivi');
+  if (suiviEl) suiviEl.innerHTML = renderAlertesSuivi();
+  showToast('Alerte supprimée ✓', 'success');
 }
 
 function renderQRPage() {
@@ -10037,114 +10818,107 @@ function qrRenderPostesAPourvoir(etab, agent) {
   var zone = document.getElementById('qr-postes-pourvoir');
   if (!zone) return;
 
+  var today = new Date();
+
   // Trouver les alertes actives pour cet agent
   var alertes = (etab.alertesPersonnel || []).filter(function(a) {
-    if (!a.destinataires.includes(agent.id)) return false;
+    if (!a.destinataires || !a.destinataires.includes(agent.id)) return false;
     var fin = new Date(a.annee, a.mois + 1, 15);
-    return new Date() < fin;
+    return today < fin;
   });
 
-  if (alertes.length === 0) { zone.style.display = 'none'; return; }
+  // Dédupliquer par date+code : une alerte peut avoir été envoyée plusieurs fois
+  // On collecte les combinaisons uniques date+code à afficher
+  var seen = {}; // clé: "YYYY-MM-DD_CODE"
+  var postes = []; // [{alerte, j, m}] dédupliqués
+  alertes.forEach(function(alerte) {
+    (alerte.joursManquants || []).forEach(function(j) {
+      var dt = new Date(j.date + 'T00:00:00');
+      if (dt < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return;
+      (j.manq || []).forEach(function(m) {
+        var key = j.date + '_' + m.code;
+        if (!seen[key]) {
+          seen[key] = true;
+          postes.push({ alerte: alerte, j: j, m: m, dt: dt, dk: j.date });
+        }
+      });
+    });
+  });
+
+  if (postes.length === 0) { zone.style.display = 'none'; zone.innerHTML = ''; return; }
 
   zone.style.display = 'block';
-  var today = new Date();
   var colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
-
-  // Secteur préféré de l'agent
   var secteurAgent = agent.secteurFixe || getSecteurDuMois(agent, today.getFullYear(), today.getMonth(), etab);
   var secteursExclus = agent.exclusSecteurs || [];
 
-  var html = '<div style="font-size:11px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚨 Postes à pourvoir — cliquez pour vous proposer</div>';
+  var html = '<div style="font-size:11px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚨 ' + postes.length + ' poste(s) à pourvoir — répondez ci-dessous</div>';
 
-  alertes.forEach(function(alerte) {
-    var moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][alerte.mois];
-    var jours = (alerte.joursManquants || []).filter(function(j) {
-      // Ne montrer que les jours futurs ou aujourd'hui
-      var dt = new Date(j.date + 'T00:00:00');
-      return dt >= new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    });
-    if (jours.length === 0) return;
+  // Trier par date
+  postes.sort(function(a, b) { return a.dk < b.dk ? -1 : a.dk > b.dk ? 1 : 0; });
 
-    html += '<div style="font-size:11px;font-weight:600;color:#8892aa;margin-bottom:6px">' + moisLabel + ' ' + alerte.annee + '</div>';
+  postes.forEach(function(p) {
+    var alerte = p.alerte, j = p.j, m = p.m, dt = p.dt, dk = p.dk;
+    var dl = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+    var col = colors[m.code] || '#888';
+    var hor = etab.horaires.find(function(h){ return h.code === m.code; });
+    var horaire = hor ? (hor.debut && hor.fin ? hor.debut + '–' + hor.fin : '') : '';
+    var duree = hor ? hor.duree : 10;
 
-    jours.forEach(function(j) {
-      var dt = new Date(j.date + 'T00:00:00');
-      var dl = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-      var dk = j.date;
+    // Secteur prévu ce jour
+    var secteurJour = getSecteurDuJour ? getSecteurDuJour(agent, dt.getFullYear(), dt.getMonth(), dt.getDate(), etab) : secteurAgent;
+    var sectObj = etab.secteurs.find(function(s){ return s.id === secteurJour; });
+    var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
+    var isExclu = secteursExclus.includes(secteurJour);
 
-      // Vérifier si l'agent est déjà affecté ce jour
-      var dejaAff = ((etab.affectationsVac || {})[dk] || {})[agent.id];
-      if (dejaAff) return;
+    // Statut planning
+    var agentPlanJour = ((etab.planning[dt.getFullYear()] || {})[dt.getMonth()] || {})[agent.id] || {};
+    var shiftCeJour = agentPlanJour[dt.getDate()] || '';
+    var travailCeJour = ['M','S','J','NU','N','FO'].includes(shiftCeJour) || (shiftCeJour.startsWith('HS') && shiftCeJour.length > 2);
+    var absenceCeJour = ['MO','EM','AT','GR','AM','CP'].includes(shiftCeJour);
+    var dejaAff = ((etab.affectationsVac || {})[dk] || {})[agent.id];
+    var dejaRepondu = alerte.reponses && alerte.reponses[agent.id] && alerte.reponses[agent.id][dk + '_' + m.code];
 
-      j.manq.forEach(function(m) {
-        var col = colors[m.code] || '#888';
-        var hor = etab.horaires.find(function(h){ return h.code === m.code; });
-        var horaire = hor ? (hor.debut && hor.fin ? hor.debut + '–' + hor.fin : '') : '';
-        var duree = hor ? hor.duree : 10;
+    var statusMsg = '', btnDisabled = false;
+    if (dejaAff) { statusMsg = '✅ Déjà affecté(e) ce jour'; btnDisabled = true; }
+    else if (travailCeJour) { statusMsg = '🔵 Déjà planifié(e) (' + shiftCeJour + ')'; btnDisabled = true; }
+    else if (absenceCeJour) { statusMsg = '⚠️ Absence ce jour (' + shiftCeJour + ')'; btnDisabled = true; }
+    else if (dejaRepondu) {
+      statusMsg = dejaRepondu.disponible ? '✅ Vous vous êtes proposé(e)' : '❌ Indisponible (répondu)';
+      btnDisabled = true;
+    }
 
-        // Secteur prévu ce jour (si rotation)
-        var secteurJour = getSecteurDuJour ? getSecteurDuJour(agent, dt.getFullYear(), dt.getMonth(), dt.getDate(), etab) : secteurAgent;
-        var sectObj = etab.secteurs.find(function(s){ return s.id === secteurJour; });
-        var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
-        var isExclu = secteursExclus.includes(secteurJour);
+    var disabledStyle = btnDisabled ? 'opacity:0.4;cursor:not-allowed;' : 'cursor:pointer;';
+    var bgColor = travailCeJour ? 'rgba(79,142,247,0.06)' : absenceCeJour ? 'rgba(247,169,79,0.06)' : 'rgba(247,111,111,0.08)';
+    var bdColor = travailCeJour ? 'rgba(79,142,247,0.25)' : absenceCeJour ? 'rgba(247,169,79,0.25)' : 'rgba(247,111,111,0.25)';
 
-        // ── Vérifier si l'agent travaille déjà ce jour ──
-        var agentPlanJour = ((etab.planning[dt.getFullYear()] || {})[dt.getMonth()] || {})[agent.id] || {};
-        var shiftCeJour = agentPlanJour[dt.getDate()] || '';
-        var codesWork = ['M','S','J','NU','N','FO'];
-        var codesAbs  = ['MO','EM','AT','GR','AM','CP'];
-        var travailCeJour = codesWork.includes(shiftCeJour) || (shiftCeJour.startsWith('HS') && shiftCeJour.length > 2);
-        var absenceCeJour = codesAbs.includes(shiftCeJour);
-        var dejaRepondu   = alerte.reponses && alerte.reponses[agent.id] && alerte.reponses[agent.id][dk + '_' + m.code];
-
-        // Message de statut
-        var statusMsg = '';
-        var btnDisabled = false;
-        if (travailCeJour) {
-          statusMsg = '🔵 Vous travaillez déjà ce jour (' + shiftCeJour + ')';
-          btnDisabled = true;
-        } else if (absenceCeJour) {
-          statusMsg = '⚠️ Absence enregistrée ce jour (' + shiftCeJour + ')';
-          btnDisabled = true;
-        } else if (dejaRepondu) {
-          var rep = dejaRepondu;
-          statusMsg = rep.disponible ? '✅ Vous vous êtes proposé(e)' : '❌ Vous avez indiqué ne pas être disponible';
-          btnDisabled = true;
-        }
-
-        var disabledStyle = btnDisabled ? 'opacity:0.4;cursor:not-allowed;' : 'cursor:pointer;';
-
-        html += '<div style="background:' + (travailCeJour ? 'rgba(79,142,247,0.06)' : absenceCeJour ? 'rgba(247,169,79,0.06)' : 'rgba(247,111,111,0.08)') + ';' +
-          'border:1.5px solid ' + (travailCeJour ? 'rgba(79,142,247,0.25)' : absenceCeJour ? 'rgba(247,169,79,0.25)' : 'rgba(247,111,111,0.25)') + ';' +
-          'border-radius:10px;padding:12px;margin-bottom:8px">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-            '<div>' +
-              '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
-              '<div style="font-size:11px;color:#8892aa;margin-top:2px">' +
-                '<span style="background:' + col + '20;color:' + col + ';padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace">' + m.code + '</span>' +
-                (horaire ? ' · ' + horaire : '') +
-                (duree ? ' · ' + duree + 'h' : '') +
-              '</div>' +
-            '</div>' +
-            (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
+    html += '<div style="background:' + bgColor + ';border:1.5px solid ' + bdColor + ';border-radius:10px;padding:12px;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
+          '<div style="font-size:11px;color:#8892aa;margin-top:2px">' +
+            '<span style="background:' + col + '20;color:' + col + ';padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace">' + m.code + '</span>' +
+            (horaire ? ' · ' + horaire : '') +
+            (duree ? ' · ' + duree + 'h' : '') +
           '</div>' +
-          (statusMsg ? '<div style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px;margin-bottom:8px">' + statusMsg + '</div>' : '') +
-          (isExclu && !btnDisabled ? '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Ce secteur figure dans vos exclusions — vous pouvez quand même vous proposer.</div>' : '') +
-          (btnDisabled ? '' :
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, true)" ' +
-                'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;' + disabledStyle + 'font-family:inherit">' +
-                '✅ Je suis disponible' +
-              '</button>' +
-              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, false)" ' +
-                'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;' + disabledStyle + 'font-family:inherit">' +
-                '❌ Pas disponible' +
-              '</button>' +
-            '</div>'
-          ) +
-        '</div>';
-      });
-    });
+        '</div>' +
+        (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
+      '</div>' +
+      (statusMsg ? '<div style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px;margin-bottom:8px">' + statusMsg + '</div>' : '') +
+      (isExclu && !btnDisabled ? '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Secteur hors rotation — vous pouvez quand même vous proposer.</div>' : '') +
+      (btnDisabled ? '' :
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<button onclick="qrSeProposer(\"' + alerte.id + '\",\"' + dk + '\",\"' + m.code + '\",true)" ' +
+            'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">' +
+            '✅ Je suis disponible' +
+          '</button>' +
+          '<button onclick="qrSeProposer(\"' + alerte.id + '\",\"' + dk + '\",\"' + m.code + '\",false)" ' +
+            'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">' +
+            '❌ Pas disponible' +
+          '</button>' +
+        '</div>'
+      ) +
+    '</div>';
   });
 
   zone.innerHTML = html;
@@ -10304,23 +11078,174 @@ function qrRenderDispos(etab, agent) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// MESSAGERIE QR — agent → cadre (routage par spécialité)
+// ══════════════════════════════════════════════════════════════
+
+// ── Trouver le cadre destinataire selon la spécialité de l'agent ──
+function qrGetDestCadre(etab, agent) {
+  if (!etab || !agent) return null;
+  var spec = agent.spec || '';
+  // 1. Chercher un login avec specResponsable correspondant
+  var logins = etab.logins || [];
+  var match = logins.find(function(l) {
+    return l.specsResponsables && l.specsResponsables.includes(spec);
+  });
+  if (match) return match;
+  // 2. Fallback : premier IDEC / cadre trouvé
+  var idec = logins.find(function(l) {
+    return l.role === 'IDEC' || l.role === 'cadre' || l.role === 'admin';
+  });
+  return idec || null;
+}
+
+// ── Afficher le nom du cadre destinataire ──
+function qrUpdateDestInfo() {
+  var etab = DB.etablissements[_qrEtabId];
+  var agent = etab && etab.agents.find(function(a){ return a.id === _qrAgentId; });
+  var infoEl = document.getElementById('qr-msg-destinataire-info');
+  if (!infoEl) return;
+  if (!etab || !agent) return;
+  var cadre = qrGetDestCadre(etab, agent);
+  if (cadre) {
+    infoEl.textContent = '📨 Envoyé à : ' + cadre.nom + (cadre.titre ? ' (' + cadre.titre + ')' : '') + ' — ' + (agent.spec || '');
+  } else {
+    infoEl.textContent = '\uD83D\uDCE8 Envoy\u00e9 au cadre de l\'\u00e9tablissement';
+  }
+}
+
+// ── Envoyer un message depuis la vue agent ──
+function qrEnvoyerMessage() {
+  var etab = DB.etablissements[_qrEtabId];
+  if (!etab || !_qrAgentId) return;
+  var agent = etab.agents.find(function(a){ return a.id === _qrAgentId; })
+           || (etab.vacataires||[]).find(function(v){ return v.id === _qrAgentId; });
+  if (!agent) return;
+
+  var sujet = (document.getElementById('qr-msg-sujet') || {}).value || '';
+  var corps = (document.getElementById('qr-msg-corps') || {}).value || '';
+  var st = document.getElementById('qr-msg-status');
+
+  if (!sujet.trim()) {
+    if (st) { st.style.color='#f76f6f'; st.textContent='Veuillez saisir un objet'; st.style.display='block'; }
+    return;
+  }
+  if (!corps.trim()) {
+    if (st) { st.style.color='#f76f6f'; st.textContent='Veuillez saisir un message'; st.style.display='block'; }
+    return;
+  }
+
+  var cadre = qrGetDestCadre(etab, agent);
+  var sendBtn = document.querySelector('[onclick="qrEnvoyerMessage()"]');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.6'; }
+  if (st) { st.style.color='#38bdf8'; st.textContent='⏳ Envoi en cours…'; st.style.display='block'; }
+
+  var msg = {
+    id: 'MSG_' + Date.now(),
+    type: 'message_agent',
+    agentId: _qrAgentId,
+    agentNom: (agent.prenom || '') + ' ' + agent.nom,
+    agentSpec: agent.spec || '',
+    destLogin: cadre ? cadre.login : null,
+    destNom: cadre ? cadre.nom : 'Cadre',
+    sujet: sujet.trim(),
+    corps: corps.trim(),
+    lu: false,
+    reponse: null,
+    createdAt: new Date().toISOString()
+  };
+
+  // Sauvegarder dans Supabase (merge + upsert)
+  supaLoadEtab(_qrEtabId).then(function(fresh) {
+    var data = fresh || etab;
+    if (!data.messagesRH) data.messagesRH = [];
+    data.messagesRH.push(msg);
+    // Notification cadre
+    if (!data.notificationsRH) data.notificationsRH = [];
+    data.notificationsRH.push({
+      id: 'NOTIF_MSG_' + Date.now(),
+      type: 'message_agent',
+      agentId: _qrAgentId,
+      agentNom: msg.agentNom,
+      agentSpec: msg.agentSpec,
+      destLogin: msg.destLogin,
+      sujet: msg.sujet,
+      msgId: msg.id,
+      lu: false,
+      createdAt: msg.createdAt
+    });
+    DB.etablissements[_qrEtabId] = data;
+    return supa.from('horizon_data').upsert({
+      etab_id: _qrEtabId, data: data, updated_at: new Date().toISOString()
+    }, { onConflict: 'etab_id' });
+  }).then(function() {
+    if (st) { st.style.color='#38d9a9'; st.textContent='✅ Message envoyé !'; st.style.display='block'; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+    document.getElementById('qr-msg-sujet').value = '';
+    document.getElementById('qr-msg-corps').value = '';
+    setTimeout(function(){ qrRenderMessages(); }, 300);
+    setTimeout(function(){ if(st) st.style.display='none'; }, 3000);
+  }).catch(function() {
+    if (st) { st.style.color='#f76f6f'; st.textContent='❌ Erreur réseau — réessayez'; st.style.display='block'; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+  });
+}
+
+// ── Afficher l'historique des messages de l'agent ──
+function qrRenderMessages() {
+  var etab = DB.etablissements[_qrEtabId];
+  var el = document.getElementById('qr-msg-list');
+  if (!el || !etab) return;
+  var msgs = (etab.messagesRH || []).filter(function(m) {
+    return m.agentId === _qrAgentId;
+  }).slice().reverse();
+
+  if (msgs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#475569">' +
+      '<div style="font-size:32px;margin-bottom:8px">💬</div>' +
+      '<div style="font-size:13px;color:#6b7fa8">Aucun message envoyé</div>' +
+    '</div>';
+    return;
+  }
+
+  el.innerHTML = msgs.map(function(m) {
+    var dt = new Date(m.createdAt);
+    var dateLabel = dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' ' + dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    var hasReponse = m.reponse && m.reponse.corps;
+    return '<div style="background:#161b27;border-radius:12px;padding:12px 14px;margin-bottom:10px;border:1px solid ' + (hasReponse ? 'rgba(56,217,169,0.3)' : '#1e3050') + '">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+        '<div style="font-size:13px;font-weight:700;color:#e8ecf4">' + esc(m.sujet) + '</div>' +
+        '<div style="font-size:10px;color:#6b7fa8">' + dateLabel + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#8892aa;margin-bottom:6px">À : ' + esc(m.destNom) + '</div>' +
+      '<div style="font-size:12px;color:#94a3b8;line-height:1.5;background:rgba(255,255,255,0.03);border-radius:6px;padding:8px 10px">' + esc(m.corps) + '</div>' +
+      (hasReponse ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(56,217,169,0.08);border-radius:8px;border-left:2px solid #38d9a9">' +
+        '<div style="font-size:10px;font-weight:700;color:#38d9a9;margin-bottom:4px">↩️ Réponse de ' + esc(m.reponse.auteurNom || 'Cadre') + '</div>' +
+        '<div style="font-size:12px;color:#e8ecf4;line-height:1.5">' + esc(m.reponse.corps) + '</div>' +
+      '</div>' : '<div style="margin-top:8px;font-size:11px;color:#475569;font-style:italic">En attente de réponse…</div>') +
+    '</div>';
+  }).join('');
+}
+
 function qrShowTab(tab) {
   // Tous les contenus
   var contents = {
-    alertes : document.getElementById('qr-tab-alertes-content'),
-    planning: document.getElementById('qr-tab-planning-content'),
-    dispos  : document.getElementById('qr-tab-dispos-content'),
-    conges  : document.getElementById('qr-tab-conges-content')
+    alertes  : document.getElementById('qr-tab-alertes-content'),
+    planning : document.getElementById('qr-tab-planning-content'),
+    dispos   : document.getElementById('qr-tab-dispos-content'),
+    conges   : document.getElementById('qr-tab-conges-content'),
+    messages : document.getElementById('qr-tab-messages-content')
   };
   // Tous les boutons nav
   var btns = {
-    alertes : document.getElementById('qr-tab-alertes'),
-    planning: document.getElementById('qr-tab-planning'),
-    dispos  : document.getElementById('qr-tab-dispos'),
-    conges  : document.getElementById('qr-tab-conges')
+    alertes  : document.getElementById('qr-tab-alertes'),
+    planning : document.getElementById('qr-tab-planning'),
+    dispos   : document.getElementById('qr-tab-dispos'),
+    conges   : document.getElementById('qr-tab-conges'),
+    messages : document.getElementById('qr-tab-messages')
   };
   // Couleurs actives par onglet
-  var colors = { alertes:'#ef4444', planning:'#38bdf8', dispos:'#38bdf8', conges:'#f59e0b' };
+  var colors = { alertes:'#ef4444', planning:'#38bdf8', dispos:'#38bdf8', conges:'#f59e0b', messages:'#a78bfa' };
 
   // Tout masquer / reset
   Object.keys(contents).forEach(function(k){
@@ -10355,6 +11280,13 @@ function qrShowTab(tab) {
   } else if (tab === 'conges') {
     qrRenderCongeList();
     qrInitDateSelects();
+  } else if (tab === 'messages') {
+    qrRenderMessages();
+    // Effacer badge
+    var badge = document.getElementById('qr-msg-badge');
+    if (badge) badge.style.display = 'none';
+    // Afficher cadre destinataire
+    qrUpdateDestInfo();
   }
 }
 
@@ -10679,6 +11611,8 @@ function saveQRDispos() {
 // CONFIG
 // ============================================================
 function switchConfigTab(tab) {
+  if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
+  if (tab === 'options') { renderOptions(); }
   ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
@@ -11578,6 +12512,12 @@ async function addLogin() {
   const role  = document.getElementById('new-login-role')?.value || 'cadre';
   const titre = document.getElementById('new-login-titre')?.value.trim() || '';
   if (!nom || !login || !pwd) { showToast('Remplissez tous les champs', 'error'); return; }
+  // Validation mot de passe fort
+  const pwdErrors = validatePasswordStrength(pwd);
+  if (pwdErrors.length > 0) {
+    showToast('Mot de passe insuffisant : ' + pwdErrors.join(', '), 'error');
+    return;
+  }
   const etab = getEtab();
   if (etab.logins.find(l => l.login === login)) { showToast('Identifiant déjà utilisé', 'error'); return; }
   const pwdHash = await hashPwd(pwd);
@@ -13577,6 +14517,11 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
       <span>Congés</span>
       <span class="mobile-nav-badge" id="mn-conges-badge" style="display:none">0</span>
     </button>
+    <button class="mobile-nav-item" onclick="mobileNav('notifications')" id="mn-notifications" style="position:relative">
+      <span class="icon">🔔</span>
+      <span>Notifs</span>
+      <span class="mobile-nav-badge" id="mn-notif-badge" style="display:none">0</span>
+    </button>
     <button class="mobile-nav-item" onclick="mobileNav('more')" id="mn-more">
       <span class="icon">⋯</span>
       <span>Plus</span>
@@ -13612,6 +14557,147 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
       </button>
     </div>
   </div>
+
+
+<!-- ═══════════ MODAL CGU / MENTIONS LÉGALES ═══════════ -->
+<div class="modal-backdrop" id="modal-legal" style="display:none;z-index:9999;overflow-y:auto;align-items:flex-start;padding:20px 0">
+  <div class="modal" style="max-width:720px;width:95%;margin:auto;max-height:90vh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--bg2);z-index:1;border-bottom:1px solid var(--border)">
+      <span class="modal-title">⚖️ Mentions légales &amp; CGU — Horizon Planning</span>
+      <button class="modal-close" onclick="closeModal('modal-legal')">✕</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 20px;background:var(--bg2);position:sticky;top:57px;z-index:1">
+      <button onclick="legalTab('mentions')" id="legal-tab-mentions" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Mentions légales</button>
+      <button onclick="legalTab('cgu')" id="legal-tab-cgu" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">CGU</button>
+      <button onclick="legalTab('rgpd')" id="legal-tab-rgpd" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">RGPD &amp; Données</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div id="legal-content-mentions">
+        <h3 style="color:var(--accent1);margin-top:0">Éditeur du logiciel</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7"><strong>Horizon Studio</strong><br>Logiciel SaaS de planification du personnel de santé<br>Site : <a href="https://horizon-planning.fr" target="_blank" style="color:var(--accent1)">horizon-planning.fr</a><br>Contact : <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></p>
+        <h3 style="color:var(--accent1)">Hébergement</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7"><strong>Vercel Inc.</strong> — 340 Pine Street, Suite 1501, San Francisco, CA 94104, USA<br><strong>Supabase Inc.</strong> — données stockées en région Europe West (eu-west). Les données sont hébergées sur des serveurs situés dans l'Union Européenne.</p>
+        <h3 style="color:var(--accent1)">Propriété intellectuelle</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">L'ensemble du logiciel Horizon Planning (code source, interface, algorithmes de planification, design) est la propriété exclusive d'Horizon Studio et est protégé par le droit d'auteur (CPI, art. L111-1 et suivants). Toute reproduction ou exploitation commerciale sans autorisation écrite préalable est strictement interdite.</p>
+        <h3 style="color:var(--accent1)">Responsabilité</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Horizon Studio s'efforce d'assurer la disponibilité et la fiabilité du service. La responsabilité d'Horizon Studio ne saurait être engagée en cas d'interruption de service, de perte de données résultant d'une mauvaise utilisation, ou de force majeure. Il appartient à chaque établissement de s'assurer de la conformité de son utilisation avec la réglementation applicable.</p>
+      </div>
+      <div id="legal-content-cgu" style="display:none">
+        <h3 style="color:var(--accent1);margin-top:0">Conditions Générales d'Utilisation</h3>
+        <p style="font-size:12px;color:var(--text2);font-style:italic">Dernière mise à jour : juin 2026</p>
+        <h4 style="color:var(--text)">1. Objet</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Les présentes CGU régissent l'accès et l'utilisation du logiciel Horizon Planning, accessible via l'URL fournie par Horizon Studio à chaque établissement client.</p>
+        <h4 style="color:var(--text)">2. Accès au service</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">L'accès est réservé aux établissements de santé ayant souscrit un abonnement. Chaque établissement est responsable de la confidentialité de ses identifiants. L'accès agent via QR code est réservé aux agents de l'établissement.</p>
+        <h4 style="color:var(--text)">3. Données</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Les données saisies restent la propriété exclusive de l'établissement client. Horizon Studio n'accède pas aux données clients sauf intervention technique expressément sollicitée.</p>
+        <h4 style="color:var(--text)">4. Disponibilité</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Horizon Studio vise une disponibilité de 99,5% sur base annuelle. Les maintenances planifiées sont notifiées 48h à l'avance.</p>
+        <h4 style="color:var(--text)">5. Résiliation</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Préavis d'un mois. Les données de l'établissement sont transmises sous format exportable dans un délai de 30 jours après résiliation.</p>
+        <h4 style="color:var(--text)">6. Droit applicable</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Droit français. En cas de litige, recherche d'une solution amiable préalablement à tout recours judiciaire.</p>
+      </div>
+      <div id="legal-content-rgpd" style="display:none">
+        <h3 style="color:var(--accent1);margin-top:0">Protection des données personnelles</h3>
+        <p style="font-size:12px;color:var(--text2);font-style:italic">Conformément au Règlement (UE) 2016/679 du 27 avril 2016</p>
+        <h4 style="color:var(--text)">Responsable du traitement</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Chaque établissement client est responsable du traitement des données personnelles de ses agents. Horizon Studio agit en qualité de <strong>sous-traitant</strong> au sens de l'article 28 du RGPD.</p>
+        <h4 style="color:var(--text)">Données traitées</h4>
+        <ul style="font-size:13px;color:var(--text);line-height:1.8;padding-left:20px">
+          <li>Identité des agents (nom, prénom, spécialité, numéro de poste)</li>
+          <li>Données de planning (horaires, présences, absences, congés)</li>
+          <li>Données de connexion (identifiants hachés SHA-256, horodatage de sessions)</li>
+          <li>Disponibilités déclarées et demandes de congés</li>
+        </ul>
+        <h4 style="color:var(--text)">Base légale</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Exécution du contrat de travail (art. 6.1.b RGPD) et intérêt légitime de l'établissement (art. 6.1.f RGPD).</p>
+        <h4 style="color:var(--text)">Durée de conservation</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Données conservées pendant la durée de l'abonnement, puis supprimées dans un délai de 90 jours après résiliation.</p>
+        <h4 style="color:var(--text)">Droits des personnes</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Droit d'accès, rectification, effacement, limitation et portabilité. Ces droits s'exercent auprès du cadre ou à : <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></p>
+        <h4 style="color:var(--text)">Sécurité</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">HTTPS (TLS 1.3), hachage SHA-256, accès par rôle, hébergement Europe (Supabase EU West), sauvegardes automatiques.</p>
+        <h4 style="color:var(--text)">Sous-traitants</h4>
+        <ul style="font-size:13px;color:var(--text);line-height:1.8;padding-left:20px">
+          <li><strong>Supabase Inc.</strong> — base de données (serveurs UE)</li>
+          <li><strong>Vercel Inc.</strong> — hébergement applicatif</li>
+        </ul>
+        <div style="margin-top:16px;padding:12px 16px;background:rgba(79,142,247,0.08);border-radius:8px;border-left:3px solid var(--accent1)">
+          <p style="font-size:12px;color:var(--text2);margin:0;line-height:1.6">Contact RGPD : <strong>contact@horizon-planning.fr</strong> — Réclamation possible auprès de la <strong>CNIL</strong> (cnil.fr)</p>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;background:var(--bg2);position:sticky;bottom:0">
+      <button class="btn btn-primary btn-sm" onclick="closeModal('modal-legal')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ONBOARDING ═══════════ -->
+<div class="modal-backdrop" id="modal-onboarding" style="display:none;z-index:9998">
+  <div class="modal" style="max-width:560px;width:95%">
+    <div class="modal-header">
+      <span class="modal-title">🚀 Bienvenue sur Horizon Planning !</span>
+      <button class="modal-close" onclick="closeOnboarding()">✕</button>
+    </div>
+    <div style="padding:0 20px 20px">
+      <div id="ob-step-1">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">🏥</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">Votre établissement est prêt</h3>
+          <p style="color:var(--text2);font-size:13px;line-height:1.6">Horizon Planning centralise plannings, congés, absences et renforts vacataires en un seul outil accessible partout.</p>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">3 étapes pour démarrer</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">1</span>Configurez votre établissement (secteurs, horaires, spécialités)</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">2</span>Ajoutez vos agents et attribuez leurs lignes de roulement (L1–L9)</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">3</span>Générez votre premier planning avec le bouton ✨ Générer</div>
+          </div>
+        </div>
+      </div>
+      <div id="ob-step-2" style="display:none">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">📱</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">QR codes pour vos agents</h3>
+          <p style="color:var(--text2);font-size:13px;line-height:1.6">Chaque agent dispose d'un QR code personnel donnant accès à son planning, ses disponibilités et ses demandes de congés depuis son smartphone — sans installation.</p>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">🔗</span><span><strong>Config → Établissement</strong> : renseignez l'URL de votre app</span></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">📲</span><span><strong>QR Codes</strong> : générez et imprimez les QR de vos agents</span></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">🔔</span><span>Clé VAPID dans Config pour activer les notifications push</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="ob-step-3" style="display:none">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">💡</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">Conseils pratiques</h3>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">☁️ Sync</strong> — Cliquez sur ☁️ après chaque import Excel pour sauvegarder dans le cloud.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">🕐 Historique</strong> — 20 versions sauvegardées. Rollback en 1 clic en cas d'erreur.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">📊 Vue Direction</strong> — Indicateurs d'absentéisme, couverture et comparatif mensuel.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">🆘 Support</strong> — <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:14px;justify-content:center">
+          <input type="checkbox" id="ob-no-show" style="cursor:pointer">
+          Ne plus afficher ce guide au démarrage
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
+        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden">← Précédent</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
+          <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+          <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+        </div>
+        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm">Suivant →</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
