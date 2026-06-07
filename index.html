@@ -2504,6 +2504,7 @@ body[data-qr-mode="1"] #qr-view {
 
       <!-- Card PIN (apres selection nom) -->
       <div id="qr-pin-section" style="display:none;background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.08)">
+        <div id="qr-pin-agent-label" style="font-size:15px;font-weight:800;color:#1a2540;text-align:center;margin-bottom:8px"></div>
         <div style="font-size:10px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">&#128274; 4 derniers chiffres de votre numero de poste</div>
 
         <div style="display:flex;gap:8px;margin-bottom:4px;align-items:center" id="qr-pin-dots">
@@ -2553,6 +2554,7 @@ body[data-qr-mode="1"] #qr-view {
         <div id="qr-plan-name" style="font-size:16px;font-weight:800;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
         <div id="qr-plan-info" style="font-size:11px;color:#7dd3fc;margin-top:1px"></div>
       </div>
+      <button onclick="qrLogout()" title="Se déconnecter" style="background:#1e2d4a;border:1px solid #1e3050;color:#f87171;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0">🔓</button>
       <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;flex-shrink:0">
         <option value="1">1 mois</option>
         <option value="2">2 mois</option>
@@ -3460,6 +3462,8 @@ function checkQRView() {
     } catch(e) {}
 
     // ── Accès direct agent via QR individuel (?agent=XXX) ──
+    // Le QR contient l'identifiant mais le PIN reste requis pour protéger
+    // l'accès en cas de partage involontaire du lien.
     const agentDirect = params.get('agent');
     if (agentDirect) {
       const agOk = etab.agents.find(function(a){ return a.id === agentDirect; });
@@ -3470,13 +3474,13 @@ function checkQRView() {
         _qrAgentType = 'agent';
         _qrPinBuffer = '';
         updatePinDots();
-        // Sauvegarder la session QR pour ne pas redemander
-        try {
-          localStorage.setItem('qr_session', JSON.stringify({
-            etabId: etabId, agentId: agentDirect, ts: Date.now()
-          }));
-        } catch(e) {}
-        qrOpenPlanning(agentDirect);
+        // Masquer le selecteur de nom, afficher directement le clavier PIN
+        var nameSec = document.getElementById('qr-name-section');
+        var pinSec  = document.getElementById('qr-pin-section');
+        var nameLabel = document.getElementById('qr-pin-agent-label');
+        if (nameSec) nameSec.style.display = 'none';
+        if (nameLabel) nameLabel.textContent = agOk.prenom ? agOk.prenom + ' ' + agOk.nom : agOk.nom;
+        if (pinSec) pinSec.style.display = 'block';
         return;
       }
     }
@@ -9740,8 +9744,8 @@ function qrInjectAgentManifest(agentId, etabId) {
     theme_color: '#4f8ef7',
     lang: 'fr',
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
       { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
     ]
   };
@@ -9790,8 +9794,8 @@ function _sendAgentManifestToSW(agentId, etabId) {
     theme_color: '#4f8ef7',
     lang: 'fr',
     icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
       { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
     ]
   };
@@ -10509,6 +10513,18 @@ function qrBack() {
   if (screenPlan) screenPlan.style.display = 'none';
   if (screenSel) screenSel.style.display = 'flex';
   if (nameSec) nameSec.style.display = 'block';
+}
+
+function qrLogout() {
+  _qrAgentId = null;
+  try { localStorage.removeItem('qr_session'); } catch(e) {}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.active) reg.active.postMessage({ type: 'CLEAR_AGENT_MANIFEST' });
+    }).catch(function(){});
+  }
+  // Recharger la page pour revenir à l'écran d'accueil QR proprement
+  window.location.replace(window.location.pathname + window.location.search);
 }
 
 function toggleQRDispo(dateKey, slot) {
