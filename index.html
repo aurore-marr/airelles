@@ -1784,10 +1784,12 @@ body[data-qr-mode="1"] #qr-view {
       <!-- Légende impression (masquée à l'écran) -->
       <div id="print-legend" style="display:none"></div>
 
-      <!-- Légende horaires + planning -->
-      <div class="card" style="padding:0">
-        <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
-        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%"></div>
+      <!-- Légende horaires — sticky sous la toolbar dans le viewport -->
+      <div id="planning-legend" style="padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;position:sticky;top:0;z-index:39;box-shadow:0 2px 4px rgba(0,0,0,0.2)"></div>
+
+      <!-- Planning -->
+      <div class="card" style="padding:0;overflow-x:auto;width:100%">
+        <div class="planning-wrap" id="planning-container" style="width:100%"></div>
       </div>
       <!-- Totaux secteurs (maintenant en tfoot dans le même tableau) -->
       <div id="sector-daily-totals" style="display:none"></div>
@@ -4023,9 +4025,10 @@ async function doLogin() {
       const tb = document.getElementById('planning-toolbar');
       const leg = document.getElementById('planning-legend');
       if (tb) {
-        const hTb = tb.getBoundingClientRect().height;
-        const hLeg = leg ? leg.getBoundingClientRect().height : 0;
-        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
+        const hTb = Math.round(tb.getBoundingClientRect().height);
+        if (leg) { leg.style.top = hTb + 'px'; }
+        const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
+        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
       }
     });
   }
@@ -6179,9 +6182,12 @@ function renderPlanning() {
   (function updateToolbarOffset() {
     const tb = document.getElementById('planning-toolbar');
     const leg = document.getElementById('planning-legend');
-    const hTb = tb ? tb.getBoundingClientRect().height : 52;
-    const hLeg = leg ? leg.getBoundingClientRect().height : 0;
-    document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
+    if (tb) {
+      const hTb = Math.round(tb.getBoundingClientRect().height);
+      if (leg) { leg.style.top = hTb + 'px'; }
+      const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
+      document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
+    }
   })();
 
   // Auto-générer si mois vide
@@ -6499,14 +6505,15 @@ function renderPlanning() {
 
     legendEl.innerHTML = horPart + '<span style="width:1px;height:16px;background:var(--border);margin:0 8px;display:inline-block"></span>' + sectPart;
 
-    // Recalcule l'offset sticky APRÈS rendu de la légende
+    // Positionner la légende sticky juste sous la toolbar, et le thead sous les deux
     requestAnimationFrame(function() {
       const tb = document.getElementById('planning-toolbar');
       const leg = document.getElementById('planning-legend');
-      if (tb) {
-        const hTb = tb.getBoundingClientRect().height;
-        const hLeg = leg ? leg.getBoundingClientRect().height : 0;
-        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(hTb + hLeg) + 'px');
+      if (tb && leg) {
+        const hTb = Math.round(tb.getBoundingClientRect().height);
+        leg.style.top = hTb + 'px';
+        const hLeg = Math.round(leg.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
       }
     });
   }
