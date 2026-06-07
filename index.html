@@ -9705,12 +9705,12 @@ function qrShowPWABanner() {
 
   var instructions = isIOS
     ? '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
-        '1. Appuyez sur <strong style="color:#fff">🔗 Safari</strong> (ouvrir dans Safari si ce n'est pas déjà fait)<br>' +
-        '2. Puis <strong style="color:#fff">⬆️ Partager</strong> → <strong style="color:#fff">Sur l'écran d'accueil</strong>' +
+        '1. Appuyez sur <strong style="color:#fff">Safari</strong> (ouvrir dans Safari si besoin)<br>' +
+        '2. Puis <strong style="color:#fff">&#x2B06; Partager</strong> → <strong style="color:#fff">Sur l\'ecran d\'accueil</strong>' +
       '</div>'
     : '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
         '1. Ouvrez le lien dans <strong style="color:#fff">Chrome</strong><br>' +
-        '2. Menu <strong style="color:#fff">⋮</strong> → <strong style="color:#fff">Ajouter à l'écran d'accueil</strong>' +
+        '2. Menu <strong style="color:#fff">&#8942;</strong> → <strong style="color:#fff">Ajouter a l\'ecran d\'accueil</strong>' +
       '</div>';
 
   banner.innerHTML =
@@ -9719,12 +9719,12 @@ function qrShowPWABanner() {
         '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);' +
           'display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0">H</div>' +
         '<div>' +
-          '<div style="font-weight:800;font-size:13px;color:#f1f5f9">📲 Installer l'application</div>' +
-          '<div style="font-size:11px;color:#8892aa;margin-top:1px">Accédez en 1 tap depuis votre écran d'accueil</div>' +
+          '<div style="font-weight:800;font-size:13px;color:#f1f5f9">&#x1F4F2; Installer l\'application</div>' +
+          '<div style="font-size:11px;color:#8892aa;margin-top:1px">Acces rapide depuis votre ecran d\'accueil</div>' +
         '</div>' +
       '</div>' +
-      '<button onclick="(function(){try{sessionStorage.setItem('qr_pwa_dismissed','1')}catch(e){}; document.getElementById('qr-pwa-banner').remove()})()" ' +
-        'style="background:transparent;border:none;color:#5a6480;font-size:22px;cursor:pointer;flex-shrink:0;line-height:1;padding:0">✕</button>' +
+      '<button onclick="(function(){try{sessionStorage.setItem(\'qr_pwa_dismissed\',\'1\')}catch(e){};document.getElementById(\'qr-pwa-banner\').remove()})()" ' +
+        'style="background:transparent;border:none;color:#5a6480;font-size:22px;cursor:pointer;flex-shrink:0;line-height:1;padding:0">&#x2715;</button>' +
     '</div>' +
     instructions;
 
