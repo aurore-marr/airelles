@@ -1335,6 +1335,33 @@ body[data-qr-mode="1"] #qr-view {
   padding-top: 0 !important;
 }
 
+
+
+/* ===== FIX: en-tête dates du planning =====
+   Le <thead> était sticky avec un top dynamique, ce qui pouvait le faire
+   descendre et recouvrir les lignes agents. On garde le scroll horizontal
+   et les colonnes Poste/Nom fixes, mais la ligne des dates reste dans
+   son emplacement normal en haut du tableau. */
+#planning-container .planning-table thead {
+  position: static !important;
+  top: auto !important;
+  z-index: 30;
+}
+#planning-container .planning-table thead th {
+  position: static !important;
+  top: auto !important;
+}
+#planning-container .planning-table thead th:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 36 !important;
+}
+#planning-container .planning-table thead th:nth-child(2) {
+  position: sticky !important;
+  left: 60px !important;
+  z-index: 36 !important;
+}
+
 </style>
 </head>
 <body>
@@ -6219,7 +6246,7 @@ function renderPlanning() {
   window._planningDayColW = _dayW; // exposé pour les vacataires
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:var(--planning-toolbar-h, 52px);z-index:30"><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
