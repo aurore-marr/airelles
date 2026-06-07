@@ -191,16 +191,23 @@ body {
   z-index: 100;
   padding: 20px 0 0;
   transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
-  overflow: hidden;
+  overflow: visible;
 }
-/* Clip only the inner content, not the toggle button */
+/* Clip inner content but let the toggle button overflow */
 .sidebar::before {
   content: '';
   position: absolute;
   inset: 0;
   background: var(--bg2);
-  z-index: -1;
+  z-index: 0;
   border-right: 1px solid var(--border);
+  pointer-events: none;
+}
+.sidebar-header, .etab-badge, .sidebar-user-collapsed,
+.sidebar-nav-scroll, .sidebar-footer {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 .sidebar-nav-scroll {
   overflow-y: auto;
@@ -270,6 +277,11 @@ body {
   padding: 1px 5px; min-width: 18px; text-align: center;
 }
 
+.sidebar.collapsed #online-users-bar { display: none !important; }
+.sidebar.collapsed .user-initials-badge { display: flex; }
+/* badge initiales/compteur : masqué sidebar ouverte (affiché dans zone collapsed) */
+.sidebar:not(.collapsed) .sidebar-user-collapsed { display: none; }
+
 /* Toggle button */
 .sidebar-toggle {
   position: absolute; top: 18px; right: -14px;
@@ -298,6 +310,7 @@ body {
 .sidebar.collapsed .etab-badge-icon { display: block; }
 .user-initials-badge { display: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent2); color: #0f1117; font-size: 12px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 .sidebar.collapsed .user-initials-badge { display: flex; }
+.sidebar:not(.collapsed) .user-initials-badge { display: none !important; }
 .sidebar.collapsed .etab-badge { flex-direction: column; gap: 4px; }
 
 .nav-section { padding: 0 12px; margin-bottom: 4px; }
