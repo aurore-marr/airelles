@@ -1518,6 +1518,9 @@ body[data-qr-mode="1"] #qr-view {
         <button onclick="saveToSupabase()" title="Sync Supabase"
           style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--accent2);font-size:16px;transition:background 0.15s"
           onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">☁️</button>
+        <button onclick="openModalLegal()" title="Mentions légales &amp; CGU"
+          style="flex:1;background:transparent;border:none;cursor:pointer;padding:6px 4px;border-radius:6px;color:var(--text2);font-size:16px;transition:background 0.15s"
+          onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">ℹ️</button>
       </div>
       <div id="session-timer" style="font-size:10px;color:var(--text3);padding:2px 8px 4px;text-align:center;font-family:'DM Mono',monospace">🕐 8h00</div>
     </div>
@@ -1611,7 +1614,19 @@ body[data-qr-mode="1"] #qr-view {
       </div>
 
       <!-- KPIs principaux -->
-      <div class="stats-row" id="dir-kpis" style="margin-bottom:20px"></div>
+      <div class="stats-row" id="dir-kpis" style="margin-bottom:8px"></div>
+
+      <!-- Comparatif M vs M-1 -->
+      <div id="dir-comparatif" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+      <!-- Onglets direction -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+        <button onclick="dirShowTab('mensuel')" id="dir-tab-mensuel" class="dir-tab active-tab" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📊 Mois en cours</button>
+        <button onclick="dirShowTab('absenteisme')" id="dir-tab-absenteisme" class="dir-tab" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">📉 Absentéisme 12 mois</button>
+      </div>
+
+      <!-- TAB MENSUEL -->
+      <div id="dir-tab-mensuel-content">
 
       <!-- Ligne 2 : Absentéisme + HS + Coût -->
       <div class="dir-grid-3 mb-4">
@@ -1657,6 +1672,25 @@ body[data-qr-mode="1"] #qr-view {
         <div class="card-header"><span class="card-title">📬 Alertes envoyées (suivi)</span></div>
         <div id="dir-alertes-suivi"></div>
       </div>
+
+      </div><!-- /dir-tab-mensuel-content -->
+
+      <!-- TAB ABSENTÉISME 12 MOIS -->
+      <div id="dir-tab-absenteisme-content" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title">📉 Absentéisme sur 12 mois glissants</span>
+            <button onclick="exportAbsenteismeCSV()" class="btn btn-secondary btn-sm">⬇️ Export CSV</button>
+          </div>
+          <div id="dir-abs-12m-chart" style="margin-bottom:16px"></div>
+          <div id="dir-abs-12m-table" style="overflow-x:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">👤 Détail par agent (12 mois)</span></div>
+          <div id="dir-abs-12m-agents" style="overflow-x:auto"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- NOTIFICATIONS RH -->
@@ -1664,11 +1698,29 @@ body[data-qr-mode="1"] #qr-view {
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <h2>🔔 Notifications RH</h2>
-          <p style="color:var(--text2);font-size:13px">Disponibilités agents et réponses aux alertes</p>
+          <p style="color:var(--text2);font-size:13px">Disponibilités, messages agents et réponses aux alertes</p>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="marquerToutesLues()">✓ Tout marquer comme lu</button>
       </div>
-      <div id="notif-rh-list" style="max-width:700px"></div>
+
+      <!-- Onglets Notifications -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
+        <button onclick="notifTab('notifs')" id="notif-tab-notifs" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔔 Notifications</button>
+        <button onclick="notifTab('messages')" id="notif-tab-messages" style="padding:8px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+          💬 Messages agents
+          <span id="notif-msg-badge" style="display:none;background:#a78bfa;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:1px 6px;margin-left:4px">0</span>
+        </button>
+      </div>
+
+      <!-- TAB Notifications -->
+      <div id="notif-tab-notifs-content" style="max-width:700px">
+        <div id="notif-rh-list"></div>
+      </div>
+
+      <!-- TAB Messages agents -->
+      <div id="notif-tab-messages-content" style="display:none;max-width:700px">
+        <div id="cadre-messages-list"></div>
+      </div>
     </div>
 
     <!-- PLANNING -->
@@ -1910,6 +1962,7 @@ body[data-qr-mode="1"] #qr-view {
         <div class="tab" onclick="switchConfigTab('postes')">Postes IDE/ASH</div>
         <div class="tab" onclick="switchConfigTab('logins')">Accès cadres</div>
         <div class="tab" onclick="switchConfigTab('interim')">🏢 Agences intérim</div>
+        <div class="tab" id="config-tab-options-btn" onclick="switchConfigTab('options')" style="display:none">🔑 Options souscrites</div>
       </div>
 
       <div id="config-tab-general">
@@ -1935,6 +1988,17 @@ body[data-qr-mode="1"] #qr-view {
                   style="font-family:monospace;font-size:12px"
                   oninput="localStorage.setItem('horizon_app_url',this.value.trim());showToast('URL QR mise à jour ✓','success')">
                 <p style="font-size:11px;color:var(--text3);margin-top:4px">Si vos QR codes ouvrent la page Vercel, entrez ici l'URL de production.</p>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>🔔 Clé VAPID publique (notifications push)</label>
+                <input type="text" id="cfg-vapid-key" placeholder="BxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAAAA"
+                  style="font-family:monospace;font-size:11px"
+                  oninput="localStorage.setItem('horizon_vapid_key',this.value.trim());showToast('Clé VAPID mise à jour ✓','success')">
+                <p style="font-size:11px;color:var(--text3);margin-top:4px">
+                  Génère tes clés sur <strong>vapidkeys.com</strong> ou <code>npx web-push generate-vapid-keys</code>.
+                  La clé <em>privée</em> va dans ta Supabase Edge Function, jamais ici.
+                  Après modification, <strong>recharge la page</strong> pour activer.
+                </p>
               </div>
             </div>
             <button class="btn btn-primary btn-sm mt-2" onclick="saveConfigGeneral()">💾 Enregistrer</button>
@@ -2260,7 +2324,13 @@ body[data-qr-mode="1"] #qr-view {
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
             <div class="form-group" style="margin:0"><label>Nom complet</label><input type="text" id="new-login-nom" placeholder="M. Dupont"></div>
             <div class="form-group" style="margin:0"><label>Identifiant</label><input type="text" id="new-login-id" placeholder="mdupont"></div>
-            <div class="form-group" style="margin:0"><label>Mot de passe</label><input type="password" id="new-login-pwd" placeholder="••••••"></div>
+            <div class="form-group" style="margin:0">
+              <label>Mot de passe <span style="font-size:10px;color:var(--text3);font-weight:400">(12 car. min, 1 maj, 1 chiffre, 1 spécial)</span></label>
+              <input type="password" id="new-login-pwd" placeholder="Ex: Monpwd@2026!"
+                oninput="showPasswordErrors(validatePasswordStrength(this.value),'pwd-strength-hint')"
+                style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none;width:100%;box-sizing:border-box">
+              <div id="pwd-strength-hint" style="display:none;margin-top:4px"></div>
+            </div>
             <div class="form-group" style="margin:0">
               <label>Rôle</label>
               <select id="new-login-role" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none;width:100%">
@@ -2288,6 +2358,14 @@ body[data-qr-mode="1"] #qr-view {
               <button class="btn btn-secondary btn-sm" onclick="addCustomRole()">+ Ajouter ce rôle</button>
             </div>
             <p style="font-size:11px;color:var(--text3);margin-top:6px">Les rôles créés ici apparaîtront dans le sélecteur "Rôle" ci-dessus. Droits identiques à "Cadre".</p>
+          </div>
+
+          <!-- Routage messages par spécialité -->
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">💬 Routage des messages agents</div>
+            <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Associez chaque spécialité à un cadre. Les messages des agents seront automatiquement dirigés vers le cadre responsable.</p>
+            <div id="msg-routing-list"></div>
+            <button class="btn btn-secondary btn-sm" onclick="renderMsgRouting()" style="margin-top:8px">🔄 Rafraîchir</button>
           </div>
         </div>
       </div>
@@ -2345,6 +2423,20 @@ body[data-qr-mode="1"] #qr-view {
           <div id="save-status" class="text-xs text-muted mt-2"></div>
         </div>
       </div>
+
+      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
+      <div id="config-tab-options" class="hidden">
+        <div class="config-section" style="max-width:600px">
+          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Activez ou désactivez les modules selon l'abonnement du client.
+            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
+          </p>
+          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ASTREINTES -->
@@ -2504,6 +2596,7 @@ body[data-qr-mode="1"] #qr-view {
 
       <!-- Card PIN (apres selection nom) -->
       <div id="qr-pin-section" style="display:none;background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.08)">
+        <div id="qr-pin-agent-label" style="font-size:15px;font-weight:800;color:#1a2540;text-align:center;margin-bottom:8px"></div>
         <div style="font-size:10px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">&#128274; 4 derniers chiffres de votre numero de poste</div>
 
         <div style="display:flex;gap:8px;margin-bottom:4px;align-items:center" id="qr-pin-dots">
@@ -2547,56 +2640,106 @@ body[data-qr-mode="1"] #qr-view {
   <!-- ECRAN 2 : Planning -->
   <div id="qr-screen-planning" style="display:none;min-height:100vh;background:#0f1117;max-width:440px;margin:0 auto">
 
+    <!-- HEADER fixe -->
     <div style="background:linear-gradient(135deg,#0f1827,#1d3a6e);padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e3050">
       <button onclick="qrBack()" style="background:#1e2d4a;border:1px solid #1e3050;color:#7dd3fc;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0">&#9664;</button>
       <div style="flex:1;min-width:0">
         <div id="qr-plan-name" style="font-size:16px;font-weight:800;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
         <div id="qr-plan-info" style="font-size:11px;color:#7dd3fc;margin-top:1px"></div>
       </div>
-      <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none;flex-shrink:0">
-        <option value="1">1 mois</option>
-        <option value="2">2 mois</option>
-        <option value="3" selected>3 mois</option>
-        <option value="6">6 mois</option>
-        <option value="12">12 mois</option>
-      </select>
+      <button onclick="qrLogout()" title="Se déconnecter" style="background:#1e2d4a;border:1px solid #1e3050;color:#f87171;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0">🔓</button>
     </div>
 
     <!-- Bandeau secteur + CA restants -->
     <div id="qr-agent-banner" style="background:#161b27;padding:10px 16px;display:flex;gap:10px;border-bottom:1px solid #1e3050;flex-wrap:wrap"></div>
-    <!-- Zone alertes manque de personnel -->
-    <div id="qr-alertes-zone" style="display:none;padding:12px 16px"></div>
-    <!-- Postes à pourvoir (affichés dans planning) -->
-    <div id="qr-postes-pourvoir" style="display:none;padding:12px 16px;border-top:1px solid #1e3050"></div>
 
-    <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
+    <!-- NAV 4 onglets -->
+    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex;z-index:100;max-width:440px;margin:0 auto">
+      <button onclick="qrShowTab('alertes')" id="qr-tab-alertes" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">🔔</span>Alertes<span id="qr-alertes-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 5px;margin-top:1px">0</span>
+      </button>
+      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:10px 4px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#128197;</span>Planning
+      </button>
+      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#9989;</span>Dispos
+      </button>
+      <button onclick="qrShowTab('conges')" id="qr-tab-conges" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#127965;</span>Congés
+      </button>
+      <button onclick="qrShowTab('messages')" id="qr-tab-messages" style="flex:1;padding:10px 4px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <span style="font-size:15px">&#128172;</span>Message<span id="qr-msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 5px;margin-top:1px">0</span>
+      </button>
+    </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
-      <button onclick="qrNavWeek(-1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9664;</button>
-      <div style="text-align:center">
-        <div id="qr-week-label" style="font-size:15px;font-weight:800;color:#38bdf8"></div>
-        <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8;margin-top:1px"></div>
+    <!-- TAB ALERTES -->
+    <div id="qr-tab-alertes-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
+      <div id="qr-alertes-zone" style="display:block"></div>
+      <div id="qr-postes-pourvoir" style="display:block;margin-top:8px"></div>
+      <div id="qr-alertes-empty" style="display:none;text-align:center;padding:40px 20px;color:#475569">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <div style="font-size:14px;font-weight:700;color:#38d9a9">Aucune alerte</div>
+        <div style="font-size:12px;color:#6b7fa8;margin-top:4px">Pas de manque de personnel signalé</div>
       </div>
-      <button onclick="qrNavWeek(1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9654;</button>
     </div>
 
-    <div id="qr-weeks-container" style="padding:12px 16px;padding-bottom:80px;overflow-y:auto"></div>
-
-    <div style="position:fixed;bottom:0;left:0;right:0;background:#0f1827;border-top:1px solid #1e3050;display:flex;z-index:100">
-      <button onclick="qrShowTab('planning')" id="qr-tab-planning" style="flex:1;padding:13px 8px;background:none;border:none;color:#38bdf8;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border-top:2px solid #38bdf8;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#128197;</span>Planning
-      </button>
-      <button onclick="qrShowTab('dispos')" id="qr-tab-dispos" style="flex:1;padding:13px 8px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#9989;</span>Dispos
-      </button>
-      <button onclick="qrShowTab('conges')" id="qr-tab-conges" style="flex:1;padding:13px 8px;background:none;border:none;color:#6b7fa8;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:16px">&#127965;</span>Congés
-      </button>
+    <!-- TAB PLANNING -->
+    <div id="qr-tab-planning-content" style="display:block;padding-bottom:80px;overflow-y:auto">
+      <div id="qr-counters" style="display:flex;border-bottom:1px solid #1e3050"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#0f1827;border-bottom:1px solid #1e3050">
+        <button onclick="qrNavWeek(-1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9664;</button>
+        <div style="text-align:center">
+          <div id="qr-week-label" style="font-size:15px;font-weight:800;color:#38bdf8"></div>
+          <div id="qr-week-dates" style="font-size:11px;color:#6b7fa8;margin-top:1px"></div>
+        </div>
+        <button onclick="qrNavWeek(1)" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">&#9654;</button>
+      </div>
+      <div id="qr-weeks-container" style="padding:12px 16px"></div>
+      <div style="padding:0 16px 12px;display:flex;justify-content:flex-end">
+        <select id="qr-horizon-sel" onchange="qrRenderPlanning()" style="background:#1e2d4a;border:1px solid #1e3050;color:#38bdf8;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;font-weight:700;outline:none">
+          <option value="1">1 mois</option>
+          <option value="2">2 mois</option>
+          <option value="3" selected>3 mois</option>
+          <option value="6">6 mois</option>
+          <option value="12">12 mois</option>
+        </select>
+      </div>
     </div>
 
-    <div id="qr-tab-dispos-content" style="display:none;padding:12px 16px 80px">
+    <!-- TAB MESSAGES -->
+    <div id="qr-tab-messages-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
+      <!-- Nouveau message -->
+      <div style="background:#161b27;border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#38bdf8;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">✏️ Nouveau message</div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#6b7fa8;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Objet</label>
+          <input id="qr-msg-sujet" type="text" placeholder="Ex: Question planning, Demande échange..." maxlength="80"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:700;color:#6b7fa8;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Message</label>
+          <textarea id="qr-msg-corps" rows="4" placeholder="Écrivez votre message ici..."
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #1e3050;background:#0f1117;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;resize:none;box-sizing:border-box"></textarea>
+        </div>
+        <div id="qr-msg-destinataire-info" style="font-size:11px;color:#6b7fa8;margin-bottom:10px;padding:8px 10px;background:rgba(56,189,248,0.08);border-radius:8px;border:1px solid rgba(56,189,248,0.15)">
+          📨 Votre message sera envoyé au cadre responsable de votre spécialité
+        </div>
+        <button onclick="qrEnvoyerMessage()" style="width:100%;padding:13px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">
+          📨 Envoyer
+        </button>
+        <div id="qr-msg-status" style="display:none;text-align:center;font-size:13px;font-weight:600;margin-top:10px"></div>
+      </div>
+      <!-- Historique messages -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#6b7fa8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">📬 Mes messages</div>
+        <div id="qr-msg-list"></div>
+      </div>
+    </div>
+
+    <!-- TAB DISPOS -->
+    <div id="qr-tab-dispos-content" style="display:none;padding:12px 16px 80px;overflow-y:auto">
       <div style="font-size:12px;color:#6b7fa8;margin-bottom:14px;padding:10px 14px;background:#161b27;border-radius:10px">
-        Appuie sur un creneau pour indiquer ta disponibilite sur les 14 prochains jours
+        Indique ta disponibilite sur les 14 prochains jours. Les jours deja planifies sont affichés en lecture seule.
       </div>
       <div id="qr-dispo-form"></div>
       <button onclick="saveQRDispos()" style="width:100%;margin-top:16px;padding:16px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">
@@ -2738,9 +2881,9 @@ body[data-qr-mode="1"] #qr-view {
       </div>
 
       <!-- BOUTONS MODIFICATEUR -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <div id="shift-mod-hs-wrap" style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #38d9a944;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div id="shift-mod-hs-wrap">
+          <button class="shift-mod-btn" id="mod-btn-hs" onclick="selectModificateur('hs')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #38d9a944;background:#1e2538;color:#38d9a9;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
             + HEURES SUP
           </button>
           <div id="hs-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2757,8 +2900,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-depart" onclick="selectModificateur('depart')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
             DÉPART ANTICIPÉ
           </button>
           <div id="depart-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2772,8 +2915,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-retard" onclick="selectModificateur('retard')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid #e8ecf444;background:#1e2538;color:#e8ecf4;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">
             RETARD
           </button>
           <div id="retard-hours-input" style="display:none;margin-top:8px;padding:10px;background:#1e2538;border-radius:8px;border:1px solid #2a3350">
@@ -2786,8 +2929,8 @@ body[data-qr-mode="1"] #qr-view {
             </div>
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="width:100%;text-align:center;padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+        <div>
+          <button class="shift-mod-btn" id="mod-btn-aucun" onclick="selectModificateur('aucun')" style="width:100%;height:44px;text-align:center;padding:0 14px;border-radius:8px;border:2px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
             AUCUN
           </button>
         </div>
@@ -2992,6 +3135,8 @@ body[data-qr-mode="1"] #qr-view {
     <div class="form-group"><label>Ville</label><input type="text" id="ne-ville" placeholder="Ville"></div>
     <div class="form-group"><label>Identifiant admin</label><input type="text" id="ne-login" placeholder="admin"></div>
     <div class="form-group"><label>Mot de passe admin</label><input type="password" id="ne-pwd" placeholder="••••••"></div>
+    <div class="form-group"><label>🔗 URL de l'app <span style="font-weight:400;color:var(--text3)">(pour les QR codes)</span></label><input type="url" id="ne-url" placeholder="https://monehpad.vercel.app" style="font-family:monospace;font-size:12px"></div>
+    <div class="form-group"><label>🔔 Clé VAPID publique <span style="font-weight:400;color:var(--text3)">(notifications push, optionnel)</span></label><input type="text" id="ne-vapid" placeholder="BxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAAAA" style="font-family:monospace;font-size:11px"><p style="font-size:11px;color:var(--text3);margin-top:4px">Génère tes clés sur <strong>vapidkeys.com</strong>. Laisse vide pour configurer plus tard.</p></div>
     <div class="alert alert-info mt-2"><span>ℹ️</span>Un établissement démo sera pré-configuré avec des agents et secteurs exemples.</div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-new-etab')">Annuler</button>
@@ -3255,7 +3400,15 @@ async function supaAuthSignIn(login, etabId, pwdPlain) {
 async function supaAuthSignOut() {
   try { await supa.auth.signOut(); } catch(e) {}
 }
-const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
+// ID de l'établissement par défaut — peut être surchargé via Config
+// Priorité : localStorage 'horizon_default_etab' > 'etab_airelles'
+const ETAB_ID = (function() {
+  try {
+    var stored = localStorage.getItem('horizon_default_etab');
+    if (stored && stored.trim()) return stored.trim();
+  } catch(e) {}
+  return 'etab_airelles'; // fallback historique Les Airelles
+})();
 
 // ============================================================
 // Init immédiate — charger depuis localStorage d'abord
@@ -3267,6 +3420,28 @@ const ETAB_ID = 'etab_airelles'; // ID fixe pour Les Airelles
 
 window.onload = async function() {
   loadTheme();
+
+  // ── Fix iOS PWA : redirection automatique si session QR active ──
+  // Le raccourci mémorise start_url="/" ou "/?qr=1&etab=..." sans agent authentifié.
+  // On relit qr_session et on redirige vers l'URL complète avec agent=.
+  try {
+    var _p = new URLSearchParams(window.location.search);
+    var _hasAgent = !!_p.get('agent');
+    if (!_hasAgent) {
+      var _raw = localStorage.getItem('qr_session');
+      if (_raw) {
+        var _s = JSON.parse(_raw);
+        if ((Date.now() - (_s.ts||0)) < 8*3600*1000 && _s.agentId && _s.etabId) {
+          var _target = '/?qr=1&etab='+encodeURIComponent(_s.etabId)+'&agent='+encodeURIComponent(_s.agentId);
+          window.location.replace(_target);
+          return;
+        } else {
+          localStorage.removeItem('qr_session');
+        }
+      }
+    }
+  } catch(_e) {}
+
   if (checkQRView()) return;
 
   // ── Afficher un indicateur de chargement dans le dropdown ──
@@ -3417,12 +3592,20 @@ function checkQRView() {
     _qrEtabId = etabId;
 
     // ── Restaurer session QR si encore valide (8h) ──
+    // Si l'URL contient un ?agent= différent de la session, on ignore la session
+    // pour permettre au cadre de tester différents agents sans être bloqué
     try {
       const savedQR = localStorage.getItem('qr_session');
       if (savedQR) {
         const s = JSON.parse(savedQR);
         const elapsed = Date.now() - (s.ts || 0);
-        if (elapsed < 8 * 60 * 60 * 1000 && s.etabId === etabId && s.agentId) {
+        const agentInUrl = params.get('agent');
+        // Ignorer la session si l'URL pointe vers un agent différent
+        const sessionValide = elapsed < 8 * 60 * 60 * 1000
+          && s.etabId === etabId
+          && s.agentId
+          && (!agentInUrl || agentInUrl === s.agentId);
+        if (sessionValide) {
           const agOk = etab.agents.find(function(a){ return a.id === s.agentId; })
                     || (etab.vacataires||[]).find(function(v){ return v.id === s.agentId; });
           if (agOk) {
@@ -3433,11 +3616,22 @@ function checkQRView() {
           }
         } else {
           localStorage.removeItem('qr_session');
+          // Session expirée : afficher message clair au lieu d'écran blanc
+          var pinSec = document.getElementById('qr-pin-section');
+          if (pinSec) {
+            var expMsg = document.createElement('div');
+            expMsg.style.cssText = 'text-align:center;padding:14px 16px;background:#fef2f2;border-radius:12px;margin-bottom:12px;border:1px solid #fca5a5';
+            expMsg.innerHTML = '<div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:4px">⏱️ Session expirée</div>' +
+              '<div style="font-size:12px;color:#6b7fa8">Votre session de 8h a expiré. Reconnectez-vous avec votre PIN.</div>';
+            pinSec.insertAdjacentElement('beforebegin', expMsg);
+          }
         }
       }
     } catch(e) {}
 
     // ── Accès direct agent via QR individuel (?agent=XXX) ──
+    // Le QR contient l'identifiant mais le PIN reste requis pour protéger
+    // l'accès en cas de partage involontaire du lien.
     const agentDirect = params.get('agent');
     if (agentDirect) {
       const agOk = etab.agents.find(function(a){ return a.id === agentDirect; });
@@ -3448,13 +3642,13 @@ function checkQRView() {
         _qrAgentType = 'agent';
         _qrPinBuffer = '';
         updatePinDots();
-        // Sauvegarder la session QR pour ne pas redemander
-        try {
-          localStorage.setItem('qr_session', JSON.stringify({
-            etabId: etabId, agentId: agentDirect, ts: Date.now()
-          }));
-        } catch(e) {}
-        qrOpenPlanning(agentDirect);
+        // Masquer le selecteur de nom, afficher directement le clavier PIN
+        var nameSec = document.getElementById('qr-name-section');
+        var pinSec  = document.getElementById('qr-pin-section');
+        var nameLabel = document.getElementById('qr-pin-agent-label');
+        if (nameSec) nameSec.style.display = 'none';
+        if (nameLabel) nameLabel.textContent = agOk.prenom ? agOk.prenom + ' ' + agOk.nom : agOk.nom;
+        if (pinSec) pinSec.style.display = 'block';
         return;
       }
     }
@@ -3780,6 +3974,8 @@ async function doLogin() {
 
   DB.currentEtab = etabId;
   DB.currentUser = { ...login, supaEtabId: etabId };
+  // Mémoriser l'établissement par défaut pour éviter le fallback 'etab_airelles'
+  try { localStorage.setItem('horizon_default_etab', etabId); } catch(e) {}
   err.textContent = '';
 
   // Sauvegarder la session pour reconnexion automatique (sans mot de passe)
@@ -3876,7 +4072,19 @@ async function doLogin() {
     saveToStorage();
   }
 
+  // ── Avertissement mot de passe par défaut ──
+  if (login.mustChangePassword) {
+    setTimeout(function() {
+      showToast('⚠️ Mot de passe par défaut actif — changez-le dans Configuration → Utilisateurs', 'warning');
+    }, 1200);
+  }
+
   initApp();
+  // ── Appliquer options souscrites ──
+  applyOptions();
+  updateOptionsTabVisibility();
+  // ── Onboarding nouvel établissement ──
+  setTimeout(showOnboardingIfNeeded, 800);
 }
 
 // ============================================================
@@ -3892,11 +4100,20 @@ let _sessionWarningShown = false;
 // ============================================================
 let _pollTimer = null;
 let _pollLastCongesCount = -1;
+let _lastActivity = Date.now();
+const POLL_INACTIVITY_LIMIT = 30 * 60 * 1000; // 30min sans activité = pause polling
+
+// Réinitialiser le timer d'activité sur toute interaction
+['click','keydown','mousemove','touchstart','scroll'].forEach(function(ev) {
+  document.addEventListener(ev, function() { _lastActivity = Date.now(); }, { passive: true });
+});
 
 function startPolling() {
   if (_pollTimer) clearInterval(_pollTimer);
   _pollTimer = setInterval(async function() {
     if (!DB.currentUser) { clearInterval(_pollTimer); return; }
+    // Pause si inactif depuis plus de 30min
+    if (Date.now() - _lastActivity > POLL_INACTIVITY_LIMIT) return;
     const etab = getEtab();
     if (!etab || !etab.id) return;
     try {
@@ -3991,6 +4208,377 @@ function resetSessionTimer() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════
+// MENTIONS LÉGALES / CGU
+// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// MESSAGERIE — côté cadre
+// ══════════════════════════════════════════════════════════════
+
+// ── Onglets page Notifications ──
+function notifTab(tab) {
+  ['notifs','messages'].forEach(function(t) {
+    var c = document.getElementById('notif-tab-' + t + '-content');
+    var b = document.getElementById('notif-tab-' + t);
+    if (c) c.style.display = t === tab ? 'block' : 'none';
+    if (b) {
+      b.style.color = t === tab ? 'var(--accent1)' : 'var(--text2)';
+      b.style.borderBottomColor = t === tab ? 'var(--accent1)' : 'transparent';
+      b.style.fontWeight = t === tab ? '700' : '600';
+    }
+  });
+  if (tab === 'messages') renderCadreMessages();
+}
+
+// ── Afficher les messages reçus côté cadre ──
+function renderCadreMessages() {
+  var etab = getEtab();
+  var el = document.getElementById('cadre-messages-list');
+  if (!el || !etab) return;
+
+  var currentLogin = DB.currentUser ? DB.currentUser.login : null;
+  var msgs = (etab.messagesRH || []).filter(function(m) {
+    // Afficher si destinataire direct OU si cadre sans filtrage spécialité
+    return !m.destLogin || m.destLogin === currentLogin || DB.currentUser.role === 'admin';
+  }).slice().reverse();
+
+  // Badge
+  var badge = document.getElementById('notif-msg-badge');
+  var nonLus = msgs.filter(function(m){ return !m.lu; }).length;
+  if (badge) {
+    badge.textContent = nonLus;
+    badge.style.display = nonLus > 0 ? 'inline' : 'none';
+  }
+
+  if (msgs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:40px;margin-bottom:8px">💬</div><div style="font-size:13px">Aucun message reçu</div></div>';
+    return;
+  }
+
+  el.innerHTML = msgs.map(function(m, idx) {
+    var dt = new Date(m.createdAt);
+    var dateLabel = dt.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    var hasReponse = m.reponse && m.reponse.corps;
+    var realIdx = (etab.messagesRH || []).findIndex(function(x){ return x.id === m.id; });
+    return '<div style="background:var(--bg2);border:1px solid ' + (m.lu ? 'var(--border)' : 'var(--accent1)') + ';border-radius:12px;padding:14px 16px;margin-bottom:12px' + (m.lu ? '' : ';box-shadow:0 0 0 1px var(--accent1)20') + '">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">' + esc(m.sujet) + (m.lu ? '' : ' <span style="background:var(--accent1);color:#fff;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;vertical-align:middle">NOUVEAU</span>') + '</div>' +
+          '<div style="font-size:11px;color:var(--text2);margin-top:2px">De : <strong>' + esc(m.agentNom) + '</strong> · <span style="color:var(--accent1)">' + esc(m.agentSpec) + '</span> · ' + dateLabel + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px">' + esc(m.corps) + '</div>' +
+      (!hasReponse ?
+        '<div style="display:flex;flex-direction:column;gap:6px">' +
+          '<textarea id="rep-' + realIdx + '" rows="2" placeholder="Votre réponse…" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;font-size:13px;outline:none;resize:none;box-sizing:border-box"></textarea>' +
+          '<button onclick="cadreRepondreMsg(' + realIdx + ')" class="btn btn-primary btn-sm" style="align-self:flex-end">↩️ Répondre</button>' +
+        '</div>'
+      :
+        '<div style="padding:8px 12px;background:rgba(56,217,169,0.08);border-radius:8px;border-left:2px solid var(--accent2)">' +
+          '<div style="font-size:10px;font-weight:700;color:var(--accent2);margin-bottom:3px">↩️ Vous avez répondu</div>' +
+          '<div style="font-size:12px;color:var(--text2)">' + esc(m.reponse.corps) + '</div>' +
+        '</div>'
+      ) +
+    '</div>';
+  }).join('');
+
+  // Marquer tous comme lus
+  var modified = false;
+  (etab.messagesRH || []).forEach(function(m) {
+    if (!m.lu && (!m.destLogin || m.destLogin === currentLogin || (DB.currentUser && DB.currentUser.role === 'admin'))) {
+      m.lu = true; modified = true;
+    }
+  });
+  if (modified) {
+    saveToStorage();
+    saveToSupabase().catch(function(){});
+  }
+}
+
+// ── Répondre à un message ──
+function cadreRepondreMsg(idx) {
+  var etab = getEtab();
+  if (!etab || !etab.messagesRH || !etab.messagesRH[idx]) return;
+  var msg = etab.messagesRH[idx];
+  var repEl = document.getElementById('rep-' + idx);
+  if (!repEl || !repEl.value.trim()) { showToast('Saisissez une réponse', 'warning'); return; }
+
+  msg.reponse = {
+    corps: repEl.value.trim(),
+    auteurLogin: DB.currentUser ? DB.currentUser.login : '',
+    auteurNom: DB.currentUser ? DB.currentUser.nom : 'Cadre',
+    createdAt: new Date().toISOString()
+  };
+  msg.lu = true;
+
+  saveToStorage();
+  saveToSupabase().then(function() {
+    showToast('Réponse envoyée ✓', 'success');
+    renderCadreMessages();
+    // Mettre à jour le badge dans la nav
+    updateNotifBadge();
+  }).catch(function() {
+    showToast('⚠️ Erreur sync — réponse sauvegardée localement', 'warning');
+    renderCadreMessages();
+  });
+}
+
+// ── Config routage messages — afficher les selects spécialité → cadre ──
+function renderMsgRouting() {
+  var etab = getEtab();
+  var el = document.getElementById('msg-routing-list');
+  if (!el || !etab) return;
+
+  var specs = etab.specialites || [];
+  var logins = (etab.logins || []).filter(function(l){ return l.login; });
+
+  if (specs.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Aucune spécialité configurée. Ajoutez-en dans la section Spécialités.</div>';
+    return;
+  }
+
+  el.innerHTML = specs.map(function(spec) {
+    // Trouver le cadre actuellement associé à cette spécialité
+    var current = logins.find(function(l) {
+      return l.specsResponsables && l.specsResponsables.includes(spec);
+    });
+    var currentLogin = current ? current.login : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)22">' +
+      '<span style="min-width:80px;font-size:13px;font-weight:600;color:var(--text)">' + esc(spec) + '</span>' +
+      '<select onchange="saveMsgRouting(\"' + spec + '\",this.value)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:12px;outline:none">' +
+        '<option value="">— Aucun (cadre par défaut) —</option>' +
+        logins.map(function(l) {
+          return '<option value="' + l.login + '"' + (l.login === currentLogin ? ' selected' : '') + '>' + esc(l.nom) + ' (' + esc(l.role) + ')</option>';
+        }).join('') +
+      '</select>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Sauvegarder l'association spécialité → cadre ──
+function saveMsgRouting(spec, loginCadre) {
+  var etab = getEtab();
+  if (!etab || !etab.logins) return;
+  // Retirer cette spécialité de tous les logins
+  etab.logins.forEach(function(l) {
+    if (l.specsResponsables) {
+      l.specsResponsables = l.specsResponsables.filter(function(s){ return s !== spec; });
+    }
+  });
+  // Ajouter au login sélectionné
+  if (loginCadre) {
+    var target = etab.logins.find(function(l){ return l.login === loginCadre; });
+    if (target) {
+      if (!target.specsResponsables) target.specsResponsables = [];
+      target.specsResponsables.push(spec);
+    }
+  }
+  saveToStorage();
+  saveToSupabase().catch(function(){});
+  showToast('Routage ' + spec + ' mis à jour ✓', 'success');
+}
+
+// ── Mettre à jour le badge messages dans la nav notifications ──
+function updateMsgBadge() {
+  var etab = getEtab();
+  if (!etab) return;
+  var currentLogin = DB.currentUser ? DB.currentUser.login : null;
+  var nonLus = (etab.messagesRH || []).filter(function(m) {
+    return !m.lu && (!m.destLogin || m.destLogin === currentLogin || (DB.currentUser && DB.currentUser.role === 'admin'));
+  }).length;
+  var badge = document.getElementById('notif-msg-badge');
+  if (badge) { badge.textContent = nonLus; badge.style.display = nonLus > 0 ? 'inline' : 'none'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SYSTÈME D'OPTIONS PAR ÉTABLISSEMENT
+// ══════════════════════════════════════════════════════════════
+
+const HORIZON_OPTIONS = [
+  { id: 'qr_agents',    label: '📱 QR Codes agents',      desc: 'Vue mobile agents, disponibilités, messagerie', defaultOn: true },
+  { id: 'vue_direction',label: '🏛️ Vue Direction',         desc: 'KPIs, comparatif M vs M-1, absentéisme 12 mois, export CSV', defaultOn: true },
+  { id: 'vacataires',   label: '👥 Module vacataires',     desc: 'Planning vacataires, agences intérim, alertes manque de personnel', defaultOn: true },
+  { id: 'notifications_push', label: '🔔 Notifications push', desc: 'Alertes temps réel sur mobile via VAPID', defaultOn: false },
+  { id: 'messagerie',   label: '💬 Messagerie interne',    desc: 'Messages agents → cadre avec routage par spécialité', defaultOn: false },
+  { id: 'astreintes',   label: '\uD83D\uDCDE Planning astreintes',   desc: 'Planning IDEC et directeurs d\u2019astreinte annuel', defaultOn: true },
+  { id: 'comptage_hs',  label: '⏱️ Comptage & HS',         desc: 'Comptage temps, heures supplémentaires, export RH', defaultOn: true },
+];
+
+// Vérifier si une option est active pour l'établissement courant
+function hasOption(optionId) {
+  var etab = getEtab();
+  if (!etab) return true; // Par défaut tout est actif
+  // Si options non configurées, tout est actif (rétrocompatibilité)
+  if (!etab.options) return true;
+  return etab.options[optionId] !== false;
+}
+
+// Vérifier si l'utilisateur courant est admin Horizon Studio
+function isHorizonAdmin() {
+  return DB.currentUser && DB.currentUser.login === 'admin' && DB.currentUser.role === 'admin';
+}
+
+// Afficher/masquer le tab options selon le rôle
+function updateOptionsTabVisibility() {
+  var btn = document.getElementById('config-tab-options-btn');
+  if (btn) btn.style.display = isHorizonAdmin() ? 'block' : 'none';
+}
+
+// Rendre le formulaire d'options
+function renderOptions() {
+  var el = document.getElementById('options-list');
+  if (!el) return;
+  var etab = getEtab();
+  if (!etab) return;
+  if (!etab.options) etab.options = {};
+
+  el.innerHTML = HORIZON_OPTIONS.map(function(opt) {
+    var active = etab.options[opt.id] !== false;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">' +
+      '<div style="flex:1">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text)">' + opt.label + '</div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:2px">' + opt.desc + '</div>' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;margin-left:16px">' +
+        '<span style="font-size:12px;color:' + (active ? 'var(--accent2)' : 'var(--text3)') + '">' + (active ? 'Actif' : 'Inactif') + '</span>' +
+        '<input type="checkbox" id="opt-' + opt.id + '" ' + (active ? 'checked' : '') +
+          ' style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent2)">' +
+      '</label>' +
+    '</div>';
+  }).join('');
+}
+
+function saveOptions() {
+  var etab = getEtab();
+  if (!etab) return;
+  if (!etab.options) etab.options = {};
+  HORIZON_OPTIONS.forEach(function(opt) {
+    var cb = document.getElementById('opt-' + opt.id);
+    if (cb) etab.options[opt.id] = cb.checked;
+  });
+  saveToStorage();
+  saveToSupabase().catch(function(){});
+  showToast('Options enregistrées ✓', 'success');
+  applyOptions();
+}
+
+// Appliquer les options : masquer/afficher les sections selon les options actives
+function applyOptions() {
+  var etab = getEtab();
+  if (!etab || !etab.options) return;
+
+  // QR Codes
+  var navQR = document.querySelector('[onclick="showPage(\'qr\')"]');
+  if (navQR) navQR.style.display = hasOption('qr_agents') ? '' : 'none';
+
+  // Vue Direction
+  var navDir = document.getElementById('nav-dir');
+  if (navDir) navDir.style.display = hasOption('vue_direction') ? '' : 'none';
+
+  // Vacataires
+  var navVac = document.querySelector('[onclick="showPage(\'vacataires\')"]');
+  if (navVac) navVac.style.display = hasOption('vacataires') ? '' : 'none';
+
+  // Astreintes
+  var navAstr = document.querySelector('[onclick="showPage(\'astreintes\')"]');
+  if (navAstr) navAstr.style.display = hasOption('astreintes') ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════════
+// VALIDATION MOT DE PASSE FORT (cadres)
+// ══════════════════════════════════════════════════════════════
+
+function validatePasswordStrength(pwd) {
+  var errors = [];
+  if (pwd.length < 12)           errors.push('12 caractères minimum');
+  if (!/[A-Z]/.test(pwd))        errors.push('1 majuscule minimum');
+  if (!/[0-9]/.test(pwd))        errors.push('1 chiffre minimum');
+  if (!/[^A-Za-z0-9]/.test(pwd)) errors.push('1 caractère spécial minimum (ex: @#$!%)');
+  return errors;
+}
+
+function showPasswordErrors(errors, containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  if (errors.length === 0) {
+    el.innerHTML = '<span style="color:var(--accent2);font-size:11px">✓ Mot de passe sécurisé</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--accent4);font-size:11px">⚠️ ' + errors.join(' · ') + '</span>';
+  }
+  el.style.display = 'block';
+}
+
+function openModalLegal() {
+  legalTab('mentions');
+  openModal('modal-legal');
+}
+
+function legalTab(tab) {
+  ['mentions','cgu','rgpd'].forEach(function(t) {
+    var content = document.getElementById('legal-content-' + t);
+    var btn = document.getElementById('legal-tab-' + t);
+    if (content) content.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = (t === tab) ? 'var(--accent1)' : 'var(--text2)';
+      btn.style.borderBottomColor = (t === tab) ? 'var(--accent1)' : 'transparent';
+      btn.style.fontWeight = (t === tab) ? '700' : '600';
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// ONBOARDING
+// ══════════════════════════════════════════════════════
+var _obStep = 1;
+var _obMaxSteps = 3;
+
+function showOnboardingIfNeeded() {
+  try {
+    var etabId = DB.currentEtab || ETAB_ID;
+    var key = 'horizon_onboarding_done_' + etabId;
+    if (!localStorage.getItem(key)) {
+      _obStep = 1;
+      obRender();
+      openModal('modal-onboarding');
+    }
+  } catch(e) {}
+}
+
+function closeOnboarding() {
+  try {
+    var noShow = document.getElementById('ob-no-show');
+    if (noShow && noShow.checked) {
+      var etabId = DB.currentEtab || ETAB_ID;
+      localStorage.setItem('horizon_onboarding_done_' + etabId, '1');
+    }
+  } catch(e) {}
+  closeModal('modal-onboarding');
+}
+
+function obNav(delta) {
+  _obStep = Math.max(1, Math.min(_obMaxSteps, _obStep + delta));
+  obRender();
+}
+
+function obRender() {
+  for (var i = 1; i <= _obMaxSteps; i++) {
+    var step = document.getElementById('ob-step-' + i);
+    if (step) step.style.display = (i === _obStep) ? 'block' : 'none';
+    var dot = document.getElementById('ob-dot-' + i);
+    if (dot) dot.style.background = (i === _obStep) ? 'var(--accent1)' : 'var(--border)';
+  }
+  var prev = document.getElementById('ob-btn-prev');
+  var next = document.getElementById('ob-btn-next');
+  if (prev) prev.style.visibility = _obStep > 1 ? 'visible' : 'hidden';
+  if (next) {
+    next.textContent = _obStep < _obMaxSteps ? 'Suivant →' : '✓ Commencer';
+    next.onclick = _obStep < _obMaxSteps
+      ? function() { obNav(1); }
+      : function() { closeOnboarding(); };
+  }
+}
+
 function doLogout() {
   // Déconnecter Supabase Auth
   supaAuthSignOut();
@@ -4005,6 +4593,9 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pwd').value = '';
   document.getElementById('login-error').textContent = '';
+  ['mobile-header-bar','mobile-nav','mobile-more-menu'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
 }
 
 function showNewEtab() { openModal('modal-new-etab'); }
@@ -4014,16 +4605,30 @@ async function createNewEtab() {
   const ville = document.getElementById('ne-ville').value.trim();
   const login = document.getElementById('ne-login').value.trim();
   const pwd = document.getElementById('ne-pwd').value;
+  const appUrl = (document.getElementById('ne-url') || {}).value || '';
+  const vapidKey = (document.getElementById('ne-vapid') || {}).value || '';
   if (!nom || !login || !pwd) { showToast('Remplissez tous les champs', 'error'); return; }
   const id = 'etab_' + Date.now();
   const pwdHash = await hashPwd(pwd);
   const etab = defaultEtab(nom, ville, login, pwdHash);
   DB.etablissements[id] = etab;
+  // Sauvegarder URL et VAPID dans localStorage pour cet établissement
+  try {
+    if (appUrl) localStorage.setItem('horizon_app_url', appUrl);
+    if (vapidKey && !vapidKey.startsWith('REMPLACER')) localStorage.setItem('horizon_vapid_key', vapidKey);
+    localStorage.setItem('horizon_default_etab', id);
+  } catch(e) {}
   saveToStorage();
   populateLoginEtabs();
   document.getElementById('login-etab').value = id;
   closeModal('modal-new-etab');
-  showToast('Établissement créé ! Vous pouvez vous connecter.', 'success');
+  // Réinitialiser les champs du modal
+  ['ne-nom','ne-ville','ne-login','ne-pwd','ne-url','ne-vapid'].forEach(function(fid) {
+    var el = document.getElementById(fid); if (el) el.value = '';
+  });
+  var msg = 'Établissement créé ! Vous pouvez vous connecter.';
+  if (!vapidKey) msg += ' — Pensez à configurer la clé VAPID pour les notifications push.';
+  showToast(msg, 'success');
 }
 
 // ============================================================
@@ -4180,6 +4785,7 @@ function showPage(page) {
     checkNouvellesDemandesConges();
   }
   if (page === 'direction') renderDirectionDashboard();
+  if (page === 'notifications') { updateMsgBadge(); updateMobileNotifBadge(); }
   if (page === 'notifications') { renderNotificationsRH(); marquerToutesLues(); }
   if (page === 'agents') { updateAgentSpecTabs(); renderAgents(); }
   if (page === 'vacataires') renderVacataires();
@@ -4374,6 +4980,8 @@ function updateMobileCongesBadge() {
   const nb = (etab.demandesConges||[]).filter(d => d.statut === 'en_attente').length;
   badge.textContent = nb;
   badge.style.display = nb > 0 ? 'block' : 'none';
+  // Aussi mettre à jour le badge notif
+  if (typeof updateMobileNotifBadge === 'function') updateMobileNotifBadge();
 }
 
 function mobileNav(page) {
@@ -4391,7 +4999,6 @@ function mobileNav(page) {
   // Pages spéciales
   if (page === 'conges') {
     showPage('dashboard');
-    // Scroll vers la section congés
     setTimeout(() => {
       const el = document.getElementById('dash-conges');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -4400,6 +5007,19 @@ function mobileNav(page) {
   }
 
   showPage(page);
+}
+
+function updateMobileNotifBadge() {
+  var etab = getEtab();
+  var badge = document.getElementById('mn-notif-badge');
+  if (!badge || !etab) return;
+  var nb = ((etab.notificationsRH||[]).filter(function(n){ return !n.lu; }).length)
+         + ((etab.messagesRH||[]).filter(function(m){
+              var u = DB.currentUser;
+              return !m.lu && (!m.destLogin || m.destLogin === (u && u.login) || (u && u.role === 'admin'));
+            }).length);
+  badge.textContent = nb;
+  badge.style.display = nb > 0 ? 'block' : 'none';
 }
 
 function closeMobileMore() {
@@ -4552,6 +5172,266 @@ function initDirectionSelects() {
   }
 }
 
+// ── Gestion onglets Vue Direction ──
+function dirShowTab(tab) {
+  ['mensuel','absenteisme'].forEach(function(t) {
+    var content = document.getElementById('dir-tab-' + t + '-content');
+    var btn = document.getElementById('dir-tab-' + t);
+    if (content) content.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = (t === tab) ? 'var(--accent1)' : 'var(--text2)';
+      btn.style.borderBottomColor = (t === tab) ? 'var(--accent1)' : 'transparent';
+      btn.style.fontWeight = (t === tab) ? '700' : '600';
+    }
+  });
+  if (tab === 'absenteisme') renderAbsenteisme12Mois();
+}
+
+// ── Calculer les stats d'un mois donné ──
+function calcStatsMois(annee, mois, etab) {
+  var planMonth = ((etab.planning[annee] || {})[mois]) || {};
+  var daysInMonth = new Date(annee, mois + 1, 0).getDate();
+  var agents = etab.agents.filter(function(a) { return a.actif; });
+  var codesWork = ['M','S','J','NU','N'];
+  var codesAbs  = ['MO','AM','EM','AT','GR'];
+  var codesCA   = ['CA','CF','RC','FO','CP'];
+
+  var totalJoursTrav = 0, totalJoursAbs = 0, totalJoursCA = 0, totalHS = 0;
+  var agentsAvecAbs = new Set(), agentsAvecHS = new Set();
+  var absByCode = {};
+
+  agents.forEach(function(ag) {
+    var agPlan = planMonth[ag.id] || {};
+    for (var d = 1; d <= daysInMonth; d++) {
+      var sh = agPlan[d] || '';
+      if (codesWork.includes(sh) || (sh.startsWith('HS') && sh.length > 2)) totalJoursTrav++;
+      if (codesAbs.includes(sh)) { totalJoursAbs++; agentsAvecAbs.add(ag.id); absByCode[sh] = (absByCode[sh]||0)+1; }
+      if (codesCA.includes(sh)) totalJoursCA++;
+    }
+    var hs = ((etab.heuresSup || {})[ag.id] || []).filter(function(e) {
+      var dd = new Date(e.date);
+      return dd.getFullYear() === annee && dd.getMonth() === mois;
+    }).reduce(function(s,e) { return s + (e.heures||0); }, 0);
+    if (hs > 0) { totalHS += hs; agentsAvecHS.add(ag.id); }
+  });
+
+  var theorique = agents.length * daysInMonth * 0.714;
+  var tauxCouv = theorique > 0 ? Math.min(100, Math.round(totalJoursTrav / theorique * 100)) : 0;
+  var tauxAbs = agents.length > 0 ? Math.round(agentsAvecAbs.size / agents.length * 100) : 0;
+
+  // Coût vacataires
+  var txH = etab.config.tauxHoraireVac || 18;
+  var coutVac = 0, nbVacJours = 0;
+  Object.entries(etab.affectationsVac || {}).forEach(function([dk, aff]) {
+    var parts = dk.split('-').map(Number);
+    if (parts[0] === annee && parts[1] - 1 === mois) {
+      Object.values(aff).forEach(function(a) {
+        if (a && a.shift) {
+          var hor = etab.horaires.find(function(h){ return h.code === a.shift; });
+          coutVac += (hor ? (hor.duree||10) : 10) * txH;
+          nbVacJours++;
+        }
+      });
+    }
+  });
+
+  return { totalJoursTrav, totalJoursAbs, totalJoursCA, totalHS, tauxCouv, tauxAbs,
+           agentsAvecAbs: agentsAvecAbs.size, agentsAvecHS: agentsAvecHS.size,
+           coutVac, nbVacJours, absByCode, agents: agents.length, daysInMonth };
+}
+
+// ── Comparatif M vs M-1 ──
+function renderComparatif(annee, mois, etab) {
+  var el = document.getElementById('dir-comparatif');
+  if (!el) return;
+
+  var prevMois = mois === 0 ? 11 : mois - 1;
+  var prevAnnee = mois === 0 ? annee - 1 : annee;
+  var curr = calcStatsMois(annee, mois, etab);
+  var prev = calcStatsMois(prevAnnee, prevMois, etab);
+  var moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var prevLabel = moisLabels[prevMois] + ' ' + prevAnnee;
+
+  function delta(curr, prev, higherIsBetter) {
+    if (prev === 0) return '';
+    var diff = curr - prev;
+    var pct = Math.round(Math.abs(diff) / prev * 100);
+    if (diff === 0) return '<span style="color:var(--text3);font-size:10px">= vs ' + prevLabel + '</span>';
+    var good = higherIsBetter ? diff > 0 : diff < 0;
+    var arrow = diff > 0 ? '↑' : '↓';
+    var color = good ? '#38d9a9' : '#f76f6f';
+    return '<span style="color:' + color + ';font-size:10px;font-weight:700">' + arrow + ' ' + pct + '% vs ' + prevLabel + '</span>';
+  }
+
+  var items = [
+    { label: 'Couverture', curr: curr.tauxCouv + '%', prev: prev.tauxCouv + '%', d: delta(curr.tauxCouv, prev.tauxCouv, true), color: '#4f8ef7' },
+    { label: 'Absentéisme', curr: curr.tauxAbs + '%', prev: prev.tauxAbs + '%', d: delta(curr.tauxAbs, prev.tauxAbs, false), color: '#f7a94f' },
+    { label: 'Jours absences', curr: curr.totalJoursAbs + 'j', prev: prev.totalJoursAbs + 'j', d: delta(curr.totalJoursAbs, prev.totalJoursAbs, false), color: '#f76f6f' },
+    { label: 'HS', curr: curr.totalHS + 'h', prev: prev.totalHS + 'h', d: delta(curr.totalHS, prev.totalHS, false), color: '#a07ee8' },
+    { label: 'Coût vacataires', curr: curr.coutVac.toLocaleString('fr-FR') + '€', prev: prev.coutVac.toLocaleString('fr-FR') + '€', d: delta(curr.coutVac, prev.coutVac, false), color: '#38d9a9' }
+  ];
+
+  el.innerHTML = items.map(function(item) {
+    return '<div style="flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">' +
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">' + item.label + '</div>' +
+      '<div style="display:flex;align-items:baseline;gap:8px">' +
+        '<span style="font-size:20px;font-weight:900;color:' + item.color + '">' + item.curr + '</span>' +
+        '<span style="font-size:11px;color:var(--text3)">vs ' + item.prev + '</span>' +
+      '</div>' +
+      '<div style="margin-top:4px">' + item.d + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Absentéisme 12 mois glissants ──
+function renderAbsenteisme12Mois() {
+  var etab = getEtab();
+  if (!etab) return;
+  var moisLabels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var codesAbs = ['MO','AM','EM','AT','GR'];
+  var absColors = { MO:'#94a3b8', AM:'#fb923c', EM:'#f97316', AT:'#f59e0b', GR:'#6b7280' };
+  var now = new Date();
+  var mois12 = [];
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    mois12.push({ annee: d.getFullYear(), mois: d.getMonth() });
+  }
+
+  var stats = mois12.map(function(m) {
+    return Object.assign({ label: moisLabels[m.mois] + ' ' + m.annee, labelCourt: moisLabels[m.mois] }, calcStatsMois(m.annee, m.mois, etab));
+  });
+
+  // ── Graphique barres HTML ──
+  var maxAbs = Math.max.apply(null, stats.map(function(s){ return s.totalJoursAbs; })) || 1;
+  var chartEl = document.getElementById('dir-abs-12m-chart');
+  if (chartEl) {
+    chartEl.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding:0 4px">' +
+      stats.map(function(s) {
+        var h = Math.round((s.totalJoursAbs / maxAbs) * 80);
+        var col = s.tauxAbs > 10 ? '#f76f6f' : s.tauxAbs > 5 ? '#f7a94f' : '#38d9a9';
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
+          '<div style="font-size:9px;color:var(--text3);font-weight:600">' + (s.totalJoursAbs || '') + '</div>' +
+          '<div style="width:100%;background:' + col + ';border-radius:3px 3px 0 0;min-height:2px;height:' + h + 'px;transition:height 0.3s"></div>' +
+          '<div style="font-size:9px;color:var(--text3);writing-mode:vertical-rl;transform:rotate(180deg);height:36px;overflow:hidden">' + s.labelCourt + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;padding:8px;background:var(--bg3);border-radius:8px">' +
+      '<span style="font-size:11px;color:#38d9a9">■ ≤5% absence</span>' +
+      '<span style="font-size:11px;color:#f7a94f">■ 5–10%</span>' +
+      '<span style="font-size:11px;color:#f76f6f">■ >10%</span>' +
+    '</div>';
+  }
+
+  // ── Tableau récap mensuel ──
+  var tableEl = document.getElementById('dir-abs-12m-table');
+  if (tableEl) {
+    var header = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:var(--bg3)">' +
+      '<th style="padding:8px;text-align:left;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border)">Mois</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Jours abs.</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Agents abs.</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Taux abs.</th>' +
+      codesAbs.map(function(c){ return '<th style="padding:8px;text-align:center;color:' + (absColors[c]||'#888') + ';border-bottom:1px solid var(--border)">' + c + '</th>'; }).join('') +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">HS (h)</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Couverture</th>' +
+      '</tr></thead><tbody>';
+
+    var rows = stats.map(function(s) {
+      var tauxColor = s.tauxAbs > 10 ? '#f76f6f' : s.tauxAbs > 5 ? '#f7a94f' : '#38d9a9';
+      return '<tr style="border-bottom:1px solid var(--border)22">' +
+        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + s.label + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:700;color:var(--text)">' + s.totalJoursAbs + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;color:var(--text2)">' + s.agentsAvecAbs + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:700;color:' + tauxColor + '">' + s.tauxAbs + '%</td>' +
+        codesAbs.map(function(c){ return '<td style="padding:7px 8px;text-align:center;color:' + (absColors[c]||'#888') + '">' + (s.absByCode[c]||0) + '</td>'; }).join('') +
+        '<td style="padding:7px 8px;text-align:center;color:var(--accent2);font-weight:600">' + (s.totalHS||0) + 'h</td>' +
+        '<td style="padding:7px 8px;text-align:center;color:var(--text2)">' + s.tauxCouv + '%</td>' +
+      '</tr>';
+    }).join('');
+
+    tableEl.innerHTML = header + rows + '</tbody></table>';
+  }
+
+  // ── Tableau par agent ──
+  var agentsEl = document.getElementById('dir-abs-12m-agents');
+  if (agentsEl) {
+    var agents = etab.agents.filter(function(a){ return a.actif; });
+    // Calculer total absences par agent sur 12 mois
+    var agentStats = agents.map(function(ag) {
+      var total = 0, byCode = {};
+      mois12.forEach(function(m) {
+        var agPlan = (((etab.planning[m.annee]||{})[m.mois])||{})[ag.id] || {};
+        var dim = new Date(m.annee, m.mois+1, 0).getDate();
+        for (var d = 1; d <= dim; d++) {
+          var sh = agPlan[d] || '';
+          if (codesAbs.includes(sh)) { total++; byCode[sh] = (byCode[sh]||0)+1; }
+        }
+      });
+      return { ag: ag, total: total, byCode: byCode };
+    }).filter(function(x){ return x.total > 0; })
+      .sort(function(a,b){ return b.total - a.total; });
+
+    if (agentStats.length === 0) {
+      agentsEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:12px">Aucune absence sur les 12 derniers mois ✓</div>';
+      return;
+    }
+
+    var agHeader = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+      '<thead><tr style="background:var(--bg3)">' +
+      '<th style="padding:8px;text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">Agent</th>' +
+      '<th style="padding:8px;text-align:left;color:var(--text2);border-bottom:1px solid var(--border)">Spécialité</th>' +
+      '<th style="padding:8px;text-align:center;color:var(--text2);border-bottom:1px solid var(--border)">Total 12m</th>' +
+      codesAbs.map(function(c){ return '<th style="padding:8px;text-align:center;color:' + (absColors[c]||'#888') + ';border-bottom:1px solid var(--border)">' + c + '</th>'; }).join('') +
+      '</tr></thead><tbody>';
+
+    var agRows = agentStats.map(function(x) {
+      return '<tr style="border-bottom:1px solid var(--border)22">' +
+        '<td style="padding:7px 8px;font-weight:600;color:var(--text)">' + esc(x.ag.prenom||'') + ' ' + esc(x.ag.nom) + '</td>' +
+        '<td style="padding:7px 8px;color:var(--text2)">' + esc(x.ag.spec||'') + '</td>' +
+        '<td style="padding:7px 8px;text-align:center;font-weight:800;color:' + (x.total > 15 ? '#f76f6f' : x.total > 7 ? '#f7a94f' : 'var(--text)') + '">' + x.total + '</td>' +
+        codesAbs.map(function(c){ return '<td style="padding:7px 8px;text-align:center;color:' + (absColors[c]||'#888') + '">' + (x.byCode[c]||0) + '</td>'; }).join('') +
+      '</tr>';
+    }).join('');
+
+    agentsEl.innerHTML = agHeader + agRows + '</tbody></table>';
+  }
+}
+
+// ── Export CSV absentéisme ──
+function exportAbsenteismeCSV() {
+  var etab = getEtab();
+  if (!etab) return;
+  var moisLabels = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var codesAbs = ['MO','AM','EM','AT','GR'];
+  var now = new Date();
+  var mois12 = [];
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    mois12.push({ annee: d.getFullYear(), mois: d.getMonth() });
+  }
+  var stats = mois12.map(function(m) {
+    return Object.assign({ label: moisLabels[m.mois] + ' ' + m.annee }, calcStatsMois(m.annee, m.mois, etab));
+  });
+
+  var header = ['Mois','Jours absences','Agents absents','Taux absentéisme (%)'].concat(codesAbs).concat(['HS (h)','Couverture (%)','Coût vacataires (€)']).join(';');
+  var rows = stats.map(function(s) {
+    return [s.label, s.totalJoursAbs, s.agentsAvecAbs, s.tauxAbs]
+      .concat(codesAbs.map(function(c){ return s.absByCode[c]||0; }))
+      .concat([s.totalHS||0, s.tauxCouv, s.coutVac]).join(';');
+  });
+
+  var csv = '\uFEFF' + [header].concat(rows).join('\n'); // BOM pour Excel
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'absenteisme_' + etab.nom.replace(/\s/g,'_') + '_' + now.getFullYear() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Export CSV téléchargé ✓', 'success');
+}
+
 function renderDirectionDashboard() {
   const etab = getEtab();
   if (!etab) return;
@@ -4643,6 +5523,9 @@ function renderDirectionDashboard() {
       <div style="font-size:11px;color:var(--text2);margin-top:8px">${nbVacJours} affectation(s) · ${txHoraireVac}€/h</div>
     </div>
   `;
+
+  // ── Comparatif M vs M-1 ──
+  renderComparatif(annee, mois, etab);
 
   // ── Absentéisme détail ──
   const absEl = document.getElementById('dir-abs-detail');
@@ -5316,16 +6199,17 @@ function renderPlanning() {
   if (!planning[currentYear][currentMonth]) planning[currentYear][currentMonth] = {};
   const planMonth = planning[currentYear][currentMonth];
 
-  // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*46}px"><thead style="position:sticky;top:0;z-index:30"><tr>
-    <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
-    <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
   // Calcul dynamique largeur colonnes jour selon écran disponible
-  // Colonnes fixes : Poste(60) + Nom(150) + Total(80) = 290px
+  // Colonnes fixes : Poste(60) + Nom(150) = 210px
   const _container = document.getElementById('planning-container');
   const _availW = Math.max(600, (_container ? _container.offsetWidth : window.innerWidth - 80) - 294);
   const _dayW = Math.max(28, Math.min(46, Math.floor(_availW / daysInMonth)));
   window._planningDayColW = _dayW; // exposé pour les vacataires
+
+  // Header row — thead sticky
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+    <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
+    <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
@@ -5366,7 +6250,7 @@ function renderPlanning() {
       '<td colspan="2" style="position:sticky;left:0;z-index:20;background:var(--bg3);padding:5px 10px;border-top:2px solid var(--border);white-space:nowrap">' +
         '<span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">Groupe ' + gKey + ' — ' + nbActifsGroupe + ' agent' + (nbActifsGroupe>1?'s':'') + '</span>' +
       '</td>' +
-      '<td colspan="' + (daysInMonth + 1) + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
+      '<td colspan="' + daysInMonth + '" style="background:var(--bg3);border-top:2px solid var(--border)"></td>' +
       '</tr>';
 
     // Alertes groupe
@@ -5415,7 +6299,7 @@ function renderPlanning() {
         '<td colspan="2" style="position:sticky;left:0;z-index:8;background:rgba(247,111,111,0.06);padding:3px 10px;border-bottom:1px solid rgba(247,111,111,0.2);white-space:nowrap">' +
           '<div style="font-size:10px;display:flex;flex-wrap:wrap;gap:12px">' + alertesGroupe.join(' &nbsp;|&nbsp; ') + '</div>' +
         '</td>' +
-        '<td colspan="' + (daysInMonth + 1) + '" style="background:rgba(247,111,111,0.06);border-bottom:1px solid rgba(247,111,111,0.2)"></td>' +
+        '<td colspan="' + daysInMonth + '" style="background:rgba(247,111,111,0.06);border-bottom:1px solid rgba(247,111,111,0.2)"></td>' +
         '</tr>';
     }
 
@@ -5537,7 +6421,7 @@ function renderPlanning() {
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
+          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
@@ -5560,14 +6444,23 @@ function renderPlanning() {
   const planWrap = document.getElementById('planning-container');
   const vacWrap = document.getElementById('planning-vac-scroll');
   if (planWrap && vacWrap) {
+    // Laisser vacWrap scrollable horizontalement
+    vacWrap.style.overflowX = 'auto';
+    // Sync bidirectionnel : planning -> vac et vac -> planning
+    let _syncLock = false;
     planWrap.onscroll = function() {
+      if (_syncLock) return;
+      _syncLock = true;
       vacWrap.scrollLeft = planWrap.scrollLeft;
-      const inner = document.getElementById('planning-vac-container');
-      if (inner) inner.style.transform = 'translateX(-' + planWrap.scrollLeft + 'px)';
+      _syncLock = false;
+    };
+    vacWrap.onscroll = function() {
+      if (_syncLock) return;
+      _syncLock = true;
+      planWrap.scrollLeft = vacWrap.scrollLeft;
+      _syncLock = false;
     };
   }
-  // Changer overflow sur vacWrap pour permettre le scroll synchronisé
-  if (vacWrap) vacWrap.style.overflowX = 'hidden';
   // Cacher l'ancien conteneur totaux (maintenant dans le tableau)
   const totWrap = document.getElementById('sector-daily-totals');
   if (totWrap) totWrap.style.display = 'none';
@@ -6972,6 +7865,11 @@ function repondreConge(index, statut) {
   } else {
     showToast(`Demande de ${esc(d.agentNom)} refusée`, 'info');
   }
+
+  // ── Notification push à l'agent ──
+  const _moisLabel = d.debut ? d.debut.slice(0,7) : '';
+  notifCongeValide(_qrEtabIdCadre || DB.currentEtab, d.agentId, d.agentNom, statut === 'accepte', _moisLabel)
+    .catch(function(e){ console.warn('[PWA] Notif congé agent échouée:', e); });
 
   saveToStorage();
   saveToSupabase().catch(e => console.warn('Sync congé échoué:', e));
@@ -8426,57 +9324,24 @@ function envoyerAlertePersonnel(mois, annee) {
   }, 1500);
 }
 
-// ── Côté QR : afficher les alertes actives pour cet agent ──
+// ── Côté QR : marquer les alertes comme vues (appelé à l'ouverture) ──
 function qrCheckAlertes(etab, agentId) {
   if (!etab || !etab.alertesPersonnel) return;
-  const maintenant = new Date();
-
-  // Filtrer les alertes actives (mois courant ou futur, non expirées > 30j)
-  const alertesAgent = etab.alertesPersonnel.filter(a => {
-    if (!a.destinataires.includes(agentId)) return false;
-    // Alerte valide si dans le mois concerné ou le mois précédent/suivant
-    const finValidite = new Date(a.annee, a.mois + 1, 15); // 15 du mois suivant
-    return maintenant < finValidite;
+  var maintenant = new Date();
+  var alertesAgent = etab.alertesPersonnel.filter(function(a) {
+    if (!a.destinataires || !a.destinataires.includes(agentId)) return false;
+    return maintenant < new Date(a.annee, a.mois + 1, 15);
   });
-
   if (alertesAgent.length === 0) return;
-
-  // Marquer comme vu
-  alertesAgent.forEach(a => {
-    if (!a.vues[agentId]) {
-      a.vues[agentId] = new Date().toISOString();
-    }
+  var modifie = false;
+  alertesAgent.forEach(function(a) {
+    if (!a.vues) a.vues = {};
+    if (!a.vues[agentId]) { a.vues[agentId] = new Date().toISOString(); modifie = true; }
   });
-  saveToStorage();
-  saveToSupabase().catch(() => {});
-
-  // Afficher le bandeau dans la vue QR
-  const bannerZone = document.getElementById('qr-alertes-zone');
-  if (!bannerZone) return;
-
-  const html = alertesAgent.map(a => {
-    const moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][a.mois];
-    const colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
-    const jours = (a.joursManquants || []).slice(0, 5);
-    return `<div style="background:rgba(247,111,111,0.12);border:1.5px solid rgba(247,111,111,0.4);border-radius:12px;padding:14px 16px;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:800;color:#f76f6f;margin-bottom:6px">🚨 Alerte remplacement — ${moisLabel} ${a.annee}</div>
-      <div style="font-size:12px;color:#e8ecf4;margin-bottom:10px;line-height:1.5">${esc(a.message)}</div>
-      <div style="font-size:11px;color:#8892aa;margin-bottom:8px">Jours concernés :</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-        ${jours.map(j => {
-          const dt = new Date(j.date + 'T00:00:00');
-          const dl = dt.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
-          const badges = j.manq.map(m => `<span style="background:${colors[m.code]||'#888'}30;color:${colors[m.code]||'#888'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${m.code}</span>`).join('');
-          return `<div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:4px 8px;font-size:11px;color:#e8ecf4">${dl} ${badges}</div>`;
-        }).join('')}
-        ${a.joursManquants.length > 5 ? `<span style="font-size:10px;color:#6b7fa8">+${a.joursManquants.length-5} autre(s)</span>` : ''}
-      </div>
-      <div style="font-size:11px;color:#6b7fa8">Si vous êtes disponible, contactez votre cadre • Envoyé par ${esc(a.envoyeePar)}</div>
-    </div>`;
-  }).join('');
-
-  bannerZone.innerHTML = html;
-  bannerZone.style.display = 'block';
+  if (modifie) {
+    saveToStorage();
+    saveToSupabase().catch(function(){});
+  }
 }
 
 // Compter les alertes non vues (pour badge)
@@ -8493,20 +9358,27 @@ function countAlertesNonVues(etab, agentId) {
 // Suivi des "vues" dans la Vue Direction
 function renderAlertesSuivi() {
   const etab = getEtab();
-  if (!etab || !etab.alertesPersonnel || etab.alertesPersonnel.length === 0) return '';
-  const dernieres = etab.alertesPersonnel.slice(-5).reverse();
-  return dernieres.map(a => {
+  if (!etab || !etab.alertesPersonnel || etab.alertesPersonnel.length === 0) return '<div style="font-size:12px;color:var(--text3);padding:8px 0">Aucune alerte envoyée.</div>';
+  const toutes = [...etab.alertesPersonnel].reverse(); // toutes, plus récentes en premier
+  return toutes.map(a => {
     const nbVues = Object.keys(a.vues || {}).length;
     const reponses = Object.values(a.reponses || {});
     const nbDispo = reponses.filter(r => Object.values(r).some(v => v.disponible)).length;
     const nbNonDispo = reponses.filter(r => Object.values(r).some(v => !v.disponible)).length;
     const moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][a.mois];
-    return `<div style="padding:8px 0;border-bottom:1px solid var(--border)22">
-      <div style="font-size:12px;font-weight:600;color:var(--text)">📢 ${moisLabel} ${a.annee} — ${a.destinataires.length} destinataires</div>
+    const finValidite = new Date(a.annee, a.mois + 1, 15);
+    const expirée = new Date() >= finValidite;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)22">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:12px;font-weight:600;color:${expirée ? 'var(--text3)' : 'var(--text)'}">
+          📢 ${moisLabel} ${a.annee} — ${a.destinataires.length} dest. ${expirée ? '<span style="font-size:10px;color:var(--text3)">(expirée)</span>' : ''}
+        </div>
+        <button onclick="supprimerAlerte('${a.id}')" style="background:rgba(247,111,111,0.12);border:1px solid rgba(247,111,111,0.3);color:var(--accent4);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;flex-shrink:0">🗑️ Supprimer</button>
+      </div>
       <div style="display:flex;gap:12px;margin-top:4px;font-size:11px">
         <span style="color:var(--text3)">${nbVues} vue(s)</span>
         ${nbDispo>0?`<span style="color:var(--accent2);font-weight:700">✅ ${nbDispo} disponible(s)</span>`:''}
-        ${nbNonDispo>0?`<span style="color:var(--accent4)">❌ ${nbNonDispo} non disponible(s)</span>`:''}
+        ${nbNonDispo>0?`<span style="color:var(--accent4)">❌ ${nbNonDispo} non dispo</span>`:''}
       </div>
       ${nbDispo>0 ? `<div style="margin-top:6px;font-size:11px;color:var(--text2)">${
         Object.entries(a.reponses||{}).filter(([id,r])=>Object.values(r).some(v=>v.disponible)).map(([id,r])=>{
@@ -8516,6 +9388,19 @@ function renderAlertesSuivi() {
       }</div>` : ''}
     </div>`;
   }).join('');
+}
+
+function supprimerAlerte(alerteId) {
+  const etab = getEtab();
+  if (!etab || !etab.alertesPersonnel) return;
+  if (!confirm('Supprimer cette alerte ? Elle disparaîtra pour tous les agents.')) return;
+  etab.alertesPersonnel = etab.alertesPersonnel.filter(a => a.id !== alerteId);
+  saveToStorage();
+  saveToSupabase().catch(e => console.warn('Sync suppression alerte:', e));
+  // Rafraîchir le suivi
+  const suiviEl = document.getElementById('dir-alertes-suivi');
+  if (suiviEl) suiviEl.innerHTML = renderAlertesSuivi();
+  showToast('Alerte supprimée ✓', 'success');
 }
 
 function renderQRPage() {
@@ -8796,7 +9681,15 @@ function _handleSWMessage(event) {
 //     https://vapidkeys.com/  ou  npx web-push generate-vapid-keys
 // Remplace les valeurs ci-dessous par tes clés personnelles.
 //
-const VAPID_PUBLIC_KEY = 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+// Clé VAPID publique — configurable via Paramètres → Notifications
+// ou en dur ici pour les installations mono-établissement
+const VAPID_PUBLIC_KEY = (function() {
+  try {
+    var k = localStorage.getItem('horizon_vapid_key');
+    if (k && k.trim() && !k.startsWith('REMPLACER')) return k.trim();
+  } catch(e) {}
+  return 'REMPLACER_PAR_TA_CLE_VAPID_PUBLIQUE';
+})();
 // La clé PRIVÉE reste côté serveur (Edge Function Supabase), ne jamais la mettre ici.
 
 // ── Convertit une clé VAPID base64 en Uint8Array ──
@@ -9072,52 +9965,37 @@ window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _deferredInstallPrompt = e;
 
-  // Afficher la bannière pour tout le monde (agents QR et cadres/admins)
+  // Afficher la bannière seulement en vue QR (côté agent)
+  const qrView = document.getElementById('qr-view');
+  const isQR = window.location.search.includes('agent=') || window.location.search.includes('qr=1');
+  if (!isQR) return;
+
   // Délai pour ne pas afficher immédiatement à l'ouverture
   setTimeout(_showInstallBanner, 3000);
 });
 
 function _showInstallBanner() {
   if (!_deferredInstallPrompt) return;
-  if (document.getElementById('pwa-install-banner')) return;
-  // Ne pas re-proposer si déjà en mode standalone (déjà installée)
-  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
-
-  const isQR = document.body.getAttribute('data-qr-mode') === '1';
-  const isMobile = window.innerWidth <= 600;
+  if (document.getElementById('pwa-install-banner')) return; // déjà affiché
 
   const banner = document.createElement('div');
   banner.id = 'pwa-install-banner';
-
-  if (isQR || isMobile) {
-    // Bas d'écran — agents QR et admins mobile
-    const bottomOffset = isQR ? '12px' : '76px';
-    banner.style.cssText = [
-      'position:fixed;bottom:' + bottomOffset + ';left:12px;right:12px;z-index:9999',
-      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
-      'border:1px solid #4f8ef7;border-radius:14px',
-      'padding:14px 16px;display:flex;align-items:center;gap:12px',
-      'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
-    ].join(';');
-  } else {
-    // Coin bas-droite — admins desktop
-    banner.style.cssText = [
-      'position:fixed;bottom:24px;right:24px;z-index:9999',
-      'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
-      'border:1px solid #4f8ef7;border-radius:14px',
-      'padding:14px 18px;display:flex;align-items:center;gap:12px',
-      'box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:360px',
-    ].join(';');
-  }
-
+  banner.style.cssText = [
+    'position:fixed;bottom:70px;left:12px;right:12px;z-index:9000',
+    'background:linear-gradient(135deg,#1a2035,#1e2d4a)',
+    'border:1px solid #4f8ef7;border-radius:14px',
+    'padding:14px 16px;display:flex;align-items:center;gap:12px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+    'animation:slideUp 0.3s ease',
+  ].join(';');
   banner.innerHTML = [
-    '<div style="font-size:26px;flex-shrink:0">📲</div>',
+    '<div style="font-size:28px;flex-shrink:0">📲</div>',
     '<div style="flex:1;min-width:0">',
-    '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
-    '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis l\'\u00e9cran d\'accueil</div>',
+      '<div style="font-weight:700;font-size:13px;color:#e8ecf4">Installer Horizon Planning</div>',
+      '<div style="font-size:11px;color:#8892aa;margin-top:2px">Accès rapide depuis votre écran d\'accueil</div>',
     '</div>',
     '<button onclick="installPWA()" style="background:#4f8ef7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">Installer</button>',
-    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:20px;cursor:pointer;padding:4px 6px;flex-shrink:0;line-height:1">\u2715</button>',
+    '<button onclick="document.getElementById(\'pwa-install-banner\').remove()" style="background:transparent;border:none;color:#5a6480;font-size:18px;cursor:pointer;padding:4px;flex-shrink:0">✕</button>',
   ].join('');
   document.body.appendChild(banner);
 }
@@ -9298,9 +10176,6 @@ var _qrPinBuffer = '';
 var _qrWeekOffset = 0;
 var _qrSpecFilter = '';
 var _qrPendingAgentId = null;
-var _qrPinBuffer = '';
-var _qrWeekOffset = 0;
-var _qrSpecFilter = '';
 
 var QR_COLORS = {
   M:  { bg:'#dbeafe', fg:'#1d4ed8', dark:'#1e3a6e' },
@@ -9520,10 +10395,10 @@ function qrRenderBanner(etab, agent) {
   var sectColor = sect ? secteurCouleurCSS(sect) : '#38bdf8';
   var sectNom = sect ? sect.nom : (sectId || 'N/A');
 
-  // CA restants
+  // CA restants — on scanne TOUTE l'année civile (y compris les mois futurs déjà posés)
   var droits = calcDroitsConges ? calcDroitsConges(agent, {}, etab, today.getFullYear(), today.getMonth()) : { droitCA: 0 };
   var caAnnuel = 0;
-  for (var m = 0; m <= today.getMonth(); m++) {
+  for (var m = 0; m < 12; m++) {
     var pm = ((etab.planning[today.getFullYear()] || {})[m] || {})[agent.id] || {};
     var dim = new Date(today.getFullYear(), m+1, 0).getDate();
     for (var d = 1; d <= dim; d++) {
@@ -9621,6 +10496,11 @@ function qrOpenPlanning(agentId) {
     localStorage.setItem('qr_session', JSON.stringify({ agentId: agentId, etabId: _qrEtabId, ts: Date.now() }));
   } catch(e) {}
 
+  // ── Envoyer le manifest dynamique au Service Worker (fix iOS PWA start_url) ──
+  // iOS Safari lit /manifest.json via HTTP au moment de l'ajout à l'écran d'accueil.
+  // Le SW intercepte cette requête et retourne le manifest personnalisé de l'agent.
+  _sendAgentManifestToSW(agentId, _qrEtabId);
+
   // Peupler les types de congé avec les codes de l'établissement
   qrPopulateAbsenceTypes(etab);
 
@@ -9636,10 +10516,10 @@ function qrOpenPlanning(agentId) {
     var secteur = agent.secteurFixe || getSecteurDuMois(agent, today.getFullYear(), today.getMonth(), etab);
     var sectObj = etab.secteurs.find(function(s){ return s.id === secteur; });
     var sectColor = sectObj ? secteurCouleurCSS(sectObj) : '#6b7fa8';
-    // Calcul CA restants
+    // Calcul CA restants — toute l'année civile
     var droits = calcDroitsConges(agent, ((etab.planning[today.getFullYear()]||{})[today.getMonth()]||{}), etab, today.getFullYear(), today.getMonth());
     var caAnnuelPris = 0;
-    for (var m = 0; m <= today.getMonth(); m++) {
+    for (var m = 0; m < 12; m++) {
       var pm = ((etab.planning[today.getFullYear()]||{})[m]||{});
       var dim = new Date(today.getFullYear(), m+1, 0).getDate();
       for (var dd = 1; dd <= dim; dd++) {
@@ -9683,16 +10563,163 @@ function qrOpenPlanning(agentId) {
   }
 
   qrRenderBanner(etab, agent);
-  // Vérifier et afficher les alertes manque de personnel
+  // Calculer le nombre d'alertes et mettre à jour le badge
   qrCheckAlertes(etab, agentId);
+  var nbAlertes = ((etab.alertesPersonnel||[]).filter(function(a){
+    if (!a.destinataires || !a.destinataires.includes(agentId)) return false;
+    var fin = new Date(a.annee, a.mois + 1, 15);
+    return fin >= new Date();
+  })).length;
+  var badge = document.getElementById('qr-alertes-badge');
+  if (badge) {
+    if (nbAlertes > 0) { badge.textContent = nbAlertes; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+  // Bannière d'installation PWA
+  qrInjectAgentManifest(agentId, _qrEtabId);
+  setTimeout(function() { qrShowPWABanner(); }, 2000);
   if (isVac) {
-    // Vacataire : afficher seulement les dispos, pas le planning
     qrShowTab('dispos');
-    qrRenderDispos(etab, agent);
   } else {
     qrShowTab('planning');
-    qrRenderPlanning();
   }
+}
+
+function qrInjectAgentManifest(agentId, etabId) {
+  // Génère un manifest dynamique avec le start_url de l'agent
+  // pour que le raccourci écran d'accueil ouvre directement son planning
+  var startUrl = '/?agent=' + encodeURIComponent(agentId) + '&etab=' + encodeURIComponent(etabId);
+  var etab = DB.etablissements[etabId];
+  var agent = etab ? (etab.agents || []).find(function(a){ return a.id === agentId; })
+                   || (etab.vacataires || []).find(function(v){ return v.id === agentId; }) : null;
+  var agentName = agent ? (agent.nom + (agent.prenom ? ' ' + agent.prenom : '')) : 'Mon Planning';
+  var etabName = etab ? etab.nom : 'Horizon Planning';
+
+  var manifest = {
+    name: agentName + ' — ' + etabName,
+    short_name: agentName.split(' ')[0] || 'Planning',
+    description: 'Planning de ' + agentName,
+    start_url: startUrl,
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#0f1117',
+    theme_color: '#4f8ef7',
+    lang: 'fr',
+    icons: [
+      { src: '/icons/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  };
+
+  var blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+
+  // Remplacer le lien manifest existant
+  var existing = document.querySelector('link[rel="manifest"]');
+  if (existing) {
+    existing.href = url;
+  } else {
+    var link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = url;
+    document.head.appendChild(link);
+  }
+}
+
+// ── Envoyer le manifest agent au Service Worker via postMessage ──
+// Le SW intercepte GET /manifest.json et retourne ce manifest.
+// iOS Safari relit /manifest.json au moment de "Ajouter à l'écran d'accueil",
+// ce qui permet d'injecter un start_url personnalisé même si le raccourci
+// a été créé depuis une URL générique.
+function _sendAgentManifestToSW(agentId, etabId) {
+  if (!('serviceWorker' in navigator)) return;
+  var etab = DB.etablissements[etabId];
+  if (!etab) return;
+
+  var agent = (etab.agents || []).find(function(a){ return a.id === agentId; })
+           || (etab.vacataires || []).find(function(v){ return v.id === agentId; });
+  var agentName = agent ? (agent.nom + (agent.prenom ? ' ' + agent.prenom : '')) : 'Mon Planning';
+  var etabName  = etab.nom || 'Horizon Planning';
+
+  var startUrl = '/?agent=' + encodeURIComponent(agentId) + '&etab=' + encodeURIComponent(etabId);
+
+  var manifest = {
+    name: agentName + ' — ' + etabName,
+    short_name: agentName.split(' ')[0] || 'Planning',
+    description: 'Planning de ' + agentName,
+    start_url: startUrl,
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait-primary',
+    background_color: '#0f1117',
+    theme_color: '#4f8ef7',
+    lang: 'fr',
+    icons: [
+      { src: '/icons/web-app-manifest-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/web-app-manifest-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      { src: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  };
+
+  // Envoyer au SW actif (ou attendre qu'il soit prêt)
+  navigator.serviceWorker.ready.then(function(reg) {
+    if (reg.active) {
+      reg.active.postMessage({ type: 'SET_AGENT_MANIFEST', manifest: manifest });
+    }
+  }).catch(function(err) {
+    console.warn('[PWA] SW non prêt pour manifest agent:', err);
+  });
+}
+
+function qrShowPWABanner() {
+  // Ne pas afficher si déjà installée en standalone
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+  // Ne pas afficher si déjà visible ou déjà fermée dans cette session
+  if (document.getElementById('qr-pwa-banner')) return;
+  try { if (sessionStorage.getItem('qr_pwa_dismissed')) return; } catch(e) {}
+
+  var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  if (!isIOS && !isAndroid) return; // desktop : le beforeinstallprompt suffit
+
+  // Si le navigateur supporte beforeinstallprompt ET qu'on a le prompt → laisser faire l'automatique
+  if (!isIOS && typeof _deferredInstallPrompt !== 'undefined' && _deferredInstallPrompt) return;
+
+  var banner = document.createElement('div');
+  banner.id = 'qr-pwa-banner';
+  banner.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:9999;' +
+    'background:linear-gradient(135deg,#0f1827,#1a2d4a);' +
+    'border:1px solid #4f8ef7;border-radius:16px;' +
+    'padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.6)';
+
+  var instructions = isIOS
+    ? '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
+        '1. Appuyez sur <strong style="color:#fff">Safari</strong> (ouvrir dans Safari si besoin)<br>' +
+        '2. Puis <strong style="color:#fff">&#x2B06; Partager</strong> → <strong style="color:#fff">Sur l\'ecran d\'accueil</strong>' +
+      '</div>'
+    : '<div style="font-size:12px;color:#7dd3fc;margin-top:8px;line-height:1.7">' +
+        '1. Ouvrez le lien dans <strong style="color:#fff">Chrome</strong><br>' +
+        '2. Menu <strong style="color:#fff">&#8942;</strong> → <strong style="color:#fff">Ajouter a l\'ecran d\'accueil</strong>' +
+      '</div>';
+
+  banner.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);' +
+          'display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0">H</div>' +
+        '<div>' +
+          '<div style="font-weight:800;font-size:13px;color:#f1f5f9">&#x1F4F2; Installer l\'application</div>' +
+          '<div style="font-size:11px;color:#8892aa;margin-top:1px">Acces rapide depuis votre ecran d\'accueil</div>' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="(function(){try{sessionStorage.setItem(\'qr_pwa_dismissed\',\'1\')}catch(e){};document.getElementById(\'qr-pwa-banner\').remove()})()" ' +
+        'style="background:transparent;border:none;color:#5a6480;font-size:22px;cursor:pointer;flex-shrink:0;line-height:1;padding:0">&#x2715;</button>' +
+    '</div>' +
+    instructions;
+
+  document.body.appendChild(banner);
 }
 
 function qrRenderPlanning() {
@@ -9743,8 +10770,8 @@ function qrRenderPlanning() {
 
   var wlEl = document.getElementById('qr-week-label');
   var wdEl = document.getElementById('qr-week-dates');
-  if (wlEl) wlEl.textContent = 'Semaine ' + wn;
-  if (wdEl) wdEl.textContent = ws.getDate() + ' ' + monthNames[ws.getMonth()] + ' - ' + we.getDate() + ' ' + monthNames[we.getMonth()];
+  if (wlEl) wlEl.textContent = 'Semaine ' + wn + (ws.getFullYear() !== today.getFullYear() ? ' · ' + ws.getFullYear() : '');
+  if (wdEl) wdEl.textContent = ws.getDate() + ' ' + monthNames[ws.getMonth()] + ' - ' + we.getDate() + ' ' + monthNames[we.getMonth()] + (we.getFullYear() !== today.getFullYear() ? ' ' + we.getFullYear() : '');
 
   var dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   var container = document.getElementById('qr-weeks-container');
@@ -9793,8 +10820,6 @@ function qrRenderPlanning() {
   container.innerHTML = '';
   container.appendChild(wrapper);
 
-  qrRenderDispos(etab, agent);
-
   // Afficher les postes à pourvoir (alertes manque de personnel)
   qrRenderPostesAPourvoir(etab, agent);
 }
@@ -9803,114 +10828,107 @@ function qrRenderPostesAPourvoir(etab, agent) {
   var zone = document.getElementById('qr-postes-pourvoir');
   if (!zone) return;
 
+  var today = new Date();
+
   // Trouver les alertes actives pour cet agent
   var alertes = (etab.alertesPersonnel || []).filter(function(a) {
-    if (!a.destinataires.includes(agent.id)) return false;
+    if (!a.destinataires || !a.destinataires.includes(agent.id)) return false;
     var fin = new Date(a.annee, a.mois + 1, 15);
-    return new Date() < fin;
+    return today < fin;
   });
 
-  if (alertes.length === 0) { zone.style.display = 'none'; return; }
+  // Dédupliquer par date+code : une alerte peut avoir été envoyée plusieurs fois
+  // On collecte les combinaisons uniques date+code à afficher
+  var seen = {}; // clé: "YYYY-MM-DD_CODE"
+  var postes = []; // [{alerte, j, m}] dédupliqués
+  alertes.forEach(function(alerte) {
+    (alerte.joursManquants || []).forEach(function(j) {
+      var dt = new Date(j.date + 'T00:00:00');
+      if (dt < new Date(today.getFullYear(), today.getMonth(), today.getDate())) return;
+      (j.manq || []).forEach(function(m) {
+        var key = j.date + '_' + m.code;
+        if (!seen[key]) {
+          seen[key] = true;
+          postes.push({ alerte: alerte, j: j, m: m, dt: dt, dk: j.date });
+        }
+      });
+    });
+  });
+
+  if (postes.length === 0) { zone.style.display = 'none'; zone.innerHTML = ''; return; }
 
   zone.style.display = 'block';
-  var today = new Date();
   var colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
-
-  // Secteur préféré de l'agent
   var secteurAgent = agent.secteurFixe || getSecteurDuMois(agent, today.getFullYear(), today.getMonth(), etab);
   var secteursExclus = agent.exclusSecteurs || [];
 
-  var html = '<div style="font-size:11px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚨 Postes à pourvoir — cliquez pour vous proposer</div>';
+  var html = '<div style="font-size:11px;font-weight:700;color:#f76f6f;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🚨 ' + postes.length + ' poste(s) à pourvoir — répondez ci-dessous</div>';
 
-  alertes.forEach(function(alerte) {
-    var moisLabel = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][alerte.mois];
-    var jours = (alerte.joursManquants || []).filter(function(j) {
-      // Ne montrer que les jours futurs ou aujourd'hui
-      var dt = new Date(j.date + 'T00:00:00');
-      return dt >= new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    });
-    if (jours.length === 0) return;
+  // Trier par date
+  postes.sort(function(a, b) { return a.dk < b.dk ? -1 : a.dk > b.dk ? 1 : 0; });
 
-    html += '<div style="font-size:11px;font-weight:600;color:#8892aa;margin-bottom:6px">' + moisLabel + ' ' + alerte.annee + '</div>';
+  postes.forEach(function(p) {
+    var alerte = p.alerte, j = p.j, m = p.m, dt = p.dt, dk = p.dk;
+    var dl = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+    var col = colors[m.code] || '#888';
+    var hor = etab.horaires.find(function(h){ return h.code === m.code; });
+    var horaire = hor ? (hor.debut && hor.fin ? hor.debut + '–' + hor.fin : '') : '';
+    var duree = hor ? hor.duree : 10;
 
-    jours.forEach(function(j) {
-      var dt = new Date(j.date + 'T00:00:00');
-      var dl = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-      var dk = j.date;
+    // Secteur prévu ce jour
+    var secteurJour = getSecteurDuJour ? getSecteurDuJour(agent, dt.getFullYear(), dt.getMonth(), dt.getDate(), etab) : secteurAgent;
+    var sectObj = etab.secteurs.find(function(s){ return s.id === secteurJour; });
+    var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
+    var isExclu = secteursExclus.includes(secteurJour);
 
-      // Vérifier si l'agent est déjà affecté ce jour
-      var dejaAff = ((etab.affectationsVac || {})[dk] || {})[agent.id];
-      if (dejaAff) return;
+    // Statut planning
+    var agentPlanJour = ((etab.planning[dt.getFullYear()] || {})[dt.getMonth()] || {})[agent.id] || {};
+    var shiftCeJour = agentPlanJour[dt.getDate()] || '';
+    var travailCeJour = ['M','S','J','NU','N','FO'].includes(shiftCeJour) || (shiftCeJour.startsWith('HS') && shiftCeJour.length > 2);
+    var absenceCeJour = ['MO','EM','AT','GR','AM','CP'].includes(shiftCeJour);
+    var dejaAff = ((etab.affectationsVac || {})[dk] || {})[agent.id];
+    var dejaRepondu = alerte.reponses && alerte.reponses[agent.id] && alerte.reponses[agent.id][dk + '_' + m.code];
 
-      j.manq.forEach(function(m) {
-        var col = colors[m.code] || '#888';
-        var hor = etab.horaires.find(function(h){ return h.code === m.code; });
-        var horaire = hor ? (hor.debut && hor.fin ? hor.debut + '–' + hor.fin : '') : '';
-        var duree = hor ? hor.duree : 10;
+    var statusMsg = '', btnDisabled = false;
+    if (dejaAff) { statusMsg = '✅ Déjà affecté(e) ce jour'; btnDisabled = true; }
+    else if (travailCeJour) { statusMsg = '🔵 Déjà planifié(e) (' + shiftCeJour + ')'; btnDisabled = true; }
+    else if (absenceCeJour) { statusMsg = '⚠️ Absence ce jour (' + shiftCeJour + ')'; btnDisabled = true; }
+    else if (dejaRepondu) {
+      statusMsg = dejaRepondu.disponible ? '✅ Vous vous êtes proposé(e)' : '❌ Indisponible (répondu)';
+      btnDisabled = true;
+    }
 
-        // Secteur prévu ce jour (si rotation)
-        var secteurJour = getSecteurDuJour ? getSecteurDuJour(agent, dt.getFullYear(), dt.getMonth(), dt.getDate(), etab) : secteurAgent;
-        var sectObj = etab.secteurs.find(function(s){ return s.id === secteurJour; });
-        var sectNom = sectObj ? sectObj.nom : (secteurJour || '');
-        var isExclu = secteursExclus.includes(secteurJour);
+    var disabledStyle = btnDisabled ? 'opacity:0.4;cursor:not-allowed;' : 'cursor:pointer;';
+    var bgColor = travailCeJour ? 'rgba(79,142,247,0.06)' : absenceCeJour ? 'rgba(247,169,79,0.06)' : 'rgba(247,111,111,0.08)';
+    var bdColor = travailCeJour ? 'rgba(79,142,247,0.25)' : absenceCeJour ? 'rgba(247,169,79,0.25)' : 'rgba(247,111,111,0.25)';
 
-        // ── Vérifier si l'agent travaille déjà ce jour ──
-        var agentPlanJour = ((etab.planning[dt.getFullYear()] || {})[dt.getMonth()] || {})[agent.id] || {};
-        var shiftCeJour = agentPlanJour[dt.getDate()] || '';
-        var codesWork = ['M','S','J','NU','N','FO'];
-        var codesAbs  = ['MO','EM','AT','GR','AM','CP'];
-        var travailCeJour = codesWork.includes(shiftCeJour) || (shiftCeJour.startsWith('HS') && shiftCeJour.length > 2);
-        var absenceCeJour = codesAbs.includes(shiftCeJour);
-        var dejaRepondu   = alerte.reponses && alerte.reponses[agent.id] && alerte.reponses[agent.id][dk + '_' + m.code];
-
-        // Message de statut
-        var statusMsg = '';
-        var btnDisabled = false;
-        if (travailCeJour) {
-          statusMsg = '🔵 Vous travaillez déjà ce jour (' + shiftCeJour + ')';
-          btnDisabled = true;
-        } else if (absenceCeJour) {
-          statusMsg = '⚠️ Absence enregistrée ce jour (' + shiftCeJour + ')';
-          btnDisabled = true;
-        } else if (dejaRepondu) {
-          var rep = dejaRepondu;
-          statusMsg = rep.disponible ? '✅ Vous vous êtes proposé(e)' : '❌ Vous avez indiqué ne pas être disponible';
-          btnDisabled = true;
-        }
-
-        var disabledStyle = btnDisabled ? 'opacity:0.4;cursor:not-allowed;' : 'cursor:pointer;';
-
-        html += '<div style="background:' + (travailCeJour ? 'rgba(79,142,247,0.06)' : absenceCeJour ? 'rgba(247,169,79,0.06)' : 'rgba(247,111,111,0.08)') + ';' +
-          'border:1.5px solid ' + (travailCeJour ? 'rgba(79,142,247,0.25)' : absenceCeJour ? 'rgba(247,169,79,0.25)' : 'rgba(247,111,111,0.25)') + ';' +
-          'border-radius:10px;padding:12px;margin-bottom:8px">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-            '<div>' +
-              '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
-              '<div style="font-size:11px;color:#8892aa;margin-top:2px">' +
-                '<span style="background:' + col + '20;color:' + col + ';padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace">' + m.code + '</span>' +
-                (horaire ? ' · ' + horaire : '') +
-                (duree ? ' · ' + duree + 'h' : '') +
-              '</div>' +
-            '</div>' +
-            (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
+    html += '<div style="background:' + bgColor + ';border:1.5px solid ' + bdColor + ';border-radius:10px;padding:12px;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700;color:#e8ecf4">' + dl + '</div>' +
+          '<div style="font-size:11px;color:#8892aa;margin-top:2px">' +
+            '<span style="background:' + col + '20;color:' + col + ';padding:1px 7px;border-radius:4px;font-weight:800;font-family:monospace">' + m.code + '</span>' +
+            (horaire ? ' · ' + horaire : '') +
+            (duree ? ' · ' + duree + 'h' : '') +
           '</div>' +
-          (statusMsg ? '<div style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px;margin-bottom:8px">' + statusMsg + '</div>' : '') +
-          (isExclu && !btnDisabled ? '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Ce secteur figure dans vos exclusions — vous pouvez quand même vous proposer.</div>' : '') +
-          (btnDisabled ? '' :
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, true)" ' +
-                'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;' + disabledStyle + 'font-family:inherit">' +
-                '✅ Je suis disponible' +
-              '</button>' +
-              '<button onclick="qrSeProposer(&quot;' + alerte.id + '&quot;,&quot;' + dk + '&quot;,&quot;' + m.code + '&quot;, false)" ' +
-                'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;' + disabledStyle + 'font-family:inherit">' +
-                '❌ Pas disponible' +
-              '</button>' +
-            '</div>'
-          ) +
-        '</div>';
-      });
-    });
+        '</div>' +
+        (sectNom ? '<div style="font-size:11px;color:' + (isExclu ? '#f76f6f' : '#38d9a9') + ';font-weight:600">' + (isExclu ? '⚠️ ' : '📍 ') + sectNom + '</div>' : '') +
+      '</div>' +
+      (statusMsg ? '<div style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);border-radius:6px;padding:6px 10px;margin-bottom:8px">' + statusMsg + '</div>' : '') +
+      (isExclu && !btnDisabled ? '<div style="font-size:11px;color:#f7a94f;margin-bottom:8px">⚠️ Secteur hors rotation — vous pouvez quand même vous proposer.</div>' : '') +
+      (btnDisabled ? '' :
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<button onclick="qrSeProposer(\"' + alerte.id + '\",\"' + dk + '\",\"' + m.code + '\",true)" ' +
+            'style="padding:10px;background:' + col + '22;color:' + col + ';border:1.5px solid ' + col + '55;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">' +
+            '✅ Je suis disponible' +
+          '</button>' +
+          '<button onclick="qrSeProposer(\"' + alerte.id + '\",\"' + dk + '\",\"' + m.code + '\",false)" ' +
+            'style="padding:10px;background:rgba(107,127,168,0.1);color:#6b7fa8;border:1.5px solid rgba(107,127,168,0.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">' +
+            '❌ Pas disponible' +
+          '</button>' +
+        '</div>'
+      ) +
+    '</div>';
   });
 
   zone.innerHTML = html;
@@ -10034,65 +11052,251 @@ function qrRenderDispos(etab, agent) {
     var btnsDiv = document.createElement('div');
     btnsDiv.style.cssText = 'display:flex;gap:4px;flex:1;justify-content:flex-end';
 
-    slots.forEach(function(s) {
-      var active = cur === s;
-      var col = slotColors[s];
-      var dis = isWork && (s === 'M' || s === 'S' || s === 'J');
-      var btn = document.createElement('button');
-      btn.disabled = dis;
-      btn.textContent = s === 'non' ? 'x' : s;
-      btn.style.cssText = [
-        'padding:5px 7px',
-        'border-radius:7px',
-        'border:2px solid ' + (active ? col : col + '44'),
-        'background:' + (active ? col + '22' : 'transparent'),
-        'color:' + (dis ? '#cbd5e1' : col),
-        'font-size:11px',
-        'font-weight:800',
-        'cursor:' + (dis ? 'not-allowed' : 'pointer'),
-        'font-family:inherit',
-        'min-width:30px',
-        'opacity:' + (dis ? 0.3 : 1)
-      ].join(';');
-      (function(dk, sl) {
-        btn.onclick = function() { toggleQRDispo(dk, sl); };
-      })(k, s);
-      btnsDiv.appendChild(btn);
-    });
+    if (isWork) {
+      // Jour deja planifie : pas de saisie dispo possible
+      var workMsg = document.createElement('div');
+      workMsg.style.cssText = 'font-size:11px;color:#64748b;font-style:italic;display:flex;align-items:center;gap:4px';
+      workMsg.textContent = '\u2022 Deja planifie (' + planSh + ')';
+      btnsDiv.appendChild(workMsg);
+    } else {
+      slots.forEach(function(s) {
+        var active = cur === s;
+        var col = slotColors[s];
+        var btn = document.createElement('button');
+        btn.textContent = s === 'non' ? 'x' : s;
+        btn.style.cssText = [
+          'padding:5px 7px',
+          'border-radius:7px',
+          'border:2px solid ' + (active ? col : col + '44'),
+          'background:' + (active ? col + '22' : 'transparent'),
+          'color:' + col,
+          'font-size:11px',
+          'font-weight:800',
+          'cursor:pointer',
+          'font-family:inherit',
+          'min-width:30px'
+        ].join(';');
+        (function(dk, sl) {
+          btn.onclick = function() { toggleQRDispo(dk, sl); };
+        })(k, s);
+        btnsDiv.appendChild(btn);
+      });
+    }
 
     row.appendChild(btnsDiv);
     el.appendChild(row);
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// MESSAGERIE QR — agent → cadre (routage par spécialité)
+// ══════════════════════════════════════════════════════════════
+
+// ── Trouver le cadre destinataire selon la spécialité de l'agent ──
+function qrGetDestCadre(etab, agent) {
+  if (!etab || !agent) return null;
+  var spec = agent.spec || '';
+  // 1. Chercher un login avec specResponsable correspondant
+  var logins = etab.logins || [];
+  var match = logins.find(function(l) {
+    return l.specsResponsables && l.specsResponsables.includes(spec);
+  });
+  if (match) return match;
+  // 2. Fallback : premier IDEC / cadre trouvé
+  var idec = logins.find(function(l) {
+    return l.role === 'IDEC' || l.role === 'cadre' || l.role === 'admin';
+  });
+  return idec || null;
+}
+
+// ── Afficher le nom du cadre destinataire ──
+function qrUpdateDestInfo() {
+  var etab = DB.etablissements[_qrEtabId];
+  var agent = etab && etab.agents.find(function(a){ return a.id === _qrAgentId; });
+  var infoEl = document.getElementById('qr-msg-destinataire-info');
+  if (!infoEl) return;
+  if (!etab || !agent) return;
+  var cadre = qrGetDestCadre(etab, agent);
+  if (cadre) {
+    infoEl.textContent = '📨 Envoyé à : ' + cadre.nom + (cadre.titre ? ' (' + cadre.titre + ')' : '') + ' — ' + (agent.spec || '');
+  } else {
+    infoEl.textContent = '\uD83D\uDCE8 Envoy\u00e9 au cadre de l\'\u00e9tablissement';
+  }
+}
+
+// ── Envoyer un message depuis la vue agent ──
+function qrEnvoyerMessage() {
+  var etab = DB.etablissements[_qrEtabId];
+  if (!etab || !_qrAgentId) return;
+  var agent = etab.agents.find(function(a){ return a.id === _qrAgentId; })
+           || (etab.vacataires||[]).find(function(v){ return v.id === _qrAgentId; });
+  if (!agent) return;
+
+  var sujet = (document.getElementById('qr-msg-sujet') || {}).value || '';
+  var corps = (document.getElementById('qr-msg-corps') || {}).value || '';
+  var st = document.getElementById('qr-msg-status');
+
+  if (!sujet.trim()) {
+    if (st) { st.style.color='#f76f6f'; st.textContent='Veuillez saisir un objet'; st.style.display='block'; }
+    return;
+  }
+  if (!corps.trim()) {
+    if (st) { st.style.color='#f76f6f'; st.textContent='Veuillez saisir un message'; st.style.display='block'; }
+    return;
+  }
+
+  var cadre = qrGetDestCadre(etab, agent);
+  var sendBtn = document.querySelector('[onclick="qrEnvoyerMessage()"]');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.6'; }
+  if (st) { st.style.color='#38bdf8'; st.textContent='⏳ Envoi en cours…'; st.style.display='block'; }
+
+  var msg = {
+    id: 'MSG_' + Date.now(),
+    type: 'message_agent',
+    agentId: _qrAgentId,
+    agentNom: (agent.prenom || '') + ' ' + agent.nom,
+    agentSpec: agent.spec || '',
+    destLogin: cadre ? cadre.login : null,
+    destNom: cadre ? cadre.nom : 'Cadre',
+    sujet: sujet.trim(),
+    corps: corps.trim(),
+    lu: false,
+    reponse: null,
+    createdAt: new Date().toISOString()
+  };
+
+  // Sauvegarder dans Supabase (merge + upsert)
+  supaLoadEtab(_qrEtabId).then(function(fresh) {
+    var data = fresh || etab;
+    if (!data.messagesRH) data.messagesRH = [];
+    data.messagesRH.push(msg);
+    // Notification cadre
+    if (!data.notificationsRH) data.notificationsRH = [];
+    data.notificationsRH.push({
+      id: 'NOTIF_MSG_' + Date.now(),
+      type: 'message_agent',
+      agentId: _qrAgentId,
+      agentNom: msg.agentNom,
+      agentSpec: msg.agentSpec,
+      destLogin: msg.destLogin,
+      sujet: msg.sujet,
+      msgId: msg.id,
+      lu: false,
+      createdAt: msg.createdAt
+    });
+    DB.etablissements[_qrEtabId] = data;
+    return supa.from('horizon_data').upsert({
+      etab_id: _qrEtabId, data: data, updated_at: new Date().toISOString()
+    }, { onConflict: 'etab_id' });
+  }).then(function() {
+    if (st) { st.style.color='#38d9a9'; st.textContent='✅ Message envoyé !'; st.style.display='block'; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+    document.getElementById('qr-msg-sujet').value = '';
+    document.getElementById('qr-msg-corps').value = '';
+    setTimeout(function(){ qrRenderMessages(); }, 300);
+    setTimeout(function(){ if(st) st.style.display='none'; }, 3000);
+  }).catch(function() {
+    if (st) { st.style.color='#f76f6f'; st.textContent='❌ Erreur réseau — réessayez'; st.style.display='block'; }
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+  });
+}
+
+// ── Afficher l'historique des messages de l'agent ──
+function qrRenderMessages() {
+  var etab = DB.etablissements[_qrEtabId];
+  var el = document.getElementById('qr-msg-list');
+  if (!el || !etab) return;
+  var msgs = (etab.messagesRH || []).filter(function(m) {
+    return m.agentId === _qrAgentId;
+  }).slice().reverse();
+
+  if (msgs.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#475569">' +
+      '<div style="font-size:32px;margin-bottom:8px">💬</div>' +
+      '<div style="font-size:13px;color:#6b7fa8">Aucun message envoyé</div>' +
+    '</div>';
+    return;
+  }
+
+  el.innerHTML = msgs.map(function(m) {
+    var dt = new Date(m.createdAt);
+    var dateLabel = dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' ' + dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    var hasReponse = m.reponse && m.reponse.corps;
+    return '<div style="background:#161b27;border-radius:12px;padding:12px 14px;margin-bottom:10px;border:1px solid ' + (hasReponse ? 'rgba(56,217,169,0.3)' : '#1e3050') + '">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+        '<div style="font-size:13px;font-weight:700;color:#e8ecf4">' + esc(m.sujet) + '</div>' +
+        '<div style="font-size:10px;color:#6b7fa8">' + dateLabel + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:#8892aa;margin-bottom:6px">À : ' + esc(m.destNom) + '</div>' +
+      '<div style="font-size:12px;color:#94a3b8;line-height:1.5;background:rgba(255,255,255,0.03);border-radius:6px;padding:8px 10px">' + esc(m.corps) + '</div>' +
+      (hasReponse ? '<div style="margin-top:10px;padding:8px 10px;background:rgba(56,217,169,0.08);border-radius:8px;border-left:2px solid #38d9a9">' +
+        '<div style="font-size:10px;font-weight:700;color:#38d9a9;margin-bottom:4px">↩️ Réponse de ' + esc(m.reponse.auteurNom || 'Cadre') + '</div>' +
+        '<div style="font-size:12px;color:#e8ecf4;line-height:1.5">' + esc(m.reponse.corps) + '</div>' +
+      '</div>' : '<div style="margin-top:8px;font-size:11px;color:#475569;font-style:italic">En attente de réponse…</div>') +
+    '</div>';
+  }).join('');
+}
+
 function qrShowTab(tab) {
-  var plan = document.getElementById('qr-weeks-container');
-  var disp = document.getElementById('qr-tab-dispos-content');
-  var cong = document.getElementById('qr-tab-conges-content');
-  var tplan = document.getElementById('qr-tab-planning');
-  var tdisp = document.getElementById('qr-tab-dispos');
-  var tcong = document.getElementById('qr-tab-conges');
-  var ctr = document.getElementById('qr-counters');
-  var nav = document.querySelector('#qr-screen-planning > div:nth-child(4)');
+  // Tous les contenus
+  var contents = {
+    alertes  : document.getElementById('qr-tab-alertes-content'),
+    planning : document.getElementById('qr-tab-planning-content'),
+    dispos   : document.getElementById('qr-tab-dispos-content'),
+    conges   : document.getElementById('qr-tab-conges-content'),
+    messages : document.getElementById('qr-tab-messages-content')
+  };
+  // Tous les boutons nav
+  var btns = {
+    alertes  : document.getElementById('qr-tab-alertes'),
+    planning : document.getElementById('qr-tab-planning'),
+    dispos   : document.getElementById('qr-tab-dispos'),
+    conges   : document.getElementById('qr-tab-conges'),
+    messages : document.getElementById('qr-tab-messages')
+  };
+  // Couleurs actives par onglet
+  var colors = { alertes:'#ef4444', planning:'#38bdf8', dispos:'#38bdf8', conges:'#f59e0b', messages:'#a78bfa' };
 
-  // Reset all
-  [plan,disp,cong].forEach(function(el){ if(el) el.style.display='none'; });
-  [tplan,tdisp,tcong].forEach(function(el){ if(el){ el.style.color='#6b7fa8'; el.style.borderTopColor='transparent'; } });
+  // Tout masquer / reset
+  Object.keys(contents).forEach(function(k){
+    if (contents[k]) contents[k].style.display = 'none';
+  });
+  Object.keys(btns).forEach(function(k){
+    if (btns[k]) { btns[k].style.color = '#6b7fa8'; btns[k].style.borderTopColor = 'transparent'; }
+  });
 
-  if (tab === 'planning') {
-    if (plan) plan.style.display='block';
-    if (ctr) ctr.style.display='flex';
-    if (tplan) { tplan.style.color='#38bdf8'; tplan.style.borderTopColor='#38bdf8'; }
+  // Activer l'onglet demandé
+  if (contents[tab]) contents[tab].style.display = 'block';
+  if (btns[tab]) { btns[tab].style.color = colors[tab] || '#38bdf8'; btns[tab].style.borderTopColor = colors[tab] || '#38bdf8'; }
+
+  // Actions spécifiques par onglet
+  if (tab === 'alertes') {
+    var etab = DB.etablissements[_qrEtabId];
+    var agent = etab && etab.agents.find(function(a){ return a.id === _qrAgentId; });
+    if (etab && agent) qrRenderPostesAPourvoir(etab, agent);
+    // Afficher état vide si pas d'alertes
+    var zone = document.getElementById('qr-alertes-zone');
+    var postes = document.getElementById('qr-postes-pourvoir');
+    var empty = document.getElementById('qr-alertes-empty');
+    var hasContent = (zone && zone.innerHTML.trim()) || (postes && postes.innerHTML.trim());
+    if (empty) empty.style.display = hasContent ? 'none' : 'block';
+  } else if (tab === 'planning') {
+    qrRenderPlanning();
   } else if (tab === 'dispos') {
-    if (disp) disp.style.display='block';
-    if (ctr) ctr.style.display='none';
-    if (tdisp) { tdisp.style.color='#38bdf8'; tdisp.style.borderTopColor='#38bdf8'; }
+    var etab2 = DB.etablissements[_qrEtabId];
+    var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                        || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+    if (etab2 && agent2) qrRenderDispos(etab2, agent2);
   } else if (tab === 'conges') {
-    if (cong) cong.style.display='block';
-    if (ctr) ctr.style.display='none';
-    if (tcong) { tcong.style.color='#f59e0b'; tcong.style.borderTopColor='#f59e0b'; }
     qrRenderCongeList();
     qrInitDateSelects();
+  } else if (tab === 'messages') {
+    qrRenderMessages();
+    // Effacer badge
+    var badge = document.getElementById('qr-msg-badge');
+    if (badge) badge.style.display = 'none';
+    // Afficher cadre destinataire
+    qrUpdateDestInfo();
   }
 }
 
@@ -10114,6 +11318,9 @@ function submitQRConge() {
     if (st) { st.style.color='#f76f6f'; st.textContent='La date de fin doit être après le début'; st.style.display='block'; }
     return;
   }
+  // Anti-doublon : désactiver le bouton pendant l'envoi
+  var _submitBtn = document.querySelector('[onclick="submitQRConge()"]');
+  if (_submitBtn) { _submitBtn.disabled = true; _submitBtn.style.opacity = '0.6'; }
 
   if (!etab.demandesConges) etab.demandesConges = [];
   var agent = etab.agents.find(function(a){ return a.id===_qrAgentId; });
@@ -10153,6 +11360,24 @@ function submitQRConge() {
     if (!isDuplicate) {
       dataToSave.demandesConges.push(newDemande);
     }
+    // ── Notification cadre : nouvelle demande de congé ──
+    if (!dataToSave.notificationsRH) dataToSave.notificationsRH = [];
+    var _alreadyNotif = dataToSave.notificationsRH.some(function(n){
+      return n.type==='conge_demande' && n.agentId===newDemande.agentId && n.debut===newDemande.debut && n.fin===newDemande.fin;
+    });
+    if (!_alreadyNotif) {
+      dataToSave.notificationsRH.push({
+        id: 'NOTIF_CDG_' + Date.now(),
+        type: 'conge_demande',
+        agentId: newDemande.agentId,
+        agentNom: newDemande.agentNom,
+        typeConge: newDemande.type,
+        debut: newDemande.debut,
+        fin: newDemande.fin,
+        lu: false,
+        createdAt: new Date().toISOString()
+      });
+    }
     if (!dataToSave.newDispos) dataToSave.newDispos = [];
     dataToSave.newDispos.push({
       agentId: _qrAgentId,
@@ -10175,11 +11400,13 @@ function submitQRConge() {
     }, { onConflict: 'etab_id' });
   }).then(function() {
     if (st) { st.style.color='#38d9a9'; st.textContent='✅ Demande envoyée au cadre !'; st.style.display='block'; }
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.style.opacity = '1'; }
     qrInitDateSelects(); // reset to today
     document.getElementById('qr-conge-motif').value = '';
     setTimeout(function(){ qrRenderCongeList(); }, 300);
   }).catch(function(e) {
     if (st) { st.style.color='#f76f6f'; st.textContent='❌ Erreur réseau — réessayez'; st.style.display='block'; }
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.style.opacity = '1'; }
   });
 
   return; // early return — suite gérée dans les .then()
@@ -10314,12 +11541,30 @@ function qrRenderCongeList() {
 function qrBack() {
   _qrAgentId = null;
   try { localStorage.removeItem('qr_session'); } catch(e) {}
+  // Effacer le manifest agent du SW pour revenir au manifest générique
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.active) reg.active.postMessage({ type: 'CLEAR_AGENT_MANIFEST' });
+    }).catch(function(){});
+  }
   var screenPlan = document.getElementById('qr-screen-planning');
   var screenSel = document.getElementById('qr-screen-select');
   var nameSec = document.getElementById('qr-name-section');
   if (screenPlan) screenPlan.style.display = 'none';
   if (screenSel) screenSel.style.display = 'flex';
   if (nameSec) nameSec.style.display = 'block';
+}
+
+function qrLogout() {
+  _qrAgentId = null;
+  try { localStorage.removeItem('qr_session'); } catch(e) {}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.active) reg.active.postMessage({ type: 'CLEAR_AGENT_MANIFEST' });
+    }).catch(function(){});
+  }
+  // Recharger la page pour revenir à l'écran d'accueil QR proprement
+  window.location.replace(window.location.pathname + window.location.search);
 }
 
 function toggleQRDispo(dateKey, slot) {
@@ -10376,6 +11621,8 @@ function saveQRDispos() {
 // CONFIG
 // ============================================================
 function switchConfigTab(tab) {
+  if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
+  if (tab === 'options') { renderOptions(); }
   ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
@@ -10579,6 +11826,14 @@ function renderConfigGeneral() {
   if (cf2El) cf2El.value = etab.config.cfFrac2Seuil || 8;
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
+  // Champs localStorage (URL app + VAPID)
+  var appUrlEl = document.getElementById('cfg-app-url');
+  if (appUrlEl) appUrlEl.value = localStorage.getItem('horizon_app_url') || '';
+  var vapidEl = document.getElementById('cfg-vapid-key');
+  if (vapidEl) {
+    var vk = localStorage.getItem('horizon_vapid_key') || '';
+    vapidEl.value = vk.startsWith('REMPLACER') ? '' : vk;
+  }
   renderSpecRegles();
 }
 
@@ -11267,6 +12522,12 @@ async function addLogin() {
   const role  = document.getElementById('new-login-role')?.value || 'cadre';
   const titre = document.getElementById('new-login-titre')?.value.trim() || '';
   if (!nom || !login || !pwd) { showToast('Remplissez tous les champs', 'error'); return; }
+  // Validation mot de passe fort
+  const pwdErrors = validatePasswordStrength(pwd);
+  if (pwdErrors.length > 0) {
+    showToast('Mot de passe insuffisant : ' + pwdErrors.join(', '), 'error');
+    return;
+  }
   const etab = getEtab();
   if (etab.logins.find(l => l.login === login)) { showToast('Identifiant déjà utilisé', 'error'); return; }
   const pwdHash = await hashPwd(pwd);
@@ -12025,6 +13286,9 @@ async function clearCache() {
   const defaultHash = await hashPwd('admin123');
   {
     const freshEtab = defaultEtab(nomEtab, villeEtab, 'admin', defaultHash);
+    // Marquer le compte admin créé par défaut : mot de passe à changer à la première connexion
+    const _adminDefault = freshEtab.logins && freshEtab.logins.find(l => l.login === 'admin');
+    if (_adminDefault) _adminDefault.mustChangePassword = true;
     // Conserver les logins existants (qui sont déjà hashés)
     if (existingLogins && existingLogins.length > 0) {
       freshEtab.logins = existingLogins;
@@ -13263,6 +14527,11 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
       <span>Congés</span>
       <span class="mobile-nav-badge" id="mn-conges-badge" style="display:none">0</span>
     </button>
+    <button class="mobile-nav-item" onclick="mobileNav('notifications')" id="mn-notifications" style="position:relative">
+      <span class="icon">🔔</span>
+      <span>Notifs</span>
+      <span class="mobile-nav-badge" id="mn-notif-badge" style="display:none">0</span>
+    </button>
     <button class="mobile-nav-item" onclick="mobileNav('more')" id="mn-more">
       <span class="icon">⋯</span>
       <span>Plus</span>
@@ -13298,6 +14567,147 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
       </button>
     </div>
   </div>
+
+
+<!-- ═══════════ MODAL CGU / MENTIONS LÉGALES ═══════════ -->
+<div class="modal-backdrop" id="modal-legal" style="z-index:9999;overflow-y:auto;align-items:flex-start;padding:20px 0">
+  <div class="modal" style="max-width:720px;width:95%;margin:auto;max-height:90vh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--bg2);z-index:1;border-bottom:1px solid var(--border)">
+      <span class="modal-title">⚖️ Mentions légales &amp; CGU — Horizon Planning</span>
+      <button class="modal-close" onclick="closeModal('modal-legal')">✕</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 20px;background:var(--bg2);position:sticky;top:57px;z-index:1">
+      <button onclick="legalTab('mentions')" id="legal-tab-mentions" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid var(--accent1);color:var(--accent1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Mentions légales</button>
+      <button onclick="legalTab('cgu')" id="legal-tab-cgu" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">CGU</button>
+      <button onclick="legalTab('rgpd')" id="legal-tab-rgpd" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">RGPD &amp; Données</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div id="legal-content-mentions">
+        <h3 style="color:var(--accent1);margin-top:0">Éditeur du logiciel</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7"><strong>Horizon Studio</strong><br>Logiciel SaaS de planification du personnel de santé<br>Site : <a href="https://horizon-planning.fr" target="_blank" style="color:var(--accent1)">horizon-planning.fr</a><br>Contact : <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></p>
+        <h3 style="color:var(--accent1)">Hébergement</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7"><strong>Vercel Inc.</strong> — 340 Pine Street, Suite 1501, San Francisco, CA 94104, USA<br><strong>Supabase Inc.</strong> — données stockées en région Europe West (eu-west). Les données sont hébergées sur des serveurs situés dans l'Union Européenne.</p>
+        <h3 style="color:var(--accent1)">Propriété intellectuelle</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">L'ensemble du logiciel Horizon Planning (code source, interface, algorithmes de planification, design) est la propriété exclusive d'Horizon Studio et est protégé par le droit d'auteur (CPI, art. L111-1 et suivants). Toute reproduction ou exploitation commerciale sans autorisation écrite préalable est strictement interdite.</p>
+        <h3 style="color:var(--accent1)">Responsabilité</h3>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Horizon Studio s'efforce d'assurer la disponibilité et la fiabilité du service. La responsabilité d'Horizon Studio ne saurait être engagée en cas d'interruption de service, de perte de données résultant d'une mauvaise utilisation, ou de force majeure. Il appartient à chaque établissement de s'assurer de la conformité de son utilisation avec la réglementation applicable.</p>
+      </div>
+      <div id="legal-content-cgu" style="display:none">
+        <h3 style="color:var(--accent1);margin-top:0">Conditions Générales d'Utilisation</h3>
+        <p style="font-size:12px;color:var(--text2);font-style:italic">Dernière mise à jour : juin 2026</p>
+        <h4 style="color:var(--text)">1. Objet</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Les présentes CGU régissent l'accès et l'utilisation du logiciel Horizon Planning, accessible via l'URL fournie par Horizon Studio à chaque établissement client.</p>
+        <h4 style="color:var(--text)">2. Accès au service</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">L'accès est réservé aux établissements de santé ayant souscrit un abonnement. Chaque établissement est responsable de la confidentialité de ses identifiants. L'accès agent via QR code est réservé aux agents de l'établissement.</p>
+        <h4 style="color:var(--text)">3. Données</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Les données saisies restent la propriété exclusive de l'établissement client. Horizon Studio n'accède pas aux données clients sauf intervention technique expressément sollicitée.</p>
+        <h4 style="color:var(--text)">4. Disponibilité</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Horizon Studio vise une disponibilité de 99,5% sur base annuelle. Les maintenances planifiées sont notifiées 48h à l'avance.</p>
+        <h4 style="color:var(--text)">5. Résiliation</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Préavis d'un mois. Les données de l'établissement sont transmises sous format exportable dans un délai de 30 jours après résiliation.</p>
+        <h4 style="color:var(--text)">6. Droit applicable</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Droit français. En cas de litige, recherche d'une solution amiable préalablement à tout recours judiciaire.</p>
+      </div>
+      <div id="legal-content-rgpd" style="display:none">
+        <h3 style="color:var(--accent1);margin-top:0">Protection des données personnelles</h3>
+        <p style="font-size:12px;color:var(--text2);font-style:italic">Conformément au Règlement (UE) 2016/679 du 27 avril 2016</p>
+        <h4 style="color:var(--text)">Responsable du traitement</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Chaque établissement client est responsable du traitement des données personnelles de ses agents. Horizon Studio agit en qualité de <strong>sous-traitant</strong> au sens de l'article 28 du RGPD.</p>
+        <h4 style="color:var(--text)">Données traitées</h4>
+        <ul style="font-size:13px;color:var(--text);line-height:1.8;padding-left:20px">
+          <li>Identité des agents (nom, prénom, spécialité, numéro de poste)</li>
+          <li>Données de planning (horaires, présences, absences, congés)</li>
+          <li>Données de connexion (identifiants hachés SHA-256, horodatage de sessions)</li>
+          <li>Disponibilités déclarées et demandes de congés</li>
+        </ul>
+        <h4 style="color:var(--text)">Base légale</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Exécution du contrat de travail (art. 6.1.b RGPD) et intérêt légitime de l'établissement (art. 6.1.f RGPD).</p>
+        <h4 style="color:var(--text)">Durée de conservation</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Données conservées pendant la durée de l'abonnement, puis supprimées dans un délai de 90 jours après résiliation.</p>
+        <h4 style="color:var(--text)">Droits des personnes</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">Droit d'accès, rectification, effacement, limitation et portabilité. Ces droits s'exercent auprès du cadre ou à : <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></p>
+        <h4 style="color:var(--text)">Sécurité</h4>
+        <p style="font-size:13px;color:var(--text);line-height:1.7">HTTPS (TLS 1.3), hachage SHA-256, accès par rôle, hébergement Europe (Supabase EU West), sauvegardes automatiques.</p>
+        <h4 style="color:var(--text)">Sous-traitants</h4>
+        <ul style="font-size:13px;color:var(--text);line-height:1.8;padding-left:20px">
+          <li><strong>Supabase Inc.</strong> — base de données (serveurs UE)</li>
+          <li><strong>Vercel Inc.</strong> — hébergement applicatif</li>
+        </ul>
+        <div style="margin-top:16px;padding:12px 16px;background:rgba(79,142,247,0.08);border-radius:8px;border-left:3px solid var(--accent1)">
+          <p style="font-size:12px;color:var(--text2);margin:0;line-height:1.6">Contact RGPD : <strong>contact@horizon-planning.fr</strong> — Réclamation possible auprès de la <strong>CNIL</strong> (cnil.fr)</p>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);text-align:right;background:var(--bg2);position:sticky;bottom:0">
+      <button class="btn btn-primary btn-sm" onclick="closeModal('modal-legal')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL ONBOARDING ═══════════ -->
+<div class="modal-backdrop" id="modal-onboarding" style="z-index:9998">
+  <div class="modal" style="max-width:560px;width:95%">
+    <div class="modal-header">
+      <span class="modal-title">🚀 Bienvenue sur Horizon Planning !</span>
+      <button class="modal-close" onclick="closeOnboarding()">✕</button>
+    </div>
+    <div style="padding:0 20px 20px">
+      <div id="ob-step-1">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">🏥</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">Votre établissement est prêt</h3>
+          <p style="color:var(--text2);font-size:13px;line-height:1.6">Horizon Planning centralise plannings, congés, absences et renforts vacataires en un seul outil accessible partout.</p>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">3 étapes pour démarrer</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">1</span>Configurez votre établissement (secteurs, horaires, spécialités)</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">2</span>Ajoutez vos agents et attribuez leurs lignes de roulement (L1–L9)</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">3</span>Générez votre premier planning avec le bouton ✨ Générer</div>
+          </div>
+        </div>
+      </div>
+      <div id="ob-step-2" style="display:none">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">📱</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">QR codes pour vos agents</h3>
+          <p style="color:var(--text2);font-size:13px;line-height:1.6">Chaque agent dispose d'un QR code personnel donnant accès à son planning, ses disponibilités et ses demandes de congés depuis son smartphone — sans installation.</p>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">🔗</span><span><strong>Config → Établissement</strong> : renseignez l'URL de votre app</span></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">📲</span><span><strong>QR Codes</strong> : générez et imprimez les QR de vos agents</span></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="font-size:18px">🔔</span><span>Clé VAPID dans Config pour activer les notifications push</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="ob-step-3" style="display:none">
+        <div style="text-align:center;padding:16px 0 12px"><div style="font-size:44px;margin-bottom:8px">💡</div>
+          <h3 style="color:var(--accent1);margin:0 0 8px">Conseils pratiques</h3>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:14px 16px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">☁️ Sync</strong> — Cliquez sur ☁️ après chaque import Excel pour sauvegarder dans le cloud.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">🕐 Historique</strong> — 20 versions sauvegardées. Rollback en 1 clic en cas d'erreur.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">📊 Vue Direction</strong> — Indicateurs d'absentéisme, couverture et comparatif mensuel.</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.6"><strong style="color:var(--accent2)">🆘 Support</strong> — <a href="mailto:contact@horizon-planning.fr" style="color:var(--accent1)">contact@horizon-planning.fr</a></div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:14px;justify-content:center">
+          <input type="checkbox" id="ob-no-show" style="cursor:pointer">
+          Ne plus afficher ce guide au démarrage
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
+        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden">← Précédent</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
+          <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+          <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+        </div>
+        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm">Suivant →</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
