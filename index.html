@@ -3088,6 +3088,13 @@ body[data-qr-mode="1"] #qr-view {
           <select id="ag-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
         </div>
         <div class="form-group">
+          <label>Numéro de poste <span style="font-size:11px;font-weight:400;color:var(--text3)">(ex&nbsp;: AS285, IDE02)</span></label>
+          <input type="text" id="ag-poste" placeholder="Ex: AS285" maxlength="10"
+            style="font-family:monospace;font-size:14px;letter-spacing:1px"
+            oninput="this.value=this.value.toUpperCase()">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Utilisé pour identifier l'agent dans le planning. Les 4 derniers chiffres servent de PIN QR par défaut.</div>
+        </div>
+        <div class="form-group">
           <label>Secteur fixe (optionnel)</label>
           <select id="ag-secteur" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
             <option value="">— Rotation normale —</option>
@@ -8677,6 +8684,7 @@ function openNewAgent() {
   document.getElementById('ag-taux').value = 100;
   document.getElementById('ag-notes').value = '';
   document.getElementById('ag-pin').value = '';
+  document.getElementById('ag-poste').value = '';
   document.getElementById('ag-date-arrivee').value = '';
   document.getElementById('ag-actif').className = 'toggle on';
   document.getElementById('ag-delete-btn').style.display = 'none';
@@ -8696,6 +8704,7 @@ function openEditAgent(agentId) {
   document.getElementById('ag-taux').value = agent.taux;
   document.getElementById('ag-notes').value = agent.notes || '';
   document.getElementById('ag-pin').value = agent.pin || '';
+  document.getElementById('ag-poste').value = agent.poste || '';
   document.getElementById('ag-date-arrivee').value = agent.dateArrivee || '';
   document.getElementById('ag-actif').className = 'toggle ' + (agent.actif ? 'on' : '');
   document.getElementById('ag-delete-btn').style.display = '';
@@ -8750,7 +8759,8 @@ function saveAgent() {
     notes: document.getElementById('ag-notes').value,
     actif: document.getElementById('ag-actif').classList.contains('on'),
     dateArrivee: document.getElementById('ag-date-arrivee').value,
-    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null)
+    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null),
+    poste: (document.getElementById('ag-poste').value.trim().toUpperCase() || null)
   };
 
   if (editingAgentId) {
@@ -10461,8 +10471,15 @@ function validateQrPin(etab) {
     // Pas d'agent sélectionné, chercher par PIN parmi tous
     var matchAgent = null, matchType = 'agent';
     etab.agents.filter(function(a){ return a.actif; }).forEach(function(a) {
-      var num = (a.pin && /^\d{4}$/.test(a.pin)) ? a.pin : (a.id||'').replace(/[^0-9]/g,'');
-      if (_qrPinBuffer === num || _qrPinBuffer === num.padStart(4,'0')) { matchAgent = a; }
+      var num;
+      if (a.pin && /^\d{4}$/.test(a.pin)) {
+        num = a.pin;
+      } else if (a.poste) {
+        num = (a.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      } else {
+        num = (a.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      }
+      if (_qrPinBuffer === num) { matchAgent = a; }
     });
     (etab.vacataires||[]).forEach(function(v) {
       if (v.pin && (_qrPinBuffer === v.pin || _qrPinBuffer === v.pin.padStart(4,'0'))) { matchAgent = v; matchType = 'vacataire'; }
@@ -10488,8 +10505,15 @@ function validateQrPin(etab) {
   if (!agent) { agent = (etab.vacataires||[]).find(function(v){ return v.id === targetId; }); isVac = true; }
   if (!agent) { if (errEl) errEl.style.display = 'block'; _qrPinBuffer=''; updatePinDots(); return; }
 
-  var num = (agent.pin && /^\d{4}$/.test(agent.pin)) ? agent.pin : (isVac ? (agent.pin||'') : (agent.id||'').replace(/[^0-9]/g,'').padStart(4,'0'));
-  var numAlt = (agent.pin && /^\d{4}$/.test(agent.pin)) ? '' : (isVac ? '' : (agent.id||'').replace(/[^0-9]/g,''));
+  var num;
+  if (agent.pin && /^\d{4}$/.test(agent.pin)) {
+    num = agent.pin;
+  } else if (!isVac && agent.poste) {
+    num = (agent.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  } else {
+    num = (agent.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  }
+  var numAlt = '';
 
   if (_qrPinBuffer === num || (numAlt && _qrPinBuffer === numAlt)) {
     var overlay = document.getElementById('qr-pin-overlay');
@@ -11426,20 +11450,33 @@ function qrShowTab(tab) {
   } else if (tab === 'planning') {
     qrRenderPlanning();
   } else if (tab === 'dispos') {
-    var etab2 = DB.etablissements[_qrEtabId];
-    var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
-                        || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
-    if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    // Recharger les données fraîches depuis Supabase pour avoir les dispos à jour
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    }).catch(function() {
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    });
   } else if (tab === 'conges') {
     qrRenderCongeList();
     qrInitDateSelects();
   } else if (tab === 'messages') {
-    qrRenderMessages();
-    // Effacer badge
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    }).catch(function() {
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    });
     var badge = document.getElementById('qr-msg-badge');
     if (badge) badge.style.display = 'none';
-    // Afficher cadre destinataire
-    qrUpdateDestInfo();
   }
 }
 
@@ -11766,12 +11803,12 @@ function saveQRDispos() {
 function switchConfigTab(tab) {
   if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
   if (tab === 'options') { renderOptions(); }
-  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
+  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
   });
   document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'][i] === tab);
+    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'][i] === tab);
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
