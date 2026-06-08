@@ -3164,17 +3164,40 @@ body[data-qr-mode="1"] #qr-view {
       <span class="modal-title" id="vac-modal-title">Fiche vacataire</span>
       <button class="modal-close" onclick="closeModal('modal-vac')">✕</button>
     </div>
+    <!-- TYPE : vacataire ou intérimaire -->
+    <div class="form-group">
+      <label>Type</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <label id="vac-type-label-vac" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-vacataire" value="vacataire" style="accent-color:#38d9a9" onchange="setVacType('vacataire')">
+          👤 Vacataire
+        </label>
+        <label id="vac-type-label-interim" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-interimaire" value="interimaire" style="accent-color:#f7a94f" onchange="setVacType('interimaire')">
+          🏢 Intérimaire
+        </label>
+      </div>
+      <div id="vac-type-hint" style="font-size:11px;color:var(--text2);margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid #38d9a9">
+        👤 Vacataire direct — géré sans agence, n'est pas facturé via une boîte d'intérim.
+      </div>
+    </div>
     <div class="form-group"><label>Nom</label><input type="text" id="vac-nom" placeholder="NOM"></div>
     <div class="form-group"><label>Prénom</label><input type="text" id="vac-prenom" placeholder="Prénom"></div>
     <div class="form-group">
       <label>Spécialité</label>
       <select id="vac-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
     </div>
+    <!-- POSTE REMPLACÉ -->
+    <div class="form-group">
+      <label>Poste remplacé <span style="font-size:11px;font-weight:400;color:var(--accent3)">— visible RH &amp; cadre</span></label>
+      <input type="text" id="vac-poste-remplace" placeholder="Ex : IDE nuit — Mme Martin / Poste AS secteur B">
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">📌 Indique quel agent absent ou quel poste ce renfort couvre.</div>
+    </div>
     <div class="form-group"><label>Téléphone</label><input type="tel" id="vac-tel" placeholder="06 00 00 00 00"></div>
     <div class="form-group"><label>Email</label><input type="email" id="vac-email" placeholder="prenom.nom@email.fr"></div>
     <div class="form-group"><label>Code PIN (4 chiffres — pour accès QR)</label><input type="text" id="vac-pin" placeholder="ex: 1234" maxlength="4" pattern="[0-9]{4}"></div>
-    <div class="form-group">
-      <label>Agence intérim (si applicable)</label>
+    <div class="form-group" id="vac-agence-group">
+      <label>Agence intérim <span id="vac-agence-required" style="color:var(--accent4);font-size:11px;display:none">*obligatoire pour intérimaire</span></label>
       <select id="vac-agence" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
         <option value="">— Vacataire direct (pas d'agence) —</option>
       </select>
@@ -6961,14 +6984,20 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   vacDispo.forEach(vac => {
     const specColor = getSpecColor(vac.spec);
+    const isInterim = vac.typeVac === 'interimaire';
     html += '<tr style="background:var(--card)">';
-    // Cellule "Poste" (sticky left:0, 60px) — spec badge
+    // Cellule "Poste" (sticky left:0, 60px) — type badge
     html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 8px;border-right:1px solid var(--border);min-width:' + posWidth + 'px;width:' + posWidth + 'px;border-bottom:1px solid var(--border);text-align:center">';
-    html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
+    html += isInterim
+      ? '<span style="font-size:8px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">INTÉRIM</span>'
+      : '<span style="font-size:8px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">VAC</span>';
     html += '</td>';
-    // Cellule "Nom" (sticky left:60px, 150px) — nom prénom
+    // Cellule "Nom" (sticky left:60px, 150px) — nom + poste remplacé
     html += '<td style="position:sticky;left:' + posWidth + 'px;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nomWidth + 'px;width:' + nomWidth + 'px;border-bottom:1px solid var(--border)">';
     html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</span>';
+    if (vac.posteRemplace) {
+      html += '<div style="font-size:9px;color:var(--accent3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:' + (nomWidth-20) + 'px" title="Remplace : ' + esc(vac.posteRemplace) + '">📌 ' + esc(vac.posteRemplace) + '</div>';
+    }
     html += '</td>';
 
     let nbDispo = 0;
@@ -6988,11 +7017,14 @@ function renderPlanningVacataires(daysInMonth, etab) {
         // Déjà affecté : montrer le shift réel depuis vacAffectations
         nbDispo++;
         const aff = (etab.affectationsVac||{})[dk] || {};
-        const affEntry = Object.values(aff).find(a => a);
+        const affEntry = Object.values(aff).find(a => a.vacId === vac.id) || Object.values(aff)[0];
         const shiftLabel = (affEntry?.shift && affEntry.shift !== '') ? affEntry.shift : 'AFF';
+        const creneauLabel = affEntry?.creneau ? '\n' + affEntry.creneau.debut + '-' + affEntry.creneau.fin : '';
         const specC = getSpecColor(vac.spec);
         cellContent = '<span style=\"background:' + specC + '33;color:' + specC + ';border:1px solid ' + specC + '66;border-radius:4px;' +
-          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block\">' + shiftLabel + '</span>';
+          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block;line-height:1.3\" title=\"' + shiftLabel + creneauLabel + '\">' + shiftLabel +
+          (affEntry?.creneau ? '<div style="font-size:7px;font-weight:600;opacity:0.85;font-family:inherit">' + affEntry.creneau.debut + '–' + affEntry.creneau.fin + '</div>' : '') +
+          '</span>';
         cellBg = 'rgba(56,217,169,0.08)';
       } else if (st === 'oui' || st === 'hs') {
         nbDispo++;
@@ -7107,15 +7139,46 @@ function affecterVacataireJour(vacId, day, statut) {
     }).join('');
   }
 
+  const isInterim = vac.typeVac === 'interimaire';
+  const typeBadgeHtml = isInterim
+    ? '<span style="font-size:10px;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">🏢 INTÉRIM</span>'
+    : '<span style="font-size:10px;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">👤 VAC</span>';
+
+  // Déduire un créneau par défaut selon les horaires de l'établissement
+  const getDefaultCreneaux = () => {
+    const hs = (etab.horaires || []);
+    if (hs.length === 0) return {debut:'07:00', fin:'19:00'};
+    const first = hs[0];
+    return { debut: first.debut || '07:00', fin: first.fin || '19:00' };
+  };
+  const defC = getDefaultCreneaux();
+
+  const creneauHtml =
+    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">' +
+    '<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">⏱ Créneau horaire <span style="font-weight:400;font-style:italic;color:var(--text3)">(optionnel — à personnaliser si différent des agents fixes)</span></div>' +
+    '<div style="display:flex;align-items:center;gap:10px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Début</label>' +
+    '<input type="time" id="vac-creneau-debut" value="' + defC.debut + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Fin</label>' +
+    '<input type="time" id="vac-creneau-fin" value="' + defC.fin + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '</div>' +
+    '</div>';
+
+  const posteInfoHtml = vac.posteRemplace
+    ? '<div style="background:rgba(247,169,79,0.08);border:1px solid rgba(247,169,79,0.3);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--accent3)">📌 Remplace : <strong>' + esc(vac.posteRemplace) + '</strong></div>'
+    : '';
+
   const html = '<div id="modal-vac-shift-pick" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
-    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:340px;max-width:460px;max-height:85vh;overflow-y:auto">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:340px;max-width:480px;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">' +
     '<div>' +
-    '<div style="font-size:15px;font-weight:700;color:var(--text)">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + typeBadgeHtml + '</div>' +
     '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + dateLabel + '</div>' +
     '</div>' +
     '<button onclick="document.getElementById(\'modal-vac-shift-pick\').remove()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px">×</button>' +
     '</div>' +
+    posteInfoHtml +
+    creneauHtml +
     sectionLabel +
     '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHtml + '</div>' +
     '</div></div>';
@@ -7126,6 +7189,12 @@ function affecterVacataireJour(vacId, day, statut) {
 }
 
 function affecterVacataireConfirm(vacId, day, statut, shiftFinal) {
+  // Récupérer le créneau saisi avant de fermer la modal
+  const debutEl = document.getElementById('vac-creneau-debut');
+  const finEl = document.getElementById('vac-creneau-fin');
+  const creneau = (debutEl && finEl && debutEl.value && finEl.value)
+    ? { debut: debutEl.value, fin: finEl.value }
+    : null;
   document.getElementById('modal-vac-shift-pick')?.remove();
   const etab = getEtab();
   if (!etab) return;
@@ -7135,11 +7204,19 @@ function affecterVacataireConfirm(vacId, day, statut, shiftFinal) {
   if (!etab.affectationsVac) etab.affectationsVac = {};
   if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
   etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
-  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, shift: shiftFinal, affecteLe: new Date().toISOString() });
+  etab.affectationsVac[dk].push({
+    vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec,
+    typeVac: vac.typeVac || 'vacataire',
+    posteRemplace: vac.posteRemplace || '',
+    statut, shift: shiftFinal,
+    creneau: creneau,
+    affecteLe: new Date().toISOString()
+  });
   if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
   etab.vacDispos[vacId][dk] = 'affecte';
   saveToStorage();
-  showToast(esc(vac.prenom||'') + ' ' + esc(vac.nom) + ' → ' + shiftFinal + ' le ' + day + '/' + (currentMonth+1), 'success');
+  const creneauLabel = creneau ? ` (${creneau.debut}–${creneau.fin})` : '';
+  showToast(esc(vac.prenom||'') + ' ' + esc(vac.nom) + ' → ' + shiftFinal + creneauLabel + ' le ' + day + '/' + (currentMonth+1), 'success');
   renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
   if (document.getElementById('page-vacataires')?.classList.contains('active')) {
     renderVacataires();
@@ -9087,17 +9164,29 @@ function renderVacListe() {
   const etab = getEtab();
   const grid = document.getElementById('vac-liste-grid');
   if (!grid) return;
-  document.getElementById('vac-count-label').textContent = `${etab.vacataires.length} vacataires`;
+  const total = etab.vacataires.length;
+  const nbInterim = etab.vacataires.filter(v => v.typeVac === 'interimaire').length;
+  const nbVac = total - nbInterim;
+  document.getElementById('vac-count-label').textContent =
+    `${total} personne(s) — ${nbVac} vacataire(s) · ${nbInterim} intérimaire(s)`;
   grid.innerHTML = etab.vacataires.map(v => {
     const specColor = getSpecColor(v.spec);
+    const isInterim = v.typeVac === 'interimaire';
+    const typeBadge = isInterim
+      ? `<span style="font-size:9px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">🏢 INTÉRIMAIRE</span>`
+      : `<span style="font-size:9px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">👤 VACATAIRE</span>`;
+    const posteHtml = v.posteRemplace
+      ? `<div class="text-sm" style="color:var(--accent3);margin-top:3px">📌 Remplace : ${esc(v.posteRemplace)}</div>`
+      : '';
     return `<div class="agent-card" onclick="openEditVacataire('${v.id}')">
       <div class="agent-card-header">
-        <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
+        <div class="agent-avatar" style="background:${isInterim ? 'rgba(247,169,79,0.2)' : specColor+'22'};color:${isInterim ? '#f7a94f' : specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
         <div>
-          <div class="agent-card-name">${v.prenom} ${v.nom}</div>
+          <div class="agent-card-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">${v.prenom} ${v.nom}${typeBadge}</div>
           <div class="agent-card-spec">${v.spec||'—'}</div>
         </div>
       </div>
+      ${posteHtml}
       ${v.tel ? `<div class="text-sm text-muted">📞 ${v.tel}</div>` : ''}
       ${v.email ? `<div class="text-sm text-muted">✉️ ${v.email}</div>` : ''}
     </div>`;
@@ -9145,7 +9234,11 @@ function renderDispoGrid() {
   });
 
   etab.vacataires.forEach(vac => {
-    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}.<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
+    const isInterim = vac.typeVac === 'interimaire';
+    const typeTag = isInterim
+      ? `<span style="font-size:8px;background:rgba(247,169,79,0.2);color:#f7a94f;border-radius:4px;padding:0 4px;font-weight:700">INTÉRIM</span>`
+      : `<span style="font-size:8px;background:rgba(56,217,169,0.2);color:#38d9a9;border-radius:4px;padding:0 4px;font-weight:700">VAC</span>`;
+    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}. ${typeTag}<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
     days.forEach(d => {
       const k = dateStr(d);
       const st = (etab.vacDispos[vac.id] || {})[k] || '';
@@ -9183,17 +9276,41 @@ function updateVacBadge() {
   document.getElementById('vac-badge').textContent = cnt;
 }
 
+function setVacType(type) {
+  const isInterim = type === 'interimaire';
+  const labelVac = document.getElementById('vac-type-label-vac');
+  const labelInt = document.getElementById('vac-type-label-interim');
+  const hint = document.getElementById('vac-type-hint');
+  const agenceRequired = document.getElementById('vac-agence-required');
+  if (labelVac) labelVac.style.borderColor = !isInterim ? '#38d9a9' : 'var(--border)';
+  if (labelVac) labelVac.style.background = !isInterim ? 'rgba(56,217,169,0.12)' : 'var(--bg3)';
+  if (labelInt) labelInt.style.borderColor = isInterim ? '#f7a94f' : 'var(--border)';
+  if (labelInt) labelInt.style.background = isInterim ? 'rgba(247,169,79,0.12)' : 'var(--bg3)';
+  if (hint) {
+    hint.style.borderLeftColor = isInterim ? '#f7a94f' : '#38d9a9';
+    hint.textContent = isInterim
+      ? '🏢 Intérimaire — rattaché à une agence et facturé via cette boîte.'
+      : '👤 Vacataire direct — géré sans agence, n\'est pas facturé via une boîte d\'intérim.';
+  }
+  if (agenceRequired) agenceRequired.style.display = isInterim ? '' : 'none';
+  const radio = document.getElementById('vac-type-' + (isInterim ? 'interimaire' : 'vacataire'));
+  if (radio) radio.checked = true;
+}
+
 function openNewVacataire() {
   editingVacId = null;
-  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire';
+  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire / intérimaire';
   document.getElementById('vac-nom').value = '';
   document.getElementById('vac-prenom').value = '';
   document.getElementById('vac-tel').value = '';
   document.getElementById('vac-email').value = '';
   document.getElementById('vac-notes').value = '';
   document.getElementById('vac-pin').value = '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = getEtab().specialites.map(s => `<option>${esc(s)}</option>`).join('');
+  setVacType('vacataire');
   openModal('modal-vac');
 }
 
@@ -9202,7 +9319,8 @@ function openEditVacataire(vacId) {
   const vac = etab.vacataires.find(v => v.id === vacId);
   if (!vac) return;
   editingVacId = vacId;
-  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)}`;
+  const typeLabel = vac.typeVac === 'interimaire' ? '🏢 Intérimaire' : '👤 Vacataire';
+  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)} — ${typeLabel}`;
   // Peupler select agences intérim
   const vacAgSel = document.getElementById('vac-agence');
   if (vacAgSel) {
@@ -9217,8 +9335,11 @@ function openEditVacataire(vacId) {
   document.getElementById('vac-email').value = vac.email || '';
   document.getElementById('vac-notes').value = vac.notes || '';
   document.getElementById('vac-pin').value = vac.pin || '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = vac.posteRemplace || '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = etab.specialites.map(s => `<option ${s===vac.spec?'selected':''}}>${esc(s)}</option>`).join('');
+  setVacType(vac.typeVac === 'interimaire' ? 'interimaire' : 'vacataire');
   openModal('modal-vac');
 }
 
@@ -9228,13 +9349,17 @@ function saveVacataire() {
   const prenom = document.getElementById('vac-prenom').value.trim();
   if (!nom || !prenom) { showToast('Nom et prénom requis', 'error'); return; }
   const pin = document.getElementById('vac-pin').value.trim();
+  const typeVacSel = document.querySelector('input[name="vac-type"]:checked');
+  const typeVac = typeVacSel ? typeVacSel.value : 'vacataire';
   const data = {
     nom, prenom,
+    typeVac,
     spec: document.getElementById('vac-spec').value,
     tel: document.getElementById('vac-tel').value,
     email: document.getElementById('vac-email').value,
     notes: document.getElementById('vac-notes').value,
     pin: pin || null,
+    posteRemplace: document.getElementById('vac-poste-remplace')?.value.trim() || '',
     agenceId: document.getElementById('vac-agence')?.value || '',
     tarif: parseFloat(document.getElementById('vac-tarif')?.value || '0') || 0,
   };
@@ -9248,7 +9373,8 @@ function saveVacataire() {
   saveToStorage();
   closeModal('modal-vac');
   renderVacataires();
-  showToast('Vacataire enregistré', 'success');
+  const typeLabel = typeVac === 'interimaire' ? 'Intérimaire' : 'Vacataire';
+  showToast(`${typeLabel} enregistré`, 'success');
 }
 
 function rechercherRemplacant() {
