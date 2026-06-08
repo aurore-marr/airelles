@@ -2495,6 +2495,20 @@ body[data-qr-mode="1"] #qr-view {
           </div>
         </div>
       </div>
+
+      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
+      <div id="config-tab-options" class="hidden">
+        <div class="config-section" style="max-width:600px">
+          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Activez ou désactivez les modules selon l'abonnement du client.
+            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
+          </p>
+          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- IMPORT/EXPORT -->
@@ -2547,19 +2561,6 @@ body[data-qr-mode="1"] #qr-view {
             🗑️ Vider le cache (repart de zéro)
           </button>
           <div id="save-status" class="text-xs text-muted mt-2"></div>
-        </div>
-      </div>
-
-      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
-      <div id="config-tab-options" class="hidden">
-        <div class="config-section" style="max-width:600px">
-          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
-            Activez ou désactivez les modules selon l'abonnement du client.
-            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
-          </p>
-          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
-          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
         </div>
       </div>
 
@@ -7028,7 +7029,7 @@ function affecterVacataireJour(vacId, day, statut) {
   const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
 
-  // Détecter les postes manquants ce jour (shifts M/S/J sous la cible)
+  // Détecter les postes manquants ce jour
   const planMonth = ((etab.planning[currentYear]||{})[currentMonth]||{});
   const cibleM = etab.config.cibleM || 3;
   const cibleS = etab.config.cibleS || 3;
@@ -7051,32 +7052,63 @@ function affecterVacataireJour(vacId, day, statut) {
   if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
   if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
 
-  // Codes horaires travail disponibles dans l'établissement
-  const codesHoraires = (etab.horaires || []).filter(h => h.comptage === 'travail' || h.comptage === 'presence');
+  // Couleurs fixes pour M/S/J
+  const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
+  const getCol = code => {
+    if (shiftColors[code]) return shiftColors[code];
+    const h = (etab.horaires||[]).find(h => h.code === code);
+    return (h && h.couleur) || '#4f8ef7';
+  };
 
-  // Construire modal de sélection du code horaire
-  const manquantsHtml = manquants.length > 0
-    ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">' +
-      manquants.map(m => '<span style="background:#f76f6f22;color:#f76f6f;border:1px solid #f76f6f55;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">⚠️ ' + m.code + ' manque ' + m.manque + '</span>').join('') +
-      '</div>'
-    : '<div style="color:#38d9a9;font-size:12px;margin-bottom:14px">✔️ Couverture atteinte — choix libre</div>';
+  let boutonsHtml = '';
+  let sectionLabel = '';
 
-  const boutonsHoraires = codesHoraires.map(h => {
-    const isSuggested = manquants.some(m => m.code === h.code);
-    const col = h.couleur || '#4f8ef7';
-    return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'' + h.code + '\')" ' +
-      'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 14px;' +
-      'background:' + col + (isSuggested ? '33' : '18') + ';color:' + col + ';' +
-      'border:' + (isSuggested ? '2px solid ' + col + '99' : '1px solid ' + col + '44') + ';' +
-      'border-radius:10px;cursor:pointer;font-family:monospace;min-width:60px;transition:opacity 0.15s" ' +
-      'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
-      '<span style="font-size:16px;font-weight:900">' + h.code + '</span>' +
-      '<span style="font-size:9px;font-weight:400;font-family:inherit;text-transform:uppercase;opacity:0.8">' + (h.label||'') + '</span>' +
-      '</button>';
-  }).join('');
+  if (manquants.length > 0) {
+    // Postes manquants → afficher uniquement ces codes
+    sectionLabel = '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Postes à pourvoir</div>';
+    boutonsHtml = manquants.map(m => {
+      const col = getCol(m.code);
+      const hor = (etab.horaires||[]).find(h => h.code === m.code);
+      return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'' + m.code + '\')" ' +
+        'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 18px;' +
+        'background:' + col + '33;color:' + col + ';border:2px solid ' + col + '99;' +
+        'border-radius:10px;cursor:pointer;font-family:monospace;min-width:70px" ' +
+        'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
+        '<span style="font-size:18px;font-weight:900">' + m.code + '</span>' +
+        '<span style="font-size:9px;font-family:inherit;opacity:0.8">' + (hor ? hor.label : '') + '</span>' +
+        '<span style="font-size:10px;font-weight:700;color:#f76f6f;margin-top:2px">−' + m.manque + ' poste' + (m.manque > 1 ? 's' : '') + '</span>' +
+        '</button>';
+    }).join('');
+  } else {
+    // Couverture atteinte → HS uniquement, avec choix du secteur
+    const secteurs = etab.secteurs || [];
+    sectionLabel = '<div style="color:#38d9a9;font-size:12px;margin-bottom:12px">✔️ Couverture atteinte — affectation en heure supplémentaire</div>' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Choisir le code + secteur</div>';
+
+    const codesHS = ['M', 'S', 'J'];
+    boutonsHtml = codesHS.map(code => {
+      const col = getCol(code);
+      const hor = (etab.horaires||[]).find(h => h.code === code);
+      const sectBtns = secteurs.map(s => {
+        const sc = s.couleur && s.couleur.startsWith('#') ? s.couleur : '#' + (s.couleur||'5a6480');
+        return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'HS' + code + '\')" ' +
+          'style="font-size:10px;padding:3px 8px;background:' + sc + '22;color:' + sc + ';border:1px solid ' + sc + '55;' +
+          'border-radius:6px;cursor:pointer;font-weight:600" ' +
+          'onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'">' +
+          esc(s.nom) + '</button>';
+      }).join('');
+      return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="font-size:15px;font-weight:900;color:' + col + ';font-family:monospace">' + code + '</span>' +
+        '<span style="font-size:11px;color:var(--text2)">' + (hor ? hor.label : '') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' + sectBtns + '</div>' +
+        '</div>';
+    }).join('');
+  }
 
   const html = '<div id="modal-vac-shift-pick" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
-    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:340px;max-width:480px">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:340px;max-width:460px;max-height:85vh;overflow-y:auto">' +
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">' +
     '<div>' +
     '<div style="font-size:15px;font-weight:700;color:var(--text)">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</div>' +
@@ -7084,9 +7116,8 @@ function affecterVacataireJour(vacId, day, statut) {
     '</div>' +
     '<button onclick="document.getElementById(\'modal-vac-shift-pick\').remove()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px">×</button>' +
     '</div>' +
-    manquantsHtml +
-    '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Choisir le code horaire</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHoraires + '</div>' +
+    sectionLabel +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHtml + '</div>' +
     '</div></div>';
 
   const existing = document.getElementById('modal-vac-shift-pick');
