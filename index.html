@@ -8831,13 +8831,8 @@ function renderAgents() {
     </div>`;
   }
 
-  // Si filtre spécialité actif → affichage plat
-  if (currentAgentSpecFilter) {
-    container.innerHTML = `<div class="agents-grid">${agents.map(buildAgentCard).join('')}</div>`;
-    return;
-  }
-
-  // Sinon → grouper par Groupe (groupeRot), puis dans chaque groupe par spécialité
+  // Toujours grouper par Groupe (groupeRot), même avec filtre spécialité actif
+  // → grouper par Groupe (groupeRot), puis dans chaque groupe par spécialité
   const byGroupe = {};
   agents.forEach(a => {
     const g = a.groupeRot ? 'Groupe ' + a.groupeRot : 'Sans groupe';
@@ -13544,9 +13539,16 @@ function handleImportFile(file) {
           const c1Raw = row[1];
           const c1Str = (c1Raw === null || c1Raw === undefined || c1Raw === '') ? '' : c1Raw.toString().trim();
 
-          // Nouveau groupe : ligne dont col0 contient "GROUPE" (ou "ROULEMENT" pour ancien format)
-          if (c0.toUpperCase().includes('GROUPE') || c0.toUpperCase().includes('ROULEMENT')) {
+          // Nouveau groupe : ligne dont col0 COMMENCE PAR "GROUPE" (pas le titre ROULEMENT)
+          // On ne compte plus sur "ROULEMENT" car le titre de l'onglet le contient aussi
+          if (c0.toUpperCase().startsWith('GROUPE')) {
             currentGroupe++;
+            return;
+          }
+          // Ignorer les lignes de titre (HORIZON PLANNING...)
+          if (c0.toUpperCase().includes('HORIZON PLANNING') || c0.toUpperCase().includes('REMPLISSEZ') ||
+              c0.toUpperCase().includes('POINTS CLÉS') || c0.toUpperCase().startsWith('⚠') ||
+              c0.toUpperCase().startsWith('💡')) {
             return;
           }
 
