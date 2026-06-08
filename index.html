@@ -6336,7 +6336,9 @@ function renderPlanning() {
   const _container = document.getElementById('planning-container');
   const _availW = Math.max(600, (_container ? _container.offsetWidth : window.innerWidth - 80) - 294);
   const _dayW = Math.max(28, Math.min(46, Math.floor(_availW / daysInMonth)));
+  const _dayH = _dayW <= 28 ? 32 : (_dayW <= 34 ? 38 : (_dayW <= 40 ? 42 : _dayW));
   window._planningDayColW = _dayW; // exposé pour les vacataires
+  window._planningDayCellH = _dayH; // hauteur identique pour la ligne vacataires
 
   // Header row — thead sticky
   let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead><tr>
@@ -6553,7 +6555,7 @@ function renderPlanning() {
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
+          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;height:' + _dayH + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
@@ -6918,12 +6920,13 @@ function renderPlanningVacataires(daysInMonth, etab) {
   const today = new Date();
   // Utiliser la même largeur que le planning principal pour l'alignement parfait
   const colWidth = window._planningDayColW || 46;
+  const cellHeight = window._planningDayCellH || 46;
   const posWidth = 60;   // identique à la colonne Poste du planning
   const nomWidth = 150;  // identique à la colonne Nom du planning
   const nameWidth = posWidth + nomWidth; // 210px total
 
   // Header row (aligned with planning columns)
-  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
+  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth) + 'px;font-size:11px">';
   html += '<thead><tr>';
   // Colonne "Poste" (sticky left:0, 60px)
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + posWidth + 'px;width:' + posWidth + 'px;padding:3px 8px;text-align:left;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">VAC</th>';
@@ -6943,7 +6946,6 @@ function renderPlanningVacataires(daysInMonth, etab) {
       '<div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div>' +
       '</th>';
   }
-  html += '<th style="min-width:80px;padding:3px 8px;text-align:center;font-size:9px;color:var(--text2);background:var(--bg3);border-left:1px solid var(--border)">Dispos</th>';
   html += '</tr></thead><tbody>';
 
   vacDispo.forEach(vac => {
@@ -6993,16 +6995,13 @@ function renderPlanningVacataires(daysInMonth, etab) {
         cellBg = bgC;
       }
 
-      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:38px;text-align:center;vertical-align:middle;' +
+      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:' + cellHeight + 'px;text-align:center;vertical-align:middle;' +
         'background:' + cellBg + ';' +
         'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + ';' +
         'border-bottom:1px solid var(--border)">' +
         cellContent + '</td>';
     }
 
-    html += '<td style="min-width:80px;padding:2px 8px;text-align:center;border-left:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle">';
-    html += '<span style="font-size:11px;font-weight:700;color:var(--accent2)">' + nbDispo + 'j</span>';
-    html += '</td>';
     html += '</tr>';
   });
 
@@ -14039,8 +14038,8 @@ function autoFillMonth() {
   if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
 
   etab.agents.filter(a => a.actif).forEach(agent => {
-    // Réinitialiser le planning de l'agent pour ce mois avant de regénérer
-    planMonth[agent.id] = {};
+    // Ne jamais effacer un planning déjà saisi : Générer complète seulement les cases vides.
+    if (!planMonth[agent.id]) planMonth[agent.id] = {};
 
     // Déterminer secteur + roulement effectif pour ce mois
     // Agents avec poste nommé → utiliser le roulement du poste
@@ -14086,6 +14085,9 @@ function autoFillMonth() {
         shift = alts[0] || 'R';
       }
 
+      // Préserver toute donnée déjà saisie/modifiée manuellement (CA, HS, AM, M/S/J corrigés, etc.)
+      const existingShift = planMonth[agent.id][d];
+      if (existingShift !== undefined && existingShift !== null && String(existingShift).trim() !== '') continue;
       planMonth[agent.id][d] = shift;
     }
   });
@@ -14094,7 +14096,7 @@ function autoFillMonth() {
   renderPlanning();
   renderComptage();
   renderDashboard();
-  showToast('Planning généré avec succès', 'success');
+  showToast('Planning ajusté : seules les cases vides ont été complétées', 'success');
 }
 
 // ============================================================
