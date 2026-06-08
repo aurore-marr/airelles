@@ -2321,6 +2321,8 @@ body[data-qr-mode="1"] #qr-view {
               <button class="btn btn-secondary btn-sm" onclick="initRoulementTable()">Appliquer</button>
             </div>
           </div>
+          <!-- Onglets par spécialité -->
+          <div id="roulement-spec-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
           <div style="overflow-x:auto" id="roulement-table-wrap">
             <p class="text-muted text-sm">Configurer la durée et la date de référence, puis cliquer sur Appliquer.</p>
           </div>
@@ -4237,6 +4239,13 @@ async function doLogin() {
     setTimeout(function() {
       showToast('⚠️ Mot de passe par défaut actif — changez-le dans Configuration → Utilisateurs', 'warning');
     }, 1200);
+  }
+  // ── Avertissement si mot de passe trop faible ──
+  const pwdErrors = validatePasswordStrength(pwd);
+  if (pwdErrors.length > 0) {
+    setTimeout(function() {
+      showToast('⚠️ Mot de passe faible — ' + pwdErrors[0] + '. Changez-le dans Configuration.', 'warning');
+    }, 1500);
   }
 
   initApp();
@@ -8998,7 +9007,9 @@ function renderAgencesInterim() {
   // Peupler le formulaire de tarifs avec les spécialités
   const tarifForm = document.getElementById('interim-tarifs-form');
   if (tarifForm) {
-    tarifForm.innerHTML = (etab.specialites || ['AS','IDE','AUX','ASH','Nuit']).map(spec => `
+    const specsValides = (etab.specialites || ['AS','IDE','AUX','ASH','Nuit'])
+      .filter(s => s && s.length <= 10 && /^[A-Za-zÀ-ÿ0-9-_]+$/.test(s));
+    tarifForm.innerHTML = specsValides.map(spec => `
       <div style="display:flex;flex-direction:column;gap:3px">
         <label style="font-size:10px;color:var(--text2);font-weight:600">${esc(spec)}</label>
         <div style="display:flex;align-items:center;gap:4px">
@@ -12758,29 +12769,74 @@ function removeAbsCode(idx) {
 }
 
 // Roulement
+var _roulSpecFilter = '';
+
 function initRoulementTable() {
   const etab = getEtab();
   const cycleLen = parseInt(document.getElementById('cfg-cycle-len').value) || 42;
   etab.config.cycleLen = cycleLen;
   etab.config.refDate = document.getElementById('cfg-ref-date').value;
 
+  // Construire les onglets par spécialité
+  const tabsEl = document.getElementById('roulement-spec-tabs');
+  if (tabsEl) {
+    const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))].sort();
+    if (!_roulSpecFilter && specs.length > 0) _roulSpecFilter = specs[0];
+    tabsEl.innerHTML = specs.map(s =>
+      `<button class="spec-tab-btn${_roulSpecFilter===s?' active':''}"
+        onclick="_roulSpecFilter='${s}';initRoulementTable()"
+        style="font-size:12px;padding:5px 12px">${s}</button>`
+    ).join('');
+  }
+
   const wrap = document.getElementById('roulement-table-wrap');
-  let html = `<table class="roulement-table"><thead><tr><th>Agent</th>`;
-  for (let d = 0; d < cycleLen; d++) html += `<th>J${d+1}</th>`;
+  const agents = etab.agents.filter(a => a.actif && (!_roulSpecFilter || a.spec === _roulSpecFilter));
+
+  if (agents.length === 0) {
+    wrap.innerHTML = '<p class="text-muted text-sm">Aucun agent pour cette spécialité.</p>';
+    return;
+  }
+
+  // En-têtes de jours avec numéro de semaine
+  let html = `<table class="roulement-table"><thead><tr>
+    <th style="min-width:130px">Agent</th>
+    <th style="min-width:80px;color:var(--text2);font-size:10px">Gr. / Ligne</th>`;
+  for (let d = 0; d < cycleLen; d++) {
+    const sem = Math.floor(d/7) + 1;
+    const jourSem = ['L','M','Me','J','V','S','D'][d%7];
+    const isSun = d%7 === 6;
+    const isSat = d%7 === 5;
+    html += `<th style="min-width:32px;font-size:10px;${(isSat||isSun)?'color:#f7a94f':''}" title="Sem.${sem} - Jour ${d+1}">${jourSem}<br><span style="font-size:9px;opacity:0.6">${d+1}</span></th>`;
+  }
   html += '</tr></thead><tbody>';
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
-    if (!etab.roulement[agent.id]) etab.roulement[agent.id] = {};
-    html += `<tr><td style="white-space:nowrap;font-weight:600">${esc(agent.nom)} ${agent.prenom[0]}.</td>`;
-    for (let d = 0; d < cycleLen; d++) {
-      const val = etab.roulement[agent.id][d] || '';
-      html += `<td><input type="text" maxlength="3" value="${val}" data-agent="${agent.id}" data-day="${d}" onchange="updateRoulement(this)"></td>`;
-    }
-    html += '</tr>';
+  // Grouper par Gr1 puis Gr2
+  [1,2].forEach(gr => {
+    const grAgents = agents.filter(a => (a.groupeRot||1) === gr);
+    if (grAgents.length === 0) return;
+    html += `<tr><td colspan="${cycleLen+2}" style="background:var(--bg3);padding:4px 8px;font-size:11px;font-weight:700;color:var(--accent1)">GROUPE ${gr}</td></tr>`;
+    grAgents.forEach(agent => {
+      if (!etab.roulement[agent.id]) etab.roulement[agent.id] = {};
+      const color = getSpecColor(agent.spec);
+      html += `<tr>
+        <td style="white-space:nowrap;font-weight:600;font-size:12px">${esc(agent.nom)} ${(agent.prenom||'')[0]||''}.<br>
+          <span style="font-size:10px;color:var(--text2);font-family:monospace">${agent.id||''}</span></td>
+        <td style="text-align:center;font-size:11px;color:var(--text2)">G${gr} / ${agent.ligneRoulement||'L1'}</td>`;
+      for (let d = 0; d < cycleLen; d++) {
+        const val = etab.roulement[agent.id][d] || '';
+        const shiftBg = {M:'rgba(79,142,247,0.15)',S:'rgba(247,169,79,0.15)',J:'rgba(56,217,169,0.15)',
+                         R:'transparent',NU:'rgba(160,126,232,0.15)',RC:'rgba(194,87,10,0.1)'}[val]||'transparent';
+        html += `<td style="background:${shiftBg}"><input type="text" maxlength="3" value="${esc(val)}"
+          data-agent="${agent.id}" data-day="${d}" onchange="updateRoulement(this)"
+          style="width:28px;text-align:center;background:transparent;border:none;color:var(--text);font-weight:600;font-size:11px;font-family:monospace;outline:none;padding:0"></td>`;
+      }
+      html += '</tr>';
+    });
   });
+
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  showToast('Tableau initialisé', 'success');
+  showToast('Tableau ' + _roulSpecFilter + ' — ' + agents.length + ' agents', 'success');
 }
 
 function updateRoulement(el) {
@@ -13185,10 +13241,24 @@ function handleImportFile(file) {
         const horColors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', N:'#a07ee8', R:'#5a6480',
                             CA:'#f76f6f', CF:'#f76f6f', AM:'#8892aa', CP:'#f76f6f', GR:'#8892aa' };
 
+        // Codes spécialités valides — tout le reste est ignoré (en-têtes, notes, exemples)
+        const SPEC_VALIDES = ['AS','IDE','AUX','ASH','NUIT','AS-NUIT','IDE-NUIT'];
+        const MOT_PARASITES = ['HORAIRE','DURÉE','PAUSE','MODE','SEUIL','HAS','IMPORTANT',
+                               'SPÉCIALITÉ','💡','HORIZON','UNE LIGNE','REMPLISSEZ',
+                               'AJUSTEZ','RENSEIGNEZ','NE CHANGEZ','SUPPRIMER','EXEMPLE',
+                               '★','⚠️','DURÉE','DURÉE'];
+
         rows.forEach(row => {
           const specCode = (row[0] || '').toString().trim();
-          if (!specCode || specCode.includes('SPÉCIALITÉ') || specCode.includes('💡') ||
-              specCode.includes('HORIZON') || specCode.includes('Une ligne')) return;
+          if (!specCode) return;
+          // Ignorer si contient un mot parasite
+          const upper = specCode.toUpperCase();
+          if (MOT_PARASITES.some(m => upper.includes(m.toUpperCase()))) return;
+          // N'accepter que les codes connus ou courts (max 10 chars, lettres/chiffres/tiret)
+          if (specCode.length > 10) return;
+          if (!/^[A-Za-zÀ-ÿ0-9\-_]+$/.test(specCode)) return;
+          // Vérifier que c'est bien un code spécialité (pas un nombre seul, pas une date)
+          if (/^\d+$/.test(specCode)) return;
 
           specs.push(specCode);
 
@@ -13479,6 +13549,12 @@ function handleImportFile(file) {
             currentGroupe++;
             return;
           }
+
+          // Ignorer les lignes d'en-tête du template (AGENT, LIGNE, jours L/M/ME...)
+          if (c0.toUpperCase() === 'AGENT' || c0.toUpperCase().startsWith('AGENT ')) return;
+          if (c1Str.toUpperCase() === 'LIGNE' || c1Str.toUpperCase() === 'SEM') return;
+          // La ligne des jours L/M/ME/JE... a c0="" et c1="" ou "L"
+          if (!c0 && (!c1Str || c1Str === 'L')) return;
 
           // Normaliser la ligne : "1" ou 1 → "L1", "L1" → "L1"
           let ligneCode = '';
@@ -14018,12 +14094,13 @@ function updateFilterSpec() {
   const specs = etab.specialites || [];
   tabs.innerHTML = '';
 
-  // Bouton "Tous"
-  const btnTous = document.createElement('button');
-  btnTous.textContent = 'Tous';
-  btnTous.className = 'spec-tab-btn' + (!currentSpecFilter ? ' active' : '');
-  btnTous.onclick = function() { currentSpecFilter = ''; updateSpecTabsUI(); renderPlanning(); };
-  tabs.appendChild(btnTous);
+  // Pas de bouton "Tous" — AS par défaut (IDEC), AUX pour RESP_HOT
+  const role = DB.currentUser && DB.currentUser.role;
+  if (!currentSpecFilter) {
+    if (role === 'RESP_HOT' && specs.includes('AUX')) currentSpecFilter = 'AUX';
+    else if (specs.includes('AS')) currentSpecFilter = 'AS';
+    else if (specs.length > 0) currentSpecFilter = specs[0];
+  }
 
   specs.forEach(s => {
     const btn = document.createElement('button');
