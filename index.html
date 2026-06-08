@@ -654,7 +654,7 @@ body {
   min-height: 40px;
 }
 #planning-vac-section .vac-name-cell {
-  min-width: 220px; width: 220px;
+  min-width: 210px; width: 210px;
   padding: 4px 10px;
   background: var(--bg3);
   border-right: 1px solid var(--border);
@@ -664,7 +664,7 @@ body {
   flex-shrink: 0;
 }
 #planning-vac-section .vac-day-cell {
-  min-width: 38px; width: 38px; max-width: 38px;
+  min-width: 46px; width: 46px; max-width: 46px;
   height: 40px;
   display: flex; align-items: center; justify-content: center;
   border-right: 1px solid var(--border);
@@ -1335,126 +1335,6 @@ body[data-qr-mode="1"] #qr-view {
   padding-top: 0 !important;
 }
 
-
-
-/* ===== FIX: en-tête dates du planning =====
-   Le <thead> était sticky avec un top dynamique, ce qui pouvait le faire
-   descendre et recouvrir les lignes agents. On garde le scroll horizontal
-   et les colonnes Poste/Nom fixes, mais la ligne des dates reste dans
-   son emplacement normal en haut du tableau. */
-#planning-container .planning-table thead {
-  position: static !important;
-  top: auto !important;
-  z-index: 30;
-}
-#planning-container .planning-table thead th {
-  position: static !important;
-  top: auto !important;
-}
-#planning-container .planning-table thead th:nth-child(1) {
-  position: sticky !important;
-  left: 0 !important;
-  z-index: 36 !important;
-}
-#planning-container .planning-table thead th:nth-child(2) {
-  position: sticky !important;
-  left: 60px !important;
-  z-index: 36 !important;
-}
-
-
-
-/* ============================================================
-   PATCH RESPONSIVE PLANNING — cellules qui ne débordent plus
-   ============================================================ */
-#planning-container,
-.planning-wrap {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto !important;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.planning-table {
-  width: max-content;
-  min-width: 100%;
-  table-layout: fixed;
-}
-
-.day-header,
-.shift-cell {
-  width: var(--planning-day-w, 46px) !important;
-  min-width: var(--planning-day-w, 46px) !important;
-  max-width: var(--planning-day-w, 46px) !important;
-}
-
-.shift-cell {
-  height: var(--planning-cell-h, 46px) !important;
-  padding: 0 !important;
-  overflow: hidden;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.shift-badge {
-  width: var(--planning-badge-w, 32px) !important;
-  max-width: calc(100% - 6px) !important;
-  height: var(--planning-badge-h, 28px) !important;
-  max-height: calc(100% - 6px) !important;
-  box-sizing: border-box;
-  margin: 0 auto;
-  line-height: 1;
-  overflow: hidden;
-}
-
-/* Écrans moyens : on compresse le planning au lieu de laisser les badges dépasser */
-@media (max-width: 1400px) and (min-width: 1101px) {
-  :root {
-    --planning-day-w: 36px;
-    --planning-cell-h: 40px;
-    --planning-badge-w: 28px;
-    --planning-badge-h: 26px;
-  }
-  .main { padding: 18px !important; }
-  .agent-cell { min-width: 52px !important; width: 52px !important; max-width: 52px !important; }
-  .agent-cell-poste { left: 52px !important; min-width: 132px !important; width: 132px !important; max-width: 132px !important; }
-  .planning-table { font-size: 11px; }
-}
-
-/* Petits laptops / tablettes paysage */
-@media (max-width: 1100px) and (min-width: 701px) {
-  :root {
-    --planning-day-w: 32px;
-    --planning-cell-h: 36px;
-    --planning-badge-w: 24px;
-    --planning-badge-h: 24px;
-  }
-  .main { padding: 14px !important; }
-  .card { padding: 12px !important; }
-  .planning-table { font-size: 10px; min-width: max-content !important; }
-  .planning-table th { font-size: 9px !important; padding: 4px 2px !important; }
-  .agent-cell { min-width: 46px !important; width: 46px !important; max-width: 46px !important; padding: 4px 5px !important; }
-  .agent-cell-poste { left: 46px !important; min-width: 118px !important; width: 118px !important; max-width: 118px !important; padding: 4px 5px !important; }
-  .agent-cell-name { font-size: 11px !important; }
-  .agent-cell-info { font-size: 9px !important; }
-}
-
-/* Mobile : scroll fluide + cellules compactes */
-@media (max-width: 700px) {
-  :root {
-    --planning-day-w: 30px;
-    --planning-cell-h: 34px;
-    --planning-badge-w: 22px;
-    --planning-badge-h: 22px;
-  }
-  .planning-table { min-width: max-content !important; }
-  .shift-badge { font-size: 10px !important; border-radius: 5px !important; }
-  .agent-cell { min-width: 42px !important; width: 42px !important; max-width: 42px !important; padding: 3px 4px !important; }
-  .agent-cell-poste { left: 42px !important; min-width: 105px !important; width: 105px !important; max-width: 105px !important; padding: 3px 4px !important; }
-  .agent-cell-name { font-size: 10px !important; }
-  .agent-cell-info, .agent-cell-sector { font-size: 8px !important; }
-}
 </style>
 </head>
 <body>
@@ -1572,14 +1452,11 @@ body[data-qr-mode="1"] #qr-view {
         <div class="online-count" id="sb-collapsed-online">1</div>
       </div>
     </div>
-    <div class="sidebar-nav-scroll">
     <div class="nav-section">
       <div class="nav-section-title">Direction</div>
       <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
         <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
       </div>
-    </div>
-    <div class="nav-section">
       <div class="nav-section-title">Planning</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
         <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
@@ -1623,8 +1500,7 @@ body[data-qr-mode="1"] #qr-view {
       <div class="nav-item" onclick="showPage('import')" data-tooltip="Import / Export">
         <span class="icon">📂</span><span class="nav-label">Import / Export</span>
       </div>
-    </div><!-- end nav-section Paramétrage -->
-    </div><!-- end sidebar-nav-scroll -->
+    </div>
     <div class="sidebar-footer">
       <!-- Actions footer groupées en ligne compacte -->
       <div style="display:flex;align-items:center;gap:2px;padding:4px 0">
@@ -1904,12 +1780,10 @@ body[data-qr-mode="1"] #qr-view {
       <!-- Légende impression (masquée à l'écran) -->
       <div id="print-legend" style="display:none"></div>
 
-      <!-- Légende horaires — sticky sous la toolbar dans le viewport -->
-      <div id="planning-legend" style="padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;position:sticky;top:0;z-index:39;box-shadow:0 2px 4px rgba(0,0,0,0.2)"></div>
-
-      <!-- Planning -->
-      <div class="card" style="padding:0;overflow-x:auto;width:100%">
-        <div class="planning-wrap" id="planning-container" style="width:100%"></div>
+      <!-- Légende horaires + planning -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
+        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%;isolation:isolate"></div>
       </div>
       <!-- Totaux secteurs (maintenant en tfoot dans le même tableau) -->
       <div id="sector-daily-totals" style="display:none"></div>
@@ -1919,7 +1793,7 @@ body[data-qr-mode="1"] #qr-view {
           <span>👥 Vacataires disponibles ce mois</span>
           <span id="planning-vac-badge" style="background:var(--accent2);color:#0f1117;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px"></span>
         </div>
-        <div style="overflow-x:hidden;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
+        <div style="overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
           <div id="planning-vac-container"></div>
         </div>
       </div>
@@ -4143,12 +4017,9 @@ async function doLogin() {
       if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
       // Recalcule l'offset de la toolbar planning si elle est visible
       const tb = document.getElementById('planning-toolbar');
-      const leg = document.getElementById('planning-legend');
       if (tb) {
-        const hTb = Math.round(tb.getBoundingClientRect().height);
-        if (leg) { leg.style.top = hTb + 'px'; }
-        const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
-        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
+        const h = tb.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
       }
     });
   }
@@ -6298,15 +6169,12 @@ function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
 
-  // Figer la ligne des dates : mesure toolbar + légende
+  // Figer la ligne des dates : mesure la hauteur réelle de la toolbar sticky
   (function updateToolbarOffset() {
     const tb = document.getElementById('planning-toolbar');
-    const leg = document.getElementById('planning-legend');
     if (tb) {
-      const hTb = Math.round(tb.getBoundingClientRect().height);
-      if (leg) { leg.style.top = hTb + 'px'; }
-      const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
-      document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
+      const h = tb.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
     }
   })();
 
@@ -6339,7 +6207,7 @@ function renderPlanning() {
   window._planningDayColW = _dayW; // exposé pour les vacataires
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
@@ -6624,18 +6492,6 @@ function renderPlanning() {
     }).join('');
 
     legendEl.innerHTML = horPart + '<span style="width:1px;height:16px;background:var(--border);margin:0 8px;display:inline-block"></span>' + sectPart;
-
-    // Positionner la légende sticky juste sous la toolbar, et le thead sous les deux
-    requestAnimationFrame(function() {
-      const tb = document.getElementById('planning-toolbar');
-      const leg = document.getElementById('planning-legend');
-      if (tb && leg) {
-        const hTb = Math.round(tb.getBoundingClientRect().height);
-        leg.style.top = hTb + 'px';
-        const hLeg = Math.round(leg.getBoundingClientRect().height);
-        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
-      }
-    });
   }
 
   // Sector daily totals
@@ -6916,14 +6772,22 @@ function renderPlanningVacataires(daysInMonth, etab) {
   section.style.display = 'block';
 
   const today = new Date();
-  // Utiliser la même largeur que le planning principal pour l'alignement parfait
+  // Utiliser exactement les mêmes largeurs que le planning principal
   const colWidth = window._planningDayColW || 46;
   const posWidth = 60;   // identique à la colonne Poste du planning
   const nomWidth = 150;  // identique à la colonne Nom du planning
-  const nameWidth = posWidth + nomWidth; // 210px total
+  const nameWidth = posWidth + nomWidth; // 210px total — même que planning principal
+
+  // Aligner le scroll du container sur le planning principal
+  const vacScrollEl = document.getElementById('planning-vac-scroll');
+  if (vacScrollEl) {
+    vacScrollEl.style.overflowX = 'auto';
+    const planWrapSync = document.getElementById('planning-container');
+    if (planWrapSync) vacScrollEl.scrollLeft = planWrapSync.scrollLeft;
+  }
 
   // Header row (aligned with planning columns)
-  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
+  let html = '<table style="border-collapse:collapse;table-layout:fixed;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
   html += '<thead><tr>';
   // Colonne "Poste" (sticky left:0, 60px)
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + posWidth + 'px;width:' + posWidth + 'px;padding:3px 8px;text-align:left;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">VAC</th>';
@@ -6993,7 +6857,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
         cellBg = bgC;
       }
 
-      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:38px;text-align:center;vertical-align:middle;' +
+      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:40px;text-align:center;vertical-align:middle;' +
         'background:' + cellBg + ';' +
         'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + ';' +
         'border-bottom:1px solid var(--border)">' +
@@ -14039,8 +13903,7 @@ function autoFillMonth() {
   if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
 
   etab.agents.filter(a => a.actif).forEach(agent => {
-    // Réinitialiser le planning de l'agent pour ce mois avant de regénérer
-    planMonth[agent.id] = {};
+    if (!planMonth[agent.id]) planMonth[agent.id] = {};
 
     // Déterminer secteur + roulement effectif pour ce mois
     // Agents avec poste nommé → utiliser le roulement du poste
@@ -14086,7 +13949,10 @@ function autoFillMonth() {
         shift = alts[0] || 'R';
       }
 
-      planMonth[agent.id][d] = shift;
+      // Ne pas écraser les jours déjà saisis manuellement
+      if (!planMonth[agent.id][d]) {
+        planMonth[agent.id][d] = shift;
+      }
     }
   });
 
@@ -14094,7 +13960,7 @@ function autoFillMonth() {
   renderPlanning();
   renderComptage();
   renderDashboard();
-  showToast('Planning généré avec succès', 'success');
+  showToast('Planning généré — les saisies manuelles existantes ont été préservées', 'success');
 }
 
 // ============================================================
