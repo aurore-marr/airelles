@@ -1495,11 +1495,11 @@ body[data-qr-mode="1"] #qr-view {
     </div>
     <div class="form-group">
       <label>Identifiant</label>
-      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username">
+      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="form-group">
       <label>Mot de passe</label>
-      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary" onclick="doLogin()">Se connecter</button>
     <div id="login-error" class="error-msg"></div>
@@ -2028,7 +2028,7 @@ body[data-qr-mode="1"] #qr-view {
       <div id="vac-tab-affectations" class="hidden">
         <div class="card mb-3">
           <div class="card-header">
-            <span class="card-title">🔍 Chercher un remplaçant</span>
+            <span class="card-title">🔍 Chercher un remplaçant disponible</span>
           </div>
           <div class="flex gap-3 flex-wrap mb-3">
             <div class="form-group" style="margin:0">
@@ -2054,7 +2054,10 @@ body[data-qr-mode="1"] #qr-view {
           <div id="rech-results"></div>
         </div>
         <div class="card">
-          <div class="card-title mb-3">📋 Toutes les disponibilités du mois</div>
+          <div class="card-header" style="margin-bottom:12px">
+            <span class="card-title">📋 Récapitulatif des affectations du mois</span>
+            <span style="font-size:11px;color:var(--text2);margin-left:8px">Vacataire · Code horaire · Créneau · Secteur · N° Poste remplacé</span>
+          </div>
           <div id="affectations-list"></div>
         </div>
       </div>
@@ -2318,6 +2321,8 @@ body[data-qr-mode="1"] #qr-view {
               <button class="btn btn-secondary btn-sm" onclick="initRoulementTable()">Appliquer</button>
             </div>
           </div>
+          <!-- Onglets par spécialité -->
+          <div id="roulement-spec-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
           <div style="overflow-x:auto" id="roulement-table-wrap">
             <p class="text-muted text-sm">Configurer la durée et la date de référence, puis cliquer sur Appliquer.</p>
           </div>
@@ -2331,6 +2336,9 @@ body[data-qr-mode="1"] #qr-view {
       <div id="config-tab-rotation" class="hidden">
         <div class="config-section" style="max-width:800px">
           <div class="config-section-title">🔄 Paramétrage de la rotation sectorielle</div>
+
+          <!-- Onglets par spécialité -->
+          <div id="rotation-spec-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px"></div>
 
           <div class="dir-grid-2 mb-4">
             <!-- Secteurs fixes -->
@@ -2495,6 +2503,20 @@ body[data-qr-mode="1"] #qr-view {
           </div>
         </div>
       </div>
+
+      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
+      <div id="config-tab-options" class="hidden">
+        <div class="config-section" style="max-width:600px">
+          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Activez ou désactivez les modules selon l'abonnement du client.
+            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
+          </p>
+          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- IMPORT/EXPORT -->
@@ -2547,19 +2569,6 @@ body[data-qr-mode="1"] #qr-view {
             🗑️ Vider le cache (repart de zéro)
           </button>
           <div id="save-status" class="text-xs text-muted mt-2"></div>
-        </div>
-      </div>
-
-      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
-      <div id="config-tab-options" class="hidden">
-        <div class="config-section" style="max-width:600px">
-          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
-            Activez ou désactivez les modules selon l'abonnement du client.
-            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
-          </p>
-          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
-          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
         </div>
       </div>
 
@@ -3088,18 +3097,27 @@ body[data-qr-mode="1"] #qr-view {
           <select id="ag-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
         </div>
         <div class="form-group">
+          <label>Numéro de poste <span style="font-size:11px;font-weight:400;color:var(--text3)">(ex&nbsp;: AS285, IDE02)</span></label>
+          <input type="text" id="ag-poste" placeholder="Ex: AS285" maxlength="10"
+            style="font-family:monospace;font-size:14px;letter-spacing:1px"
+            oninput="this.value=this.value.toUpperCase()">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Utilisé pour identifier l'agent dans le planning. Les 4 derniers chiffres servent de PIN QR par défaut.</div>
+        </div>
+        <div class="form-group">
           <label>Secteur fixe (optionnel)</label>
           <select id="ag-secteur" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
             <option value="">— Rotation normale —</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Taux de travail (%)</label>
-          <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
-        </div>
-        <div class="form-group">
-          <label>Date d'arrivée</label>
-          <input type="date" id="ag-date-arrivee">
+        <div style="display:flex;gap:12px">
+          <div class="form-group" style="flex:1">
+            <label>Taux de travail (%)</label>
+            <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Date d'arrivée</label>
+            <input type="date" id="ag-date-arrivee">
+          </div>
         </div>
       </div>
       <div>
@@ -3154,17 +3172,35 @@ body[data-qr-mode="1"] #qr-view {
       <span class="modal-title" id="vac-modal-title">Fiche vacataire</span>
       <button class="modal-close" onclick="closeModal('modal-vac')">✕</button>
     </div>
+    <!-- TYPE : vacataire ou intérimaire -->
+    <div class="form-group">
+      <label>Type</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <label id="vac-type-label-vac" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-vacataire" value="vacataire" style="accent-color:#38d9a9" onchange="setVacType('vacataire')">
+          👤 Vacataire
+        </label>
+        <label id="vac-type-label-interim" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-interimaire" value="interimaire" style="accent-color:#f7a94f" onchange="setVacType('interimaire')">
+          🏢 Intérimaire
+        </label>
+      </div>
+      <div id="vac-type-hint" style="font-size:11px;color:var(--text2);margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid #38d9a9">
+        👤 Vacataire direct — géré sans agence, n'est pas facturé via une boîte d'intérim.
+      </div>
+    </div>
     <div class="form-group"><label>Nom</label><input type="text" id="vac-nom" placeholder="NOM"></div>
     <div class="form-group"><label>Prénom</label><input type="text" id="vac-prenom" placeholder="Prénom"></div>
     <div class="form-group">
       <label>Spécialité</label>
       <select id="vac-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
     </div>
+    <!-- NOTE : Le numéro de poste remplacé est saisi lors de chaque affectation -->
     <div class="form-group"><label>Téléphone</label><input type="tel" id="vac-tel" placeholder="06 00 00 00 00"></div>
     <div class="form-group"><label>Email</label><input type="email" id="vac-email" placeholder="prenom.nom@email.fr"></div>
     <div class="form-group"><label>Code PIN (4 chiffres — pour accès QR)</label><input type="text" id="vac-pin" placeholder="ex: 1234" maxlength="4" pattern="[0-9]{4}"></div>
-    <div class="form-group">
-      <label>Agence intérim (si applicable)</label>
+    <div class="form-group" id="vac-agence-group">
+      <label>Agence intérim <span id="vac-agence-required" style="color:var(--accent4);font-size:11px;display:none">*obligatoire pour intérimaire</span></label>
       <select id="vac-agence" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
         <option value="">— Vacataire direct (pas d'agence) —</option>
       </select>
@@ -3463,7 +3499,9 @@ function generateDemoAgents() {
       exclusSecteurs: [],
       notes: '',
       actif: true,
-      dateArrivee: '2022-01-01'
+      dateArrivee: '2022-01-01',
+      ligneRoulement: 'L' + ((i % 9) + 1),
+      groupeRot: (i < 6) ? 1 : 2
     });
   }
   return agents;
@@ -4076,6 +4114,15 @@ async function doLogin() {
   const login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
   if (!login) { err.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
 
+  // ── Bloquer si mot de passe trop faible (avant d'accéder à l'app) ──
+  const pwdWeakErrors = validatePasswordStrength(pwd);
+  if (pwdWeakErrors.length > 0) {
+    err.innerHTML = '⚠️ <strong>Mot de passe trop faible</strong> — ' + pwdWeakErrors[0] + '.<br>' +
+      '<span style="font-size:12px;color:var(--text2)">Veuillez le changer dans <strong>Configuration → Utilisateurs</strong> avant de vous connecter.</span>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
+    return;
+  }
+
   // ── Supabase Auth — connexion/création en arrière-plan ──
   // Transparente pour l'utilisateur — son identifiant texte est préservé
   try {
@@ -4207,7 +4254,6 @@ async function doLogin() {
       showToast('⚠️ Mot de passe par défaut actif — changez-le dans Configuration → Utilisateurs', 'warning');
     }, 1200);
   }
-
   initApp();
   // ── Appliquer options souscrites ──
   applyOptions();
@@ -4920,6 +4966,7 @@ function showPage(page) {
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
   if (page === 'astreintes') renderAstreintes();
+  if (page === 'config') switchConfigTab('general');
 }
 
 // ============================================================
@@ -6950,14 +6997,20 @@ function renderPlanningVacataires(daysInMonth, etab) {
 
   vacDispo.forEach(vac => {
     const specColor = getSpecColor(vac.spec);
+    const isInterim = vac.typeVac === 'interimaire';
     html += '<tr style="background:var(--card)">';
-    // Cellule "Poste" (sticky left:0, 60px) — spec badge
+    // Cellule "Poste" (sticky left:0, 60px) — type badge
     html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 8px;border-right:1px solid var(--border);min-width:' + posWidth + 'px;width:' + posWidth + 'px;border-bottom:1px solid var(--border);text-align:center">';
-    html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
+    html += isInterim
+      ? '<span style="font-size:8px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">INTÉRIM</span>'
+      : '<span style="font-size:8px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">VAC</span>';
     html += '</td>';
-    // Cellule "Nom" (sticky left:60px, 150px) — nom prénom
+    // Cellule "Nom" (sticky left:60px, 150px) — nom + poste remplacé
     html += '<td style="position:sticky;left:' + posWidth + 'px;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nomWidth + 'px;width:' + nomWidth + 'px;border-bottom:1px solid var(--border)">';
     html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</span>';
+    if (vac.posteRemplace) {
+      html += '<div style="font-size:9px;color:var(--accent3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:' + (nomWidth-20) + 'px" title="Remplace : ' + esc(vac.posteRemplace) + '">📌 ' + esc(vac.posteRemplace) + '</div>';
+    }
     html += '</td>';
 
     let nbDispo = 0;
@@ -6977,11 +7030,20 @@ function renderPlanningVacataires(daysInMonth, etab) {
         // Déjà affecté : montrer le shift réel depuis vacAffectations
         nbDispo++;
         const aff = (etab.affectationsVac||{})[dk] || {};
-        const affEntry = Object.values(aff).find(a => a);
+        const affArr = Array.isArray(aff) ? aff : Object.values(aff);
+        const affEntry = affArr.find(a => a && a.vacId === vac.id);
         const shiftLabel = (affEntry?.shift && affEntry.shift !== '') ? affEntry.shift : 'AFF';
+        const creneauLabel = affEntry?.creneau ? affEntry.creneau.debut + '–' + affEntry.creneau.fin : '';
+        const tooltipParts = [shiftLabel];
+        if (creneauLabel) tooltipParts.push(creneauLabel);
+        if (affEntry?.numPoste) tooltipParts.push('Poste: ' + affEntry.numPoste);
+        if (affEntry?.secteurNom) tooltipParts.push(affEntry.secteurNom);
         const specC = getSpecColor(vac.spec);
         cellContent = '<span style=\"background:' + specC + '33;color:' + specC + ';border:1px solid ' + specC + '66;border-radius:4px;' +
-          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block\">' + shiftLabel + '</span>';
+          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block;line-height:1.3\" title=\"' + tooltipParts.join(' · ') + '\">' + shiftLabel +
+          (creneauLabel ? '<div style="font-size:7px;font-weight:600;opacity:0.85;font-family:inherit">' + creneauLabel + '</div>' : '') +
+          (affEntry?.numPoste ? '<div style="font-size:6px;font-weight:600;color:var(--accent3);font-family:inherit;overflow:hidden;max-width:36px;text-overflow:ellipsis;white-space:nowrap">' + esc(affEntry.numPoste) + '</div>' : '') +
+          '</span>';
         cellBg = 'rgba(56,217,169,0.08)';
       } else if (st === 'oui' || st === 'hs') {
         nbDispo++;
@@ -7009,6 +7071,53 @@ function renderPlanningVacataires(daysInMonth, etab) {
   container.innerHTML = html;
 }
 
+// ─── Utilitaire : retourne les postes manquants pour un jour donné ────────────
+// dk = 'YYYY-MM-DD' ou objet Date ; retourne [{code, manque, label, debut, fin}]
+function getPostesManquantsJour(dk) {
+  const etab = getEtab();
+  if (!etab) return [];
+  let year, month, day;
+  if (dk instanceof Date) {
+    year = dk.getFullYear(); month = dk.getMonth(); day = dk.getDate();
+  } else {
+    const parts = dk.split('-');
+    year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; day = parseInt(parts[2]);
+  }
+  const planMonth = ((etab.planning[year]||{})[month]||{});
+  const cibleM = etab.config.cibleM || 3;
+  const cibleS = etab.config.cibleS || 3;
+  const cibleJ = etab.config.cibleJ || 3;
+  const cibles = { M: cibleM, S: cibleS, J: cibleJ };
+  const counts = { M: 0, S: 0, J: 0 };
+  etab.agents.filter(a => a.actif).forEach(a => {
+    const sh = (planMonth[a.id]||{})[day] || '';
+    if (sh==='M'||sh==='HSM') counts.M++;
+    if (sh==='S'||sh==='HSS') counts.S++;
+    if (sh==='J'||sh==='HSJ') counts.J++;
+  });
+  const dkStr = dk instanceof Date ? dateStr(dk) : dk;
+  const affAuj = (etab.affectationsVac||{})[dkStr] || [];
+  affAuj.forEach(a => {
+    if (a.shift==='M') counts.M++;
+    if (a.shift==='S') counts.S++;
+    if (a.shift==='J') counts.J++;
+  });
+  const result = [];
+  ['M','S','J'].forEach(code => {
+    if (counts[code] < cibles[code]) {
+      const hor = (etab.horaires||[]).find(h => h.code === code);
+      result.push({
+        code,
+        manque: cibles[code] - counts[code],
+        label: hor ? hor.label : code,
+        debut: hor?.debut || '07:00',
+        fin: hor?.fin || '19:00'
+      });
+    }
+  });
+  return result;
+}
+
 function affecterVacataireJour(vacId, day, statut) {
   const etab = getEtab();
   if (!etab) return;
@@ -7018,63 +7127,166 @@ function affecterVacataireJour(vacId, day, statut) {
   const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
 
-  // Détecter les postes manquants ce jour (shifts M/S/J sous la cible)
-  const planMonth = ((etab.planning[currentYear]||{})[currentMonth]||{});
-  const cibleM = etab.config.cibleM || 3;
-  const cibleS = etab.config.cibleS || 3;
-  const cibleJ = etab.config.cibleJ || 3;
-  let countM = 0, countS = 0, countJ = 0;
-  etab.agents.filter(a=>a.actif).forEach(a => {
-    const sh = (planMonth[a.id]||{})[day]||'';
-    if (sh==='M'||sh==='HSM') countM++;
-    if (sh==='S'||sh==='HSS') countS++;
-    if (sh==='J'||sh==='HSJ') countJ++;
-  });
-  // Vacataires déjà affectés ce jour
-  const affAuj = (etab.affectationsVac||{})[dk] || [];
-  affAuj.forEach(a => {
-    if (a.shift==='M') countM++;
-    if (a.shift==='S') countS++;
-    if (a.shift==='J') countJ++;
-  });
-  const manquants = [];
-  if (countM < cibleM) manquants.push({ code:'M', manque: cibleM - countM });
-  if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
-  if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
+  // Détecter les postes manquants ce jour (via utilitaire partagé)
+  const manquants = getPostesManquantsJour(dk);
 
-  let shiftFinal;
-  if (manquants.length === 0) {
-    // Couverture atteinte — demander quand même
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n✔️ Couverture 3×3×3 atteinte.\nCode shift à affecter (M/S/J) :`, 'M');
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  } else if (manquants.length === 1) {
-    const ok = window.confirm(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Poste manquant → ${manquants[0].code} (-${manquants[0].manque})\n\nConfirmer affectation sur ${manquants[0].code} ?`);
-    if (!ok) return;
-    shiftFinal = manquants[0].code;
+  // Couleurs fixes pour M/S/J
+  const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
+  const getCol = code => {
+    if (shiftColors[code]) return shiftColors[code];
+    const h = (etab.horaires||[]).find(h => h.code === code);
+    return (h && h.couleur) || '#4f8ef7';
+  };
+
+  let boutonsHtml = '';
+  let sectionLabel = '';
+
+  if (manquants.length > 0) {
+    // Postes manquants → afficher uniquement ces codes
+    sectionLabel = '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Postes à pourvoir</div>';
+    boutonsHtml = manquants.map(m => {
+      const col = getCol(m.code);
+      const hor = (etab.horaires||[]).find(h => h.code === m.code);
+      return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'' + m.code + '\')" ' +
+        'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 18px;' +
+        'background:' + col + '33;color:' + col + ';border:2px solid ' + col + '99;' +
+        'border-radius:10px;cursor:pointer;font-family:monospace;min-width:70px" ' +
+        'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
+        '<span style="font-size:18px;font-weight:900">' + m.code + '</span>' +
+        '<span style="font-size:9px;font-family:inherit;opacity:0.8">' + (hor ? hor.label : '') + '</span>' +
+        '<span style="font-size:10px;font-weight:700;color:#f76f6f;margin-top:2px">−' + m.manque + ' poste' + (m.manque > 1 ? 's' : '') + '</span>' +
+        '</button>';
+    }).join('');
   } else {
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Postes manquants :\n` +
-      manquants.map(m=>`  • ${m.code} (-${m.manque})`).join('\n') +
-      `\n\nCode shift à affecter (${manquants.map(m=>m.code).join('/')}) :`,
-      manquants[0].code);
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  }
-  if (!shiftFinal) return;
+    // Couverture atteinte → HS uniquement, avec choix du secteur
+    const secteurs = etab.secteurs || [];
+    sectionLabel = '<div style="color:#38d9a9;font-size:12px;margin-bottom:12px">✔️ Couverture atteinte — affectation en heure supplémentaire</div>' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Choisir le code + secteur</div>';
 
-  // Enregistrer dans etab.affectationsVac
+    const codesHS = ['M', 'S', 'J'];
+    boutonsHtml = codesHS.map(code => {
+      const col = getCol(code);
+      const hor = (etab.horaires||[]).find(h => h.code === code);
+      const sectBtns = secteurs.map(s => {
+        const sc = s.couleur && s.couleur.startsWith('#') ? s.couleur : '#' + (s.couleur||'5a6480');
+        return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'HS' + code + '\')" ' +
+          'style="font-size:10px;padding:3px 8px;background:' + sc + '22;color:' + sc + ';border:1px solid ' + sc + '55;' +
+          'border-radius:6px;cursor:pointer;font-weight:600" ' +
+          'onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'">' +
+          esc(s.nom) + '</button>';
+      }).join('');
+      return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="font-size:15px;font-weight:900;color:' + col + ';font-family:monospace">' + code + '</span>' +
+        '<span style="font-size:11px;color:var(--text2)">' + (hor ? hor.label : '') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' + sectBtns + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  const isInterim = vac.typeVac === 'interimaire';
+  const typeBadgeHtml = isInterim
+    ? '<span style="font-size:10px;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">🏢 INTÉRIM</span>'
+    : '<span style="font-size:10px;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">👤 VAC</span>';
+
+  // Déduire le créneau par défaut selon le premier shift manquant
+  const getCreneauForCode = (code) => {
+    const hor = (etab.horaires||[]).find(h => h.code === code);
+    return { debut: hor?.debut || '07:00', fin: hor?.fin || '19:00' };
+  };
+  const defC = getCreneauForCode(manquants[0]?.code || 'M');
+
+  // Secteurs disponibles
+  const secteursOpts = (etab.secteurs||[]).map(s =>
+    '<option value="' + esc(s.id) + '">' + esc(s.nom) + '</option>'
+  ).join('');
+
+  // Pré-remplir le champ "N° / Libellé du poste remplacé" avec les postes manquants
+  const numPosteDefault = manquants.length > 0
+    ? manquants.map(m => m.code + ' – ' + m.label + ' (' + m.debut + '-' + m.fin + ')').join(' | ')
+    : '';
+
+  const saisieHtml =
+    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">' +
+    '<div style="margin-bottom:10px">' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📌 N° / Libellé du poste remplacé <span style="color:var(--accent3);font-weight:400;font-style:italic">(RH &amp; cadre)</span></label>' +
+    '<input type="text" id="vac-num-poste" value="' + numPosteDefault.replace(/"/g, '&quot;') + '" placeholder="Ex : AS-282 · IDE-104 · Poste nuit sect. B · Remplacement M. Dupont…" ' +
+    'style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none">' +
+    '</div>' +
+    '<div style="margin-bottom:10px">' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">🏥 Secteur</label>' +
+    '<select id="vac-secteur-aff" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none">' +
+    '<option value="">— Secteur —</option>' + secteursOpts +
+    '</select>' +
+    '</div>' +
+    '<div>' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">⏱ Créneau horaire <span style="font-weight:400;font-style:italic;color:var(--text3)">(si différent des fixes)</span></label>' +
+    '<div style="display:flex;align-items:center;gap:10px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Début</label>' +
+    '<input type="time" id="vac-creneau-debut" value="' + defC.debut + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Fin</label>' +
+    '<input type="time" id="vac-creneau-fin" value="' + defC.fin + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '</div>' +
+    '</div>' +
+    '</div>';
+
+  const html = '<div id="modal-vac-shift-pick" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:360px;max-width:500px;max-height:90vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">' +
+    '<div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + typeBadgeHtml + '</div>' +
+    '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + dateLabel + '</div>' +
+    '</div>' +
+    '<button onclick="document.getElementById(\'modal-vac-shift-pick\').remove()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px">×</button>' +
+    '</div>' +
+    saisieHtml +
+    sectionLabel +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHtml + '</div>' +
+    '</div></div>';
+
+  const existing = document.getElementById('modal-vac-shift-pick');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function affecterVacataireConfirm(vacId, day, statut, shiftFinal) {
+  // Récupérer les infos saisies avant de fermer la modal
+  const debutEl = document.getElementById('vac-creneau-debut');
+  const finEl = document.getElementById('vac-creneau-fin');
+  const numPosteEl = document.getElementById('vac-num-poste');
+  const secteurAffEl = document.getElementById('vac-secteur-aff');
+  const creneau = (debutEl && finEl && debutEl.value && finEl.value)
+    ? { debut: debutEl.value, fin: finEl.value }
+    : null;
+  const numPoste = numPosteEl ? numPosteEl.value.trim() : '';
+  const secteurAffId = secteurAffEl ? secteurAffEl.value : '';
+  document.getElementById('modal-vac-shift-pick')?.remove();
+  const etab = getEtab();
+  if (!etab) return;
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  if (!vac) return;
+  const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  const secteurObj = (etab.secteurs||[]).find(s => s.id === secteurAffId);
   if (!etab.affectationsVac) etab.affectationsVac = {};
   if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
   etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
-  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, shift: shiftFinal, affecteLe: new Date().toISOString() });
-  // Marquer comme affecté dans vacDispos
+  etab.affectationsVac[dk].push({
+    vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec,
+    typeVac: vac.typeVac || 'vacataire',
+    statut, shift: shiftFinal,
+    creneau: creneau,
+    numPoste: numPoste,
+    secteurId: secteurAffId,
+    secteurNom: secteurObj ? secteurObj.nom : '',
+    affecteLe: new Date().toISOString()
+  });
   if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
   etab.vacDispos[vacId][dk] = 'affecte';
   saveToStorage();
-  showToast(`${vac.prenom||''} ${esc(vac.nom)} → ${shiftFinal} le ${day}/${currentMonth+1}`, 'success');
+  const creneauLabel = creneau ? ` (${creneau.debut}–${creneau.fin})` : '';
+  const posteLabel = numPoste ? ` · poste ${numPoste}` : '';
+  showToast(esc(vac.prenom||'') + ' ' + esc(vac.nom) + ' → ' + shiftFinal + creneauLabel + posteLabel, 'success');
   renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
   if (document.getElementById('page-vacataires')?.classList.contains('active')) {
     renderVacataires();
@@ -8625,13 +8837,8 @@ function renderAgents() {
     </div>`;
   }
 
-  // Si filtre spécialité actif → affichage plat
-  if (currentAgentSpecFilter) {
-    container.innerHTML = `<div class="agents-grid">${agents.map(buildAgentCard).join('')}</div>`;
-    return;
-  }
-
-  // Sinon → grouper par Groupe (groupeRot), puis dans chaque groupe par spécialité
+  // Toujours grouper par Groupe (groupeRot), même avec filtre spécialité actif
+  // → grouper par Groupe (groupeRot), puis dans chaque groupe par spécialité
   const byGroupe = {};
   agents.forEach(a => {
     const g = a.groupeRot ? 'Groupe ' + a.groupeRot : 'Sans groupe';
@@ -8677,6 +8884,7 @@ function openNewAgent() {
   document.getElementById('ag-taux').value = 100;
   document.getElementById('ag-notes').value = '';
   document.getElementById('ag-pin').value = '';
+  document.getElementById('ag-poste').value = '';
   document.getElementById('ag-date-arrivee').value = '';
   document.getElementById('ag-actif').className = 'toggle on';
   document.getElementById('ag-delete-btn').style.display = 'none';
@@ -8696,6 +8904,7 @@ function openEditAgent(agentId) {
   document.getElementById('ag-taux').value = agent.taux;
   document.getElementById('ag-notes').value = agent.notes || '';
   document.getElementById('ag-pin').value = agent.pin || '';
+  document.getElementById('ag-poste').value = agent.poste || '';
   document.getElementById('ag-date-arrivee').value = agent.dateArrivee || '';
   document.getElementById('ag-actif').className = 'toggle ' + (agent.actif ? 'on' : '');
   document.getElementById('ag-delete-btn').style.display = '';
@@ -8750,7 +8959,8 @@ function saveAgent() {
     notes: document.getElementById('ag-notes').value,
     actif: document.getElementById('ag-actif').classList.contains('on'),
     dateArrivee: document.getElementById('ag-date-arrivee').value,
-    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null)
+    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null),
+    poste: (document.getElementById('ag-poste').value.trim().toUpperCase() || null)
   };
 
   if (editingAgentId) {
@@ -8798,7 +9008,9 @@ function renderAgencesInterim() {
   // Peupler le formulaire de tarifs avec les spécialités
   const tarifForm = document.getElementById('interim-tarifs-form');
   if (tarifForm) {
-    tarifForm.innerHTML = (etab.specialites || ['AS','IDE','AUX','ASH','Nuit']).map(spec => `
+    const specsValides = (etab.specialites || ['AS','IDE','AUX','ASH','Nuit'])
+      .filter(s => s && s.length <= 10 && /^[A-Za-zÀ-ÿ0-9-_]+$/.test(s));
+    tarifForm.innerHTML = specsValides.map(spec => `
       <div style="display:flex;flex-direction:column;gap:3px">
         <label style="font-size:10px;color:var(--text2);font-weight:600">${esc(spec)}</label>
         <div style="display:flex;align-items:center;gap:4px">
@@ -9019,17 +9231,29 @@ function renderVacListe() {
   const etab = getEtab();
   const grid = document.getElementById('vac-liste-grid');
   if (!grid) return;
-  document.getElementById('vac-count-label').textContent = `${etab.vacataires.length} vacataires`;
+  const total = etab.vacataires.length;
+  const nbInterim = etab.vacataires.filter(v => v.typeVac === 'interimaire').length;
+  const nbVac = total - nbInterim;
+  document.getElementById('vac-count-label').textContent =
+    `${total} personne(s) — ${nbVac} vacataire(s) · ${nbInterim} intérimaire(s)`;
   grid.innerHTML = etab.vacataires.map(v => {
     const specColor = getSpecColor(v.spec);
+    const isInterim = v.typeVac === 'interimaire';
+    const typeBadge = isInterim
+      ? `<span style="font-size:9px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">🏢 INTÉRIMAIRE</span>`
+      : `<span style="font-size:9px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">👤 VACATAIRE</span>`;
+    const posteHtml = v.posteRemplace
+      ? `<div class="text-sm" style="color:var(--accent3);margin-top:3px">📌 Remplace : ${esc(v.posteRemplace)}</div>`
+      : '';
     return `<div class="agent-card" onclick="openEditVacataire('${v.id}')">
       <div class="agent-card-header">
-        <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
+        <div class="agent-avatar" style="background:${isInterim ? 'rgba(247,169,79,0.2)' : specColor+'22'};color:${isInterim ? '#f7a94f' : specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
         <div>
-          <div class="agent-card-name">${v.prenom} ${v.nom}</div>
+          <div class="agent-card-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">${v.prenom} ${v.nom}${typeBadge}</div>
           <div class="agent-card-spec">${v.spec||'—'}</div>
         </div>
       </div>
+      ${posteHtml}
       ${v.tel ? `<div class="text-sm text-muted">📞 ${v.tel}</div>` : ''}
       ${v.email ? `<div class="text-sm text-muted">✉️ ${v.email}</div>` : ''}
     </div>`;
@@ -9077,13 +9301,33 @@ function renderDispoGrid() {
   });
 
   etab.vacataires.forEach(vac => {
-    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}.<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
+    const isInterim = vac.typeVac === 'interimaire';
+    const typeTag = isInterim
+      ? `<span style="font-size:8px;background:rgba(247,169,79,0.2);color:#f7a94f;border-radius:4px;padding:0 4px;font-weight:700">INTÉRIM</span>`
+      : `<span style="font-size:8px;background:rgba(56,217,169,0.2);color:#38d9a9;border-radius:4px;padding:0 4px;font-weight:700">VAC</span>`;
+    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}. ${typeTag}<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
     days.forEach(d => {
       const k = dateStr(d);
       const st = (etab.vacDispos[vac.id] || {})[k] || '';
       const cls = st === 'oui' ? 'dispo-oui' : st === 'hs' ? 'dispo-hs' : st === 'non' ? 'dispo-non' : st === 'affecte' ? 'dispo-affecte' : '';
       const lbl = st === 'oui' ? 'DISPO' : st === 'hs' ? 'HS' : st === 'non' ? 'NON' : st === 'affecte' ? 'AFF✓' : '';
-      html += `<div class="dispo-cell ${cls}" onclick="toggleDispo('${vac.id}','${k}')">${lbl}</div>`;
+
+      // Afficher les postes manquants pour les jours où le vacataire est disponible
+      let postesHtml = '';
+      if (st === 'oui' || st === '' ) {
+        const manquants = getPostesManquantsJour(d);
+        if (manquants.length > 0) {
+          const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
+          postesHtml = '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px">' +
+            manquants.map(m => {
+              const col = shiftColors[m.code] || '#4f8ef7';
+              return `<span style="font-size:8px;font-weight:800;background:${col}33;color:${col};border:1px solid ${col}88;border-radius:3px;padding:0 3px;line-height:14px" title="${m.label} — manque ${m.manque}">${m.code}</span>`;
+            }).join('') +
+            '</div>';
+        }
+      }
+
+      html += `<div class="dispo-cell ${cls}" onclick="toggleDispo('${vac.id}','${k}')" style="padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span>${lbl}</span>${postesHtml}</div>`;
     });
   });
   html += '</div>';
@@ -9115,17 +9359,41 @@ function updateVacBadge() {
   document.getElementById('vac-badge').textContent = cnt;
 }
 
+function setVacType(type) {
+  const isInterim = type === 'interimaire';
+  const labelVac = document.getElementById('vac-type-label-vac');
+  const labelInt = document.getElementById('vac-type-label-interim');
+  const hint = document.getElementById('vac-type-hint');
+  const agenceRequired = document.getElementById('vac-agence-required');
+  if (labelVac) labelVac.style.borderColor = !isInterim ? '#38d9a9' : 'var(--border)';
+  if (labelVac) labelVac.style.background = !isInterim ? 'rgba(56,217,169,0.12)' : 'var(--bg3)';
+  if (labelInt) labelInt.style.borderColor = isInterim ? '#f7a94f' : 'var(--border)';
+  if (labelInt) labelInt.style.background = isInterim ? 'rgba(247,169,79,0.12)' : 'var(--bg3)';
+  if (hint) {
+    hint.style.borderLeftColor = isInterim ? '#f7a94f' : '#38d9a9';
+    hint.textContent = isInterim
+      ? '🏢 Intérimaire — rattaché à une agence et facturé via cette boîte.'
+      : '👤 Vacataire direct — géré sans agence, n\'est pas facturé via une boîte d\'intérim.';
+  }
+  if (agenceRequired) agenceRequired.style.display = isInterim ? '' : 'none';
+  const radio = document.getElementById('vac-type-' + (isInterim ? 'interimaire' : 'vacataire'));
+  if (radio) radio.checked = true;
+}
+
 function openNewVacataire() {
   editingVacId = null;
-  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire';
+  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire / intérimaire';
   document.getElementById('vac-nom').value = '';
   document.getElementById('vac-prenom').value = '';
   document.getElementById('vac-tel').value = '';
   document.getElementById('vac-email').value = '';
   document.getElementById('vac-notes').value = '';
   document.getElementById('vac-pin').value = '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = getEtab().specialites.map(s => `<option>${esc(s)}</option>`).join('');
+  setVacType('vacataire');
   openModal('modal-vac');
 }
 
@@ -9134,7 +9402,8 @@ function openEditVacataire(vacId) {
   const vac = etab.vacataires.find(v => v.id === vacId);
   if (!vac) return;
   editingVacId = vacId;
-  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)}`;
+  const typeLabel = vac.typeVac === 'interimaire' ? '🏢 Intérimaire' : '👤 Vacataire';
+  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)} — ${typeLabel}`;
   // Peupler select agences intérim
   const vacAgSel = document.getElementById('vac-agence');
   if (vacAgSel) {
@@ -9149,8 +9418,11 @@ function openEditVacataire(vacId) {
   document.getElementById('vac-email').value = vac.email || '';
   document.getElementById('vac-notes').value = vac.notes || '';
   document.getElementById('vac-pin').value = vac.pin || '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = vac.posteRemplace || '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = etab.specialites.map(s => `<option ${s===vac.spec?'selected':''}}>${esc(s)}</option>`).join('');
+  setVacType(vac.typeVac === 'interimaire' ? 'interimaire' : 'vacataire');
   openModal('modal-vac');
 }
 
@@ -9160,13 +9432,17 @@ function saveVacataire() {
   const prenom = document.getElementById('vac-prenom').value.trim();
   if (!nom || !prenom) { showToast('Nom et prénom requis', 'error'); return; }
   const pin = document.getElementById('vac-pin').value.trim();
+  const typeVacSel = document.querySelector('input[name="vac-type"]:checked');
+  const typeVac = typeVacSel ? typeVacSel.value : 'vacataire';
   const data = {
     nom, prenom,
+    typeVac,
     spec: document.getElementById('vac-spec').value,
     tel: document.getElementById('vac-tel').value,
     email: document.getElementById('vac-email').value,
     notes: document.getElementById('vac-notes').value,
     pin: pin || null,
+    posteRemplace: document.getElementById('vac-poste-remplace')?.value.trim() || '',
     agenceId: document.getElementById('vac-agence')?.value || '',
     tarif: parseFloat(document.getElementById('vac-tarif')?.value || '0') || 0,
   };
@@ -9180,7 +9456,8 @@ function saveVacataire() {
   saveToStorage();
   closeModal('modal-vac');
   renderVacataires();
-  showToast('Vacataire enregistré', 'success');
+  const typeLabel = typeVac === 'interimaire' ? 'Intérimaire' : 'Vacataire';
+  showToast(`${typeLabel} enregistré`, 'success');
 }
 
 function rechercherRemplacant() {
@@ -9299,33 +9576,114 @@ function renderAffectationsList() {
   const etab = getEtab();
   const el = document.getElementById('affectations-list');
   if (!el) return;
-  if (etab.vacataires.length === 0) {
-    el.innerHTML = '<p class="text-muted text-sm">Aucun vacataire enregistré.</p>';
+
+  // Collecter toutes les affectations du mois en cours
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const rows = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const affs = (etab.affectationsVac||{})[dk];
+    if (!affs) continue;
+    const affArr = Array.isArray(affs) ? affs : Object.values(affs);
+    affArr.forEach(a => {
+      if (!a || !a.vacId) return;
+      rows.push({ ...a, day: d, dk });
+    });
+  }
+
+  if (rows.length === 0) {
+    el.innerHTML = '<p class="text-muted text-sm" style="padding:12px 0">Aucune affectation ce mois-ci.</p>';
     return;
   }
-  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
-  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="text-align:left;padding:4px 8px;color:var(--text2)">Vacataire</th>';
-  for (let d=1; d<=daysInMonth; d++) {
-    const date = new Date(currentYear, currentMonth, d);
-    const isWE = date.getDay()===0||date.getDay()===6;
-    html += `<th style="text-align:center;padding:2px;min-width:24px;color:${isWE?'var(--accent3)':'var(--text2)'};font-size:10px">${d}</th>`;
-  }
-  html += '</tr></thead><tbody>';
-  etab.vacataires.forEach(vac => {
-    html += `<tr><td style="padding:4px 8px;white-space:nowrap;font-weight:600">${esc(vac.prenom)} ${esc(vac.nom[0])}.<br><span style="font-size:9px;color:var(--text2)">${esc(vac.spec||'')}</span></td>`;
-    for (let d=1; d<=daysInMonth; d++) {
-      const date = new Date(currentYear, currentMonth, d);
-      const dk = dateStr(date);
-      const st = (etab.vacDispos[vac.id]||{})[dk]||'';
-      const bg = st==='oui'?'rgba(56,217,169,0.2)':st==='hs'?'rgba(247,169,79,0.2)':st==='non'?'rgba(247,111,111,0.1)':'transparent';
-      const lbl = st==='oui'?'✓':st==='hs'?'HS':st==='non'?'✗':'';
-      const col = st==='oui'?'#38d9a9':st==='hs'?'#f7a94f':st==='non'?'#f76f6f':'var(--text3)';
-      html += `<td style="text-align:center;background:${bg};border:1px solid var(--border);color:${col};font-size:10px;font-weight:700;cursor:pointer" onclick="toggleDispo('${vac.id}','${dk}')">${lbl}</td>`;
-    }
-    html += '</tr>';
+
+  // Tri par date
+  rows.sort((a, b) => a.day - b.day);
+
+  const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9', NU: '#9b7fe8' };
+  const getShiftCol = s => {
+    const base = s ? s.replace(/^HS/, '') : '';
+    return shiftColors[base] || '#8892aa';
+  };
+
+  let html = '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">' +
+    '<thead><tr style="background:var(--bg3)">' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Date</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Vacataire / Intérimaire</th>' +
+    '<th style="padding:8px 10px;text-align:center;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Code</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Créneau</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Secteur</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">N° Poste remplacé</th>' +
+    '<th style="padding:8px 10px;text-align:center;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Action</th>' +
+    '</tr></thead><tbody>';
+
+  rows.forEach((a, i) => {
+    const isInterim = a.typeVac === 'interimaire';
+    const typeBadge = isInterim
+      ? '<span style="font-size:9px;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.4);padding:1px 6px;border-radius:8px;font-weight:700;display:inline-block">🏢 INTÉRIM</span>'
+      : '<span style="font-size:9px;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.4);padding:1px 6px;border-radius:8px;font-weight:700;display:inline-block">👤 VAC</span>';
+    const col = getShiftCol(a.shift);
+    const isHS = (a.shift||'').startsWith('HS');
+    const shiftBadge = '<span style="font-family:monospace;font-weight:900;font-size:13px;color:' + col + ';background:' + col + '22;border:1px solid ' + col + '55;padding:2px 7px;border-radius:5px">' + esc(a.shift||'—') + '</span>';
+    const creneauLabel = a.creneau ? a.creneau.debut + ' – ' + a.creneau.fin : '<span style="color:var(--text3)">—</span>';
+    const secteurLabel = a.secteurNom ? esc(a.secteurNom) : '<span style="color:var(--text3)">—</span>';
+    const posteLabel = a.numPoste ? '<strong style="color:var(--accent3)">' + esc(a.numPoste) + '</strong>' : '<span style="color:var(--text3)">—</span>';
+    const dateObj = new Date(currentYear, currentMonth, a.day);
+    const dateFr = dateObj.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+    const bg = i % 2 === 0 ? 'var(--card)' : 'var(--bg2)';
+
+    html += '<tr style="background:' + bg + ';border-bottom:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;white-space:nowrap;font-weight:600;color:var(--text)">' + esc(dateFr) + '</td>' +
+      '<td style="padding:8px 10px">' +
+        '<div style="font-weight:700;color:var(--text)">' + esc(a.prenom||'') + ' ' + esc(a.nom||'') + '</div>' +
+        '<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">' + typeBadge +
+        (a.spec ? '<span style="font-size:9px;color:var(--text3)">' + esc(a.spec) + '</span>' : '') +
+        '</div>' +
+      '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + shiftBadge + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap">' + creneauLabel + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px;color:var(--text2)">' + secteurLabel + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px">' + posteLabel + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' +
+        '<button onclick="supprimerAffectationVac(\'' + a.dk + '\',\'' + a.vacId + '\')" ' +
+        'title="Annuler cette affectation" ' +
+        'style="background:rgba(247,111,111,0.1);color:#f76f6f;border:1px solid rgba(247,111,111,0.3);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:600">✕</button>' +
+      '</td>' +
+      '</tr>';
   });
+
   html += '</tbody></table></div>';
+
+  // Résumé en bas
+  const nbVac = rows.filter(r => r.typeVac !== 'interimaire').length;
+  const nbInt = rows.filter(r => r.typeVac === 'interimaire').length;
+  html += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);display:flex;gap:16px;flex-wrap:wrap">' +
+    '<span>📊 <strong style="color:var(--text)">' + rows.length + '</strong> affectation(s) ce mois</span>' +
+    '<span>👤 <strong style="color:#38d9a9">' + nbVac + '</strong> vacataire(s)</span>' +
+    '<span>🏢 <strong style="color:#f7a94f">' + nbInt + '</strong> intérimaire(s)</span>' +
+    '</div>';
+
   el.innerHTML = html;
+}
+
+function supprimerAffectationVac(dk, vacId) {
+  const etab = getEtab();
+  if (!etab || !etab.affectationsVac || !etab.affectationsVac[dk]) return;
+  const affs = etab.affectationsVac[dk];
+  if (Array.isArray(affs)) {
+    etab.affectationsVac[dk] = affs.filter(a => a.vacId !== vacId);
+    if (etab.affectationsVac[dk].length === 0) delete etab.affectationsVac[dk];
+  } else {
+    delete etab.affectationsVac[dk][vacId];
+  }
+  // Remettre la dispo à "oui" si elle existait
+  if (etab.vacDispos[vacId] && etab.vacDispos[vacId][dk] === 'affecte') {
+    etab.vacDispos[vacId][dk] = 'oui';
+  }
+  saveToStorage();
+  renderAffectationsList();
+  renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
+  showToast('Affectation annulée', 'info');
 }
 
 // ============================================================
@@ -10461,8 +10819,15 @@ function validateQrPin(etab) {
     // Pas d'agent sélectionné, chercher par PIN parmi tous
     var matchAgent = null, matchType = 'agent';
     etab.agents.filter(function(a){ return a.actif; }).forEach(function(a) {
-      var num = (a.pin && /^\d{4}$/.test(a.pin)) ? a.pin : (a.id||'').replace(/[^0-9]/g,'');
-      if (_qrPinBuffer === num || _qrPinBuffer === num.padStart(4,'0')) { matchAgent = a; }
+      var num;
+      if (a.pin && /^\d{4}$/.test(a.pin)) {
+        num = a.pin;
+      } else if (a.poste) {
+        num = (a.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      } else {
+        num = (a.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      }
+      if (_qrPinBuffer === num) { matchAgent = a; }
     });
     (etab.vacataires||[]).forEach(function(v) {
       if (v.pin && (_qrPinBuffer === v.pin || _qrPinBuffer === v.pin.padStart(4,'0'))) { matchAgent = v; matchType = 'vacataire'; }
@@ -10488,8 +10853,15 @@ function validateQrPin(etab) {
   if (!agent) { agent = (etab.vacataires||[]).find(function(v){ return v.id === targetId; }); isVac = true; }
   if (!agent) { if (errEl) errEl.style.display = 'block'; _qrPinBuffer=''; updatePinDots(); return; }
 
-  var num = (agent.pin && /^\d{4}$/.test(agent.pin)) ? agent.pin : (isVac ? (agent.pin||'') : (agent.id||'').replace(/[^0-9]/g,'').padStart(4,'0'));
-  var numAlt = (agent.pin && /^\d{4}$/.test(agent.pin)) ? '' : (isVac ? '' : (agent.id||'').replace(/[^0-9]/g,''));
+  var num;
+  if (agent.pin && /^\d{4}$/.test(agent.pin)) {
+    num = agent.pin;
+  } else if (!isVac && agent.poste) {
+    num = (agent.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  } else {
+    num = (agent.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  }
+  var numAlt = '';
 
   if (_qrPinBuffer === num || (numAlt && _qrPinBuffer === numAlt)) {
     var overlay = document.getElementById('qr-pin-overlay');
@@ -11426,20 +11798,33 @@ function qrShowTab(tab) {
   } else if (tab === 'planning') {
     qrRenderPlanning();
   } else if (tab === 'dispos') {
-    var etab2 = DB.etablissements[_qrEtabId];
-    var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
-                        || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
-    if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    // Recharger les données fraîches depuis Supabase pour avoir les dispos à jour
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    }).catch(function() {
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    });
   } else if (tab === 'conges') {
     qrRenderCongeList();
     qrInitDateSelects();
   } else if (tab === 'messages') {
-    qrRenderMessages();
-    // Effacer badge
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    }).catch(function() {
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    });
     var badge = document.getElementById('qr-msg-badge');
     if (badge) badge.style.display = 'none';
-    // Afficher cadre destinataire
-    qrUpdateDestInfo();
   }
 }
 
@@ -11766,12 +12151,15 @@ function saveQRDispos() {
 function switchConfigTab(tab) {
   if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
   if (tab === 'options') { renderOptions(); }
-  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
+  updateOptionsTabVisibility();
+  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
   });
-  document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'][i] === tab);
+  // Active le bon bouton sans dépendre de l'index (évite les faux positifs avec d'autres .tab de la page)
+  document.querySelectorAll('[onclick*="switchConfigTab"]').forEach(el => {
+    const match = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', match.includes("'" + tab + "'") || match.includes('"' + tab + '"'));
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
@@ -11779,10 +12167,24 @@ function switchConfigTab(tab) {
   if (tab === 'interim') renderAgencesInterim();
 }
 
+var _rotSpecFilter = '';
+
 function renderRotationConfig() {
   const etab = getEtab();
   if (!etab) return;
   initOrdreRotation(etab);
+
+  // ── Onglets par spécialité ──
+  const rotTabsEl = document.getElementById('rotation-spec-tabs');
+  if (rotTabsEl) {
+    const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))].sort();
+    if (!_rotSpecFilter && specs.length > 0) _rotSpecFilter = specs[0];
+    rotTabsEl.innerHTML = specs.map(s =>
+      `<button class="spec-tab-btn${_rotSpecFilter===s?' active':''}"
+        onclick="_rotSpecFilter='${s}';renderRotationConfig()"
+        style="font-size:12px;padding:5px 12px">${s}</button>`
+    ).join('');
+  }
 
   // Remplir le champ secteurs fixes
   const sfEl = document.getElementById('cfg-secteurs-fixes-rot');
@@ -11871,9 +12273,9 @@ function renderRotationApercu() {
   if (!el) return;
   initOrdreRotation(etab);
 
-  const agents = etab.agents.filter(a => a.actif && !a.secteurFixe && !a.posteNomme);
+  const agents = etab.agents.filter(a => a.actif && !a.secteurFixe && !a.posteNomme && (!_rotSpecFilter || a.spec === _rotSpecFilter));
   if (agents.length === 0) {
-    el.innerHTML = '<p class="text-muted text-sm">Aucun agent en rotation.</p>';
+    el.innerHTML = '<p class="text-muted text-sm">Aucun agent en rotation' + (_rotSpecFilter ? ' pour la spécialité ' + _rotSpecFilter : '') + '.</p>';
     return;
   }
   const ordre = (etab.config.ordreRotation||etab.secteurs.map(s=>s.id)).filter(s=>s&&!s.startsWith('BG:'));
@@ -12382,29 +12784,74 @@ function removeAbsCode(idx) {
 }
 
 // Roulement
+var _roulSpecFilter = '';
+
 function initRoulementTable() {
   const etab = getEtab();
   const cycleLen = parseInt(document.getElementById('cfg-cycle-len').value) || 42;
   etab.config.cycleLen = cycleLen;
   etab.config.refDate = document.getElementById('cfg-ref-date').value;
 
+  // Construire les onglets par spécialité
+  const tabsEl = document.getElementById('roulement-spec-tabs');
+  if (tabsEl) {
+    const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))].sort();
+    if (!_roulSpecFilter && specs.length > 0) _roulSpecFilter = specs[0];
+    tabsEl.innerHTML = specs.map(s =>
+      `<button class="spec-tab-btn${_roulSpecFilter===s?' active':''}"
+        onclick="_roulSpecFilter='${s}';initRoulementTable()"
+        style="font-size:12px;padding:5px 12px">${s}</button>`
+    ).join('');
+  }
+
   const wrap = document.getElementById('roulement-table-wrap');
-  let html = `<table class="roulement-table"><thead><tr><th>Agent</th>`;
-  for (let d = 0; d < cycleLen; d++) html += `<th>J${d+1}</th>`;
+  const agents = etab.agents.filter(a => a.actif && (!_roulSpecFilter || a.spec === _roulSpecFilter));
+
+  if (agents.length === 0) {
+    wrap.innerHTML = '<p class="text-muted text-sm">Aucun agent pour cette spécialité.</p>';
+    return;
+  }
+
+  // En-têtes de jours avec numéro de semaine
+  let html = `<table class="roulement-table"><thead><tr>
+    <th style="min-width:130px">Agent</th>
+    <th style="min-width:80px;color:var(--text2);font-size:10px">Gr. / Ligne</th>`;
+  for (let d = 0; d < cycleLen; d++) {
+    const sem = Math.floor(d/7) + 1;
+    const jourSem = ['L','M','Me','J','V','S','D'][d%7];
+    const isSun = d%7 === 6;
+    const isSat = d%7 === 5;
+    html += `<th style="min-width:32px;font-size:10px;${(isSat||isSun)?'color:#f7a94f':''}" title="Sem.${sem} - Jour ${d+1}">${jourSem}<br><span style="font-size:9px;opacity:0.6">${d+1}</span></th>`;
+  }
   html += '</tr></thead><tbody>';
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
-    if (!etab.roulement[agent.id]) etab.roulement[agent.id] = {};
-    html += `<tr><td style="white-space:nowrap;font-weight:600">${esc(agent.nom)} ${agent.prenom[0]}.</td>`;
-    for (let d = 0; d < cycleLen; d++) {
-      const val = etab.roulement[agent.id][d] || '';
-      html += `<td><input type="text" maxlength="3" value="${val}" data-agent="${agent.id}" data-day="${d}" onchange="updateRoulement(this)"></td>`;
-    }
-    html += '</tr>';
+  // Grouper par Gr1 puis Gr2
+  [1,2].forEach(gr => {
+    const grAgents = agents.filter(a => (a.groupeRot||1) === gr);
+    if (grAgents.length === 0) return;
+    html += `<tr><td colspan="${cycleLen+2}" style="background:var(--bg3);padding:4px 8px;font-size:11px;font-weight:700;color:var(--accent1)">GROUPE ${gr}</td></tr>`;
+    grAgents.forEach(agent => {
+      if (!etab.roulement[agent.id]) etab.roulement[agent.id] = {};
+      const color = getSpecColor(agent.spec);
+      html += `<tr>
+        <td style="white-space:nowrap;font-weight:600;font-size:12px">${esc(agent.nom)} ${(agent.prenom||'')[0]||''}.<br>
+          <span style="font-size:10px;color:var(--text2);font-family:monospace">${agent.id||''}</span></td>
+        <td style="text-align:center;font-size:11px;color:var(--text2)">G${gr} / ${agent.ligneRoulement||'L1'}</td>`;
+      for (let d = 0; d < cycleLen; d++) {
+        const val = etab.roulement[agent.id][d] || '';
+        const shiftBg = {M:'rgba(79,142,247,0.15)',S:'rgba(247,169,79,0.15)',J:'rgba(56,217,169,0.15)',
+                         R:'transparent',NU:'rgba(160,126,232,0.15)',RC:'rgba(194,87,10,0.1)'}[val]||'transparent';
+        html += `<td style="background:${shiftBg}"><input type="text" maxlength="3" value="${esc(val)}"
+          data-agent="${agent.id}" data-day="${d}" onchange="updateRoulement(this)"
+          style="width:28px;text-align:center;background:transparent;border:none;color:var(--text);font-weight:600;font-size:11px;font-family:monospace;outline:none;padding:0"></td>`;
+      }
+      html += '</tr>';
+    });
   });
+
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  showToast('Tableau initialisé', 'success');
+  showToast('Tableau ' + _roulSpecFilter + ' — ' + agents.length + ' agents', 'success');
 }
 
 function updateRoulement(el) {
@@ -12809,10 +13256,24 @@ function handleImportFile(file) {
         const horColors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', N:'#a07ee8', R:'#5a6480',
                             CA:'#f76f6f', CF:'#f76f6f', AM:'#8892aa', CP:'#f76f6f', GR:'#8892aa' };
 
+        // Codes spécialités valides — tout le reste est ignoré (en-têtes, notes, exemples)
+        const SPEC_VALIDES = ['AS','IDE','AUX','ASH','NUIT','AS-NUIT','IDE-NUIT'];
+        const MOT_PARASITES = ['HORAIRE','DURÉE','PAUSE','MODE','SEUIL','HAS','IMPORTANT',
+                               'SPÉCIALITÉ','💡','HORIZON','UNE LIGNE','REMPLISSEZ',
+                               'AJUSTEZ','RENSEIGNEZ','NE CHANGEZ','SUPPRIMER','EXEMPLE',
+                               '★','⚠️','DURÉE','DURÉE'];
+
         rows.forEach(row => {
           const specCode = (row[0] || '').toString().trim();
-          if (!specCode || specCode.includes('SPÉCIALITÉ') || specCode.includes('💡') ||
-              specCode.includes('HORIZON') || specCode.includes('Une ligne')) return;
+          if (!specCode) return;
+          // Ignorer si contient un mot parasite
+          const upper = specCode.toUpperCase();
+          if (MOT_PARASITES.some(m => upper.includes(m.toUpperCase()))) return;
+          // N'accepter que les codes connus ou courts (max 10 chars, lettres/chiffres/tiret)
+          if (specCode.length > 10) return;
+          if (!/^[A-Za-zÀ-ÿ0-9\-_]+$/.test(specCode)) return;
+          // Vérifier que c'est bien un code spécialité (pas un nombre seul, pas une date)
+          if (/^\d+$/.test(specCode)) return;
 
           specs.push(specCode);
 
@@ -13098,11 +13559,24 @@ function handleImportFile(file) {
           const c1Raw = row[1];
           const c1Str = (c1Raw === null || c1Raw === undefined || c1Raw === '') ? '' : c1Raw.toString().trim();
 
-          // Nouveau groupe : ligne dont col0 contient "GROUPE" (ou "ROULEMENT" pour ancien format)
-          if (c0.toUpperCase().includes('GROUPE') || c0.toUpperCase().includes('ROULEMENT')) {
+          // Nouveau groupe : ligne dont col0 COMMENCE PAR "GROUPE" (pas le titre ROULEMENT)
+          // On ne compte plus sur "ROULEMENT" car le titre de l'onglet le contient aussi
+          if (c0.toUpperCase().startsWith('GROUPE')) {
             currentGroupe++;
             return;
           }
+          // Ignorer les lignes de titre (HORIZON PLANNING...)
+          if (c0.toUpperCase().includes('HORIZON PLANNING') || c0.toUpperCase().includes('REMPLISSEZ') ||
+              c0.toUpperCase().includes('POINTS CLÉS') || c0.toUpperCase().startsWith('⚠') ||
+              c0.toUpperCase().startsWith('💡')) {
+            return;
+          }
+
+          // Ignorer les lignes d'en-tête du template (AGENT, LIGNE, jours L/M/ME...)
+          if (c0.toUpperCase() === 'AGENT' || c0.toUpperCase().startsWith('AGENT ')) return;
+          if (c1Str.toUpperCase() === 'LIGNE' || c1Str.toUpperCase() === 'SEM') return;
+          // La ligne des jours L/M/ME/JE... a c0="" et c1="" ou "L"
+          if (!c0 && (!c1Str || c1Str === 'L')) return;
 
           // Normaliser la ligne : "1" ou 1 → "L1", "L1" → "L1"
           let ligneCode = '';
@@ -13642,12 +14116,13 @@ function updateFilterSpec() {
   const specs = etab.specialites || [];
   tabs.innerHTML = '';
 
-  // Bouton "Tous"
-  const btnTous = document.createElement('button');
-  btnTous.textContent = 'Tous';
-  btnTous.className = 'spec-tab-btn' + (!currentSpecFilter ? ' active' : '');
-  btnTous.onclick = function() { currentSpecFilter = ''; updateSpecTabsUI(); renderPlanning(); };
-  tabs.appendChild(btnTous);
+  // Pas de bouton "Tous" — AS par défaut (IDEC), AUX pour RESP_HOT
+  const role = DB.currentUser && DB.currentUser.role;
+  if (!currentSpecFilter) {
+    if (role === 'RESP_HOT' && specs.includes('AUX')) currentSpecFilter = 'AUX';
+    else if (specs.includes('AS')) currentSpecFilter = 'AS';
+    else if (specs.length > 0) currentSpecFilter = specs[0];
+  }
 
   specs.forEach(s => {
     const btn = document.createElement('button');
@@ -14841,13 +15316,13 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
         </label>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
-        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden">← Précédent</button>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
-          <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
-          <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden;min-width:110px">← Précédent</button>
+        <div style="display:flex;gap:8px;align-items:center;flex:1;justify-content:center">
+          <div id="ob-dot-1" style="width:10px;height:10px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
+          <div id="ob-dot-2" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+          <div id="ob-dot-3" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
         </div>
-        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm">Suivant →</button>
+        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm" style="min-width:110px">Suivant →</button>
       </div>
     </div>
   </div>
