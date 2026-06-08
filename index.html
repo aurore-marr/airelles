@@ -7056,6 +7056,53 @@ function renderPlanningVacataires(daysInMonth, etab) {
   container.innerHTML = html;
 }
 
+// ─── Utilitaire : retourne les postes manquants pour un jour donné ────────────
+// dk = 'YYYY-MM-DD' ou objet Date ; retourne [{code, manque, label, debut, fin}]
+function getPostesManquantsJour(dk) {
+  const etab = getEtab();
+  if (!etab) return [];
+  let year, month, day;
+  if (dk instanceof Date) {
+    year = dk.getFullYear(); month = dk.getMonth(); day = dk.getDate();
+  } else {
+    const parts = dk.split('-');
+    year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; day = parseInt(parts[2]);
+  }
+  const planMonth = ((etab.planning[year]||{})[month]||{});
+  const cibleM = etab.config.cibleM || 3;
+  const cibleS = etab.config.cibleS || 3;
+  const cibleJ = etab.config.cibleJ || 3;
+  const cibles = { M: cibleM, S: cibleS, J: cibleJ };
+  const counts = { M: 0, S: 0, J: 0 };
+  etab.agents.filter(a => a.actif).forEach(a => {
+    const sh = (planMonth[a.id]||{})[day] || '';
+    if (sh==='M'||sh==='HSM') counts.M++;
+    if (sh==='S'||sh==='HSS') counts.S++;
+    if (sh==='J'||sh==='HSJ') counts.J++;
+  });
+  const dkStr = dk instanceof Date ? dateStr(dk) : dk;
+  const affAuj = (etab.affectationsVac||{})[dkStr] || [];
+  affAuj.forEach(a => {
+    if (a.shift==='M') counts.M++;
+    if (a.shift==='S') counts.S++;
+    if (a.shift==='J') counts.J++;
+  });
+  const result = [];
+  ['M','S','J'].forEach(code => {
+    if (counts[code] < cibles[code]) {
+      const hor = (etab.horaires||[]).find(h => h.code === code);
+      result.push({
+        code,
+        manque: cibles[code] - counts[code],
+        label: hor ? hor.label : code,
+        debut: hor?.debut || '07:00',
+        fin: hor?.fin || '19:00'
+      });
+    }
+  });
+  return result;
+}
+
 function affecterVacataireJour(vacId, day, statut) {
   const etab = getEtab();
   if (!etab) return;
@@ -7065,28 +7112,8 @@ function affecterVacataireJour(vacId, day, statut) {
   const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
 
-  // Détecter les postes manquants ce jour
-  const planMonth = ((etab.planning[currentYear]||{})[currentMonth]||{});
-  const cibleM = etab.config.cibleM || 3;
-  const cibleS = etab.config.cibleS || 3;
-  const cibleJ = etab.config.cibleJ || 3;
-  let countM = 0, countS = 0, countJ = 0;
-  etab.agents.filter(a=>a.actif).forEach(a => {
-    const sh = (planMonth[a.id]||{})[day]||'';
-    if (sh==='M'||sh==='HSM') countM++;
-    if (sh==='S'||sh==='HSS') countS++;
-    if (sh==='J'||sh==='HSJ') countJ++;
-  });
-  const affAuj = (etab.affectationsVac||{})[dk] || [];
-  affAuj.forEach(a => {
-    if (a.shift==='M') countM++;
-    if (a.shift==='S') countS++;
-    if (a.shift==='J') countJ++;
-  });
-  const manquants = [];
-  if (countM < cibleM) manquants.push({ code:'M', manque: cibleM - countM });
-  if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
-  if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
+  // Détecter les postes manquants ce jour (via utilitaire partagé)
+  const manquants = getPostesManquantsJour(dk);
 
   // Couleurs fixes pour M/S/J
   const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
@@ -7160,11 +7187,16 @@ function affecterVacataireJour(vacId, day, statut) {
     '<option value="' + esc(s.id) + '">' + esc(s.nom) + '</option>'
   ).join('');
 
+  // Pré-remplir le champ "N° / Libellé du poste remplacé" avec les postes manquants
+  const numPosteDefault = manquants.length > 0
+    ? manquants.map(m => m.code + ' – ' + m.label + ' (' + m.debut + '-' + m.fin + ')').join(' | ')
+    : '';
+
   const saisieHtml =
     '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">' +
     '<div style="margin-bottom:10px">' +
     '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📌 N° / Libellé du poste remplacé <span style="color:var(--accent3);font-weight:400;font-style:italic">(RH &amp; cadre)</span></label>' +
-    '<input type="text" id="vac-num-poste" placeholder="Ex : AS-282 · IDE-104 · Poste nuit sect. B · Remplacement M. Dupont…" ' +
+    '<input type="text" id="vac-num-poste" value="' + numPosteDefault.replace(/"/g, '&quot;') + '" placeholder="Ex : AS-282 · IDE-104 · Poste nuit sect. B · Remplacement M. Dupont…" ' +
     'style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none">' +
     '</div>' +
     '<div style="margin-bottom:10px">' +
@@ -9267,7 +9299,23 @@ function renderDispoGrid() {
       const st = (etab.vacDispos[vac.id] || {})[k] || '';
       const cls = st === 'oui' ? 'dispo-oui' : st === 'hs' ? 'dispo-hs' : st === 'non' ? 'dispo-non' : st === 'affecte' ? 'dispo-affecte' : '';
       const lbl = st === 'oui' ? 'DISPO' : st === 'hs' ? 'HS' : st === 'non' ? 'NON' : st === 'affecte' ? 'AFF✓' : '';
-      html += `<div class="dispo-cell ${cls}" onclick="toggleDispo('${vac.id}','${k}')">${lbl}</div>`;
+
+      // Afficher les postes manquants pour les jours où le vacataire est disponible
+      let postesHtml = '';
+      if (st === 'oui' || st === '' ) {
+        const manquants = getPostesManquantsJour(d);
+        if (manquants.length > 0) {
+          const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
+          postesHtml = '<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px">' +
+            manquants.map(m => {
+              const col = shiftColors[m.code] || '#4f8ef7';
+              return `<span style="font-size:8px;font-weight:800;background:${col}33;color:${col};border:1px solid ${col}88;border-radius:3px;padding:0 3px;line-height:14px" title="${m.label} — manque ${m.manque}">${m.code}</span>`;
+            }).join('') +
+            '</div>';
+        }
+      }
+
+      html += `<div class="dispo-cell ${cls}" onclick="toggleDispo('${vac.id}','${k}')" style="padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span>${lbl}</span>${postesHtml}</div>`;
     });
   });
   html += '</div>';
