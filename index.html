@@ -2308,15 +2308,27 @@ body[data-qr-mode="1"] #qr-view {
       <div id="config-tab-roulement" class="hidden">
         <div class="config-section" style="max-width:900px">
           <div class="config-section-title">🔄 Cycle de roulement</div>
-          <div class="flex gap-3 mb-3">
+          <div class="alert alert-info mb-3" style="font-size:12px">
+            <span>ℹ️</span>
+            <span>Chaque spécialité peut avoir sa propre durée de cycle. Les IDE sans rotation sectorielle utilisent leur propre cycle indépendant. Laisser 0 = utiliser la durée par défaut.</span>
+          </div>
+          <div class="flex gap-3 mb-3 flex-wrap">
             <div class="form-group" style="margin:0">
-              <label>Durée du cycle (jours)</label>
+              <label>Durée cycle par défaut (jours)</label>
               <input type="number" id="cfg-cycle-len" value="42" min="1" max="365" style="width:100px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
             </div>
             <div class="form-group" style="margin:0">
               <label>Date de référence</label>
               <input type="date" id="cfg-ref-date" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:inherit;outline:none">
             </div>
+          </div>
+          <!-- Cycles par spécialité -->
+          <div id="cfg-cycle-by-spec" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">⏱ Durée de cycle par spécialité</div>
+            <div id="cfg-cycle-spec-rows" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+            <p class="text-xs text-muted mt-2">0 = utiliser la durée par défaut ci-dessus. Les IDE avec rotation = pas de rotation sectorielle appliquée.</p>
+          </div>
+          <div class="flex gap-3 mb-3">
             <div style="align-self:end">
               <button class="btn btn-secondary btn-sm" onclick="initRoulementTable()">Appliquer</button>
             </div>
@@ -7346,12 +7358,12 @@ function autoFillIfEmpty() {
 
   const planM   = etab.planning[currentYear][currentMonth];
   const refDate = new Date(etab.config.refDate || '2020-11-23');
-  const cycleLen = etab.config.cycleLen || 42;
   const daysInM  = new Date(currentYear, currentMonth+1, 0).getDate();
 
   initOrdreRotation(etab);
 
   etab.agents.filter(a => a.actif).forEach(function(agent) {
+    const cycleLen = getCycleLenForAgent(agent, etab);
     const res  = getRoulementEffectif(agent, currentYear, currentMonth, etab);
     const roul = res.roulement;
     etab.rotationSectorielle[currentYear][currentMonth][agent.id] = res.secteur;
@@ -12187,6 +12199,7 @@ function switchConfigTab(tab) {
   if (tab === 'secteurs') renderCfgSectHorairesRules();
   if (tab === 'postes') renderConfigPostes();
   if (tab === 'interim') renderAgencesInterim();
+  if (tab === 'roulement') renderCycleBySpec();
 }
 
 var _rotSpecFilter = '';
@@ -12393,6 +12406,7 @@ function renderConfigGeneral() {
   if (cf2El) cf2El.value = etab.config.cfFrac2Seuil || 8;
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
+  renderCycleBySpec();
   // Champs localStorage (URL app + VAPID)
   var appUrlEl = document.getElementById('cfg-app-url');
   if (appUrlEl) appUrlEl.value = localStorage.getItem('horizon_app_url') || '';
@@ -12810,9 +12824,23 @@ var _roulSpecFilter = '';
 
 function initRoulementTable() {
   const etab = getEtab();
-  const cycleLen = parseInt(document.getElementById('cfg-cycle-len').value) || 42;
-  etab.config.cycleLen = cycleLen;
+  const defaultCycleLen = parseInt(document.getElementById('cfg-cycle-len').value) || 42;
+  etab.config.cycleLen = defaultCycleLen;
   etab.config.refDate = document.getElementById('cfg-ref-date').value;
+
+  // Sauvegarder les cycles par spécialité avant de rafraîchir
+  if (!etab.config.cycleLenBySpec) etab.config.cycleLenBySpec = {};
+  const specs0 = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))];
+  specs0.forEach(s => {
+    const inp = document.getElementById('cfg-cycle-spec-' + s);
+    if (inp) etab.config.cycleLenBySpec[s] = parseInt(inp.value) || 0;
+  });
+
+  // Utiliser le cycleLen de la spécialité sélectionnée pour l'affichage
+  const specCycle = (_roulSpecFilter && etab.config.cycleLenBySpec[_roulSpecFilter])
+    ? etab.config.cycleLenBySpec[_roulSpecFilter]
+    : defaultCycleLen;
+  const cycleLen = specCycle;
 
   // Construire les onglets par spécialité
   const tabsEl = document.getElementById('roulement-spec-tabs');
@@ -12885,8 +12913,72 @@ function updateRoulement(el) {
 }
 
 function saveRoulement() {
+  // Sauvegarder les cycles par spécialité
+  const etab = getEtab();
+  if (!etab.config.cycleLenBySpec) etab.config.cycleLenBySpec = {};
+  const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))];
+  specs.forEach(s => {
+    const inp = document.getElementById('cfg-cycle-spec-' + s);
+    if (inp) {
+      const v = parseInt(inp.value) || 0;
+      etab.config.cycleLenBySpec[s] = v;
+    }
+  });
+  // Sauvegarder aussi la liste des spécialités sans rotation
+  const noRotEl = document.getElementById('cfg-specs-no-rotation');
+  if (noRotEl) {
+    etab.config.specsNoRotation = noRotEl.value.split(',').map(s=>s.trim()).filter(Boolean);
+  }
   saveToStorage();
   showToast('Roulement enregistré', 'success');
+}
+
+function renderCycleBySpec() {
+  const etab = getEtab();
+  if (!etab) return;
+  const wrap = document.getElementById('cfg-cycle-spec-rows');
+  if (!wrap) return;
+  const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))].sort();
+  if (specs.length === 0) { wrap.innerHTML = '<p class="text-xs text-muted">Aucun agent configuré.</p>'; return; }
+  const cycleLenBySpec = etab.config.cycleLenBySpec || {};
+  const noRotSpecs = (etab.config.specsNoRotation || ['IDE','IDEC']).map(s=>s.toUpperCase());
+  wrap.innerHTML = specs.map(s => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:130px">
+      <div style="font-size:12px;font-weight:700;color:var(--accent)">${esc(s)}</div>
+      <label style="font-size:11px;color:var(--text2)">Durée cycle (j)</label>
+      <input type="number" id="cfg-cycle-spec-${esc(s)}" value="${cycleLenBySpec[s]||0}" min="0" max="365"
+        style="width:80px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:inherit;font-size:12px">
+      <label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer">
+        <input type="checkbox" id="cfg-no-rot-${esc(s)}" ${noRotSpecs.includes(s.toUpperCase())?'checked':''}
+          onchange="toggleSpecNoRotation('${esc(s)}',this.checked)"
+          style="width:14px;height:14px">
+        Pas de rotation secteur
+      </label>
+    </div>
+  `).join('');
+  // Afficher le champ texte pour la liste no-rotation (caché, piloté par checkboxes)
+  if (!document.getElementById('cfg-specs-no-rotation')) {
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.id = 'cfg-specs-no-rotation';
+    hidden.value = (etab.config.specsNoRotation || ['IDE','IDEC']).join(',');
+    wrap.appendChild(hidden);
+  } else {
+    document.getElementById('cfg-specs-no-rotation').value = (etab.config.specsNoRotation || ['IDE','IDEC']).join(',');
+  }
+}
+
+function toggleSpecNoRotation(spec, checked) {
+  const etab = getEtab();
+  if (!etab.config.specsNoRotation) etab.config.specsNoRotation = ['IDE','IDEC'];
+  const specUp = spec.toUpperCase();
+  etab.config.specsNoRotation = etab.config.specsNoRotation.map(s=>s.toUpperCase());
+  if (checked && !etab.config.specsNoRotation.includes(specUp)) {
+    etab.config.specsNoRotation.push(specUp);
+  } else if (!checked) {
+    etab.config.specsNoRotation = etab.config.specsNoRotation.filter(s => s !== specUp);
+  }
+  const hiddenEl = document.getElementById('cfg-specs-no-rotation');
+  if (hiddenEl) hiddenEl.value = etab.config.specsNoRotation.join(',');
 }
 
 // ============================================================
@@ -13574,12 +13666,14 @@ function handleImportFile(file) {
       //   "AGENT | LIGNE | SEM. 1 ..." → en-tête à ignorer
       //   "[vide] | [vide] | L | M | ME | J ..." → noms de jours, ignorer
       //   "Agent 1 | L1 | R | M | M | R ..." → données réelles (col0=nom, col1=Lx, col2+=shifts)
-      function parseRoulSheet(ws) {
+      function parseRoulSheet(ws, specCycleLen) {
         if (!ws) return {};
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         const validCodes = new Set(['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ']);
         const roulByLigne = {};
         let currentGroupe = 1;
+        // Utiliser la longueur fournie ou détecter automatiquement la max
+        const maxCycle = specCycleLen || 365;
 
         raw.forEach(function(row) {
           const c0   = (row[0] === null || row[0] === undefined) ? '' : row[0].toString().trim();
@@ -13623,13 +13717,15 @@ function handleImportFile(file) {
 
           // ── Lire les shifts à partir de col2 ──
           const shifts = [];
-          for (var c = 2; c < row.length && shifts.length < 42; c++) {
+          for (var c = 2; c < row.length && shifts.length < maxCycle; c++) {
             var v = (row[c] === null || row[c] === undefined) ? '' : row[c].toString().trim().toUpperCase();
             // Ignorer les séparateurs de semaine (SEM. 1, SEM. 2...) et noms de jours
             if (/^SEM\.?\s*\d/i.test(v) || ['L','M','ME','J','V','S','D','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE'].includes(v)) continue;
             shifts.push(validCodes.has(v) ? v : (v === '' ? 'R' : 'R'));
           }
-          while (shifts.length < 28) shifts.push('R');
+          // Compléter si nécessaire jusqu'au cycle réel (et pas systématiquement 28)
+          const targetLen = specCycleLen || shifts.length;
+          while (shifts.length < targetLen) shifts.push('R');
 
           const key = 'G' + currentGroupe + '_' + ligneCode;
           roulByLigne[key] = shifts;
@@ -13677,7 +13773,9 @@ function handleImportFile(file) {
         const ws = getSheet('Roulement ' + spec) || getSheet('roulement ' + spec);
         if (!ws) return;
         hasSpecRoul = true;
-        const roulByLigne = parseRoulSheet(ws);
+        // Utiliser le cycleLen configuré pour cette spécialité
+        const specCycleLen = ((etab.config.cycleLenBySpec || {})[spec]) || etab.config.cycleLen || 42;
+        const roulByLigne = parseRoulSheet(ws, specCycleLen);
         const nb = Object.keys(roulByLigne).length;
         if (nb > 0) {
           const matched = applyRoulements(roulByLigne, [spec]);
@@ -13691,7 +13789,7 @@ function handleImportFile(file) {
       if (!hasSpecRoul) {
         const wsRoul = getSheet('Roulement') || getSheet('roulement');
         if (wsRoul) {
-          const roulByLigne = parseRoulSheet(wsRoul);
+          const roulByLigne = parseRoulSheet(wsRoul, etab.config.cycleLen || 42);
           const nb = Object.keys(roulByLigne).length;
           if (nb > 0) {
             const matched = applyRoulements(roulByLigne, null);
@@ -13711,7 +13809,6 @@ function handleImportFile(file) {
       if (etab.roulement && Object.keys(etab.roulement).length > 0) {
         initOrdreRotation(etab);
         const _rf = new Date(etab.config.refDate || '2020-11-23');
-        const _cl = etab.config.cycleLen || 42;
         const _dim = new Date(currentYear, currentMonth+1, 0).getDate();
         if (!etab.planning) etab.planning = {};
         if (!etab.planning[currentYear]) etab.planning[currentYear] = {};
@@ -13721,6 +13818,7 @@ function handleImportFile(file) {
         if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
         const _pm = etab.planning[currentYear][currentMonth];
         etab.agents.filter(a => a.actif).forEach(function(ag) {
+          const _cl = getCycleLenForAgent(ag, etab);
           const _res = getRoulementEffectif(ag, currentYear, currentMonth, etab);
           const _r = _res.roulement;
           etab.rotationSectorielle[currentYear][currentMonth][ag.id] = _res.secteur;
@@ -13909,19 +14007,36 @@ function exportConfig() {
 
 function exportRoulementExcel() {
   const etab = getEtab();
-  const cycleLen = etab.config.cycleLen || 42;
-  const headers = ['AgentID'];
-  for (let i = 0; i < cycleLen; i++) headers.push('J' + (i+1));
-  const rows = [headers];
-  etab.agents.filter(a => a.actif).forEach(agent => {
-    const row = [agent.id];
-    for (let d = 0; d < cycleLen; d++) row.push((etab.roulement[agent.id] || {})[d] || '');
-    rows.push(row);
-  });
+  // Exporter par spécialité avec la bonne longueur de cycle
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement');
+  const specs = [...new Set(etab.agents.filter(a=>a.actif).map(a=>a.spec).filter(Boolean))].sort();
+  specs.forEach(spec => {
+    const cycleLen = getCycleLenForAgent({spec}, etab);
+    const headers = ['AgentID', 'Ligne'];
+    for (let i = 0; i < cycleLen; i++) headers.push('J' + (i+1));
+    const rows = [headers];
+    etab.agents.filter(a => a.actif && a.spec === spec).forEach(agent => {
+      const row = [agent.id, agent.ligneRoulement || 'L1'];
+      for (let d = 0; d < cycleLen; d++) row.push((etab.roulement[agent.id] || {})[d] || '');
+      rows.push(row);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement ' + spec);
+  });
+  if (wb.SheetNames.length === 0) {
+    // Fallback : export global
+    const cycleLen = etab.config.cycleLen || 42;
+    const headers = ['AgentID'];
+    for (let i = 0; i < cycleLen; i++) headers.push('J' + (i+1));
+    const rows = [headers];
+    etab.agents.filter(a => a.actif).forEach(agent => {
+      const row = [agent.id];
+      for (let d = 0; d < cycleLen; d++) row.push((etab.roulement[agent.id] || {})[d] || '');
+      rows.push(row);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement');
+  }
   XLSX.writeFile(wb, 'roulement.xlsx');
-  showToast('Roulement exporté', 'success');
+  showToast('Roulement exporté (1 onglet par spécialité)', 'success');
 }
 
 function exportAll() {
@@ -14443,7 +14558,7 @@ function getSecteurDuJour(agent, year, month, day, etab) {
   if (!etab.roulement) return getSecteurDuMois(agent, year, month, etab);
 
   const refDateCycle = new Date(etab.config.refDate || '2020-11-23');
-  const cycleLen     = etab.config.cycleLen || 42;
+  const cycleLen     = getCycleLenForAgent(agent, etab);
   const agOff        = agent.rotOffset || 0;
   const roulement    = etab.roulement[agent.id];
   const codesW       = ['M','S','J','NU','N'];
@@ -14499,8 +14614,29 @@ function getLigneRoulementEffective(agent, secteurDuMois) {
 }
 
 // Retourne le roulement effectif d'un agent — il garde toujours son propre roulement
+// Retourne la durée de cycle effective pour un agent (par spécialité ou défaut)
+function getCycleLenForAgent(agent, etab) {
+  const spec = agent.spec || '';
+  const cycleBySpec = (etab.config && etab.config.cycleLenBySpec) || {};
+  const specCycle = cycleBySpec[spec];
+  if (specCycle && specCycle > 0) return specCycle;
+  return (etab.config && etab.config.cycleLen) || 42;
+}
+
+// Les IDE (et spécialités sans rotation sectorielle) n'ont pas de rotation par secteur
+function specHasRotation(spec, etab) {
+  const noRotSpecs = (etab.config && etab.config.specsNoRotation) || ['IDE','IDEC'];
+  return !noRotSpecs.map(s=>s.toUpperCase()).includes((spec||'').toUpperCase());
+}
+
 function getRoulementEffectif(agent, year, month, etab) {
-  const secteur = getSecteurDuMois(agent, year, month, etab);
+  let secteur;
+  if (specHasRotation(agent.spec, etab)) {
+    secteur = getSecteurDuMois(agent, year, month, etab);
+  } else {
+    // IDE et spécialités sans rotation : secteur fixe ou null
+    secteur = agent.secteurFixe || null;
+  }
   const ligne = agent.ligneRoulement || 'L1';
   return { roulement: etab.roulement[agent.id], secteur, ligne };
 }
@@ -14549,7 +14685,6 @@ function autoFillMonth() {
   }
 
   const refDate = new Date(etab.config.refDate || '2020-11-23');
-  const cycleLen = etab.config.cycleLen || 42;
 
   // Stocker le secteur de chaque agent pour ce mois (pour l'affichage couleur)
   if (!etab.rotationSectorielle) etab.rotationSectorielle = {};
@@ -14559,6 +14694,9 @@ function autoFillMonth() {
   etab.agents.filter(a => a.actif).forEach(agent => {
     // Ne jamais effacer un planning déjà saisi : Générer complète seulement les cases vides.
     if (!planMonth[agent.id]) planMonth[agent.id] = {};
+
+    // Durée de cycle propre à cet agent (selon sa spécialité)
+    const cycleLen = getCycleLenForAgent(agent, etab);
 
     // Déterminer secteur + roulement effectif pour ce mois
     // Agents avec poste nommé → utiliser le roulement du poste
