@@ -654,7 +654,7 @@ body {
   min-height: 40px;
 }
 #planning-vac-section .vac-name-cell {
-  min-width: 220px; width: 220px;
+  min-width: 210px; width: 210px;
   padding: 4px 10px;
   background: var(--bg3);
   border-right: 1px solid var(--border);
@@ -664,7 +664,7 @@ body {
   flex-shrink: 0;
 }
 #planning-vac-section .vac-day-cell {
-  min-width: 38px; width: 38px; max-width: 38px;
+  min-width: 46px; width: 46px; max-width: 46px;
   height: 40px;
   display: flex; align-items: center; justify-content: center;
   border-right: 1px solid var(--border);
@@ -1793,7 +1793,7 @@ body[data-qr-mode="1"] #qr-view {
           <span>👥 Vacataires disponibles ce mois</span>
           <span id="planning-vac-badge" style="background:var(--accent2);color:#0f1117;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px"></span>
         </div>
-        <div style="overflow-x:hidden;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
+        <div style="overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:0 0 8px 8px" id="planning-vac-scroll">
           <div id="planning-vac-container"></div>
         </div>
       </div>
@@ -6772,11 +6772,19 @@ function renderPlanningVacataires(daysInMonth, etab) {
   section.style.display = 'block';
 
   const today = new Date();
-  // Utiliser la même largeur que le planning principal pour l'alignement parfait
+  // Utiliser exactement les mêmes largeurs que le planning principal
   const colWidth = window._planningDayColW || 46;
   const posWidth = 60;   // identique à la colonne Poste du planning
   const nomWidth = 150;  // identique à la colonne Nom du planning
-  const nameWidth = posWidth + nomWidth; // 210px total
+  const nameWidth = posWidth + nomWidth; // 210px total — même que planning principal
+
+  // Aligner le scroll du container sur le planning principal
+  const vacScrollEl = document.getElementById('planning-vac-scroll');
+  if (vacScrollEl) {
+    vacScrollEl.style.overflowX = 'auto';
+    const planWrapSync = document.getElementById('planning-container');
+    if (planWrapSync) vacScrollEl.scrollLeft = planWrapSync.scrollLeft;
+  }
 
   // Header row (aligned with planning columns)
   let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
@@ -6849,7 +6857,7 @@ function renderPlanningVacataires(daysInMonth, etab) {
         cellBg = bgC;
       }
 
-      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:38px;text-align:center;vertical-align:middle;' +
+      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:40px;text-align:center;vertical-align:middle;' +
         'background:' + cellBg + ';' +
         'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + ';' +
         'border-bottom:1px solid var(--border)">' +
