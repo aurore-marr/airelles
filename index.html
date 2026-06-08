@@ -1335,6 +1335,126 @@ body[data-qr-mode="1"] #qr-view {
   padding-top: 0 !important;
 }
 
+
+
+/* ===== FIX: en-tête dates du planning =====
+   Le <thead> était sticky avec un top dynamique, ce qui pouvait le faire
+   descendre et recouvrir les lignes agents. On garde le scroll horizontal
+   et les colonnes Poste/Nom fixes, mais la ligne des dates reste dans
+   son emplacement normal en haut du tableau. */
+#planning-container .planning-table thead {
+  position: static !important;
+  top: auto !important;
+  z-index: 30;
+}
+#planning-container .planning-table thead th {
+  position: static !important;
+  top: auto !important;
+}
+#planning-container .planning-table thead th:nth-child(1) {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 36 !important;
+}
+#planning-container .planning-table thead th:nth-child(2) {
+  position: sticky !important;
+  left: 60px !important;
+  z-index: 36 !important;
+}
+
+
+
+/* ============================================================
+   PATCH RESPONSIVE PLANNING — cellules qui ne débordent plus
+   ============================================================ */
+#planning-container,
+.planning-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.planning-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.day-header,
+.shift-cell {
+  width: var(--planning-day-w, 46px) !important;
+  min-width: var(--planning-day-w, 46px) !important;
+  max-width: var(--planning-day-w, 46px) !important;
+}
+
+.shift-cell {
+  height: var(--planning-cell-h, 46px) !important;
+  padding: 0 !important;
+  overflow: hidden;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.shift-badge {
+  width: var(--planning-badge-w, 32px) !important;
+  max-width: calc(100% - 6px) !important;
+  height: var(--planning-badge-h, 28px) !important;
+  max-height: calc(100% - 6px) !important;
+  box-sizing: border-box;
+  margin: 0 auto;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* Écrans moyens : on compresse le planning au lieu de laisser les badges dépasser */
+@media (max-width: 1400px) and (min-width: 1101px) {
+  :root {
+    --planning-day-w: 36px;
+    --planning-cell-h: 40px;
+    --planning-badge-w: 28px;
+    --planning-badge-h: 26px;
+  }
+  .main { padding: 18px !important; }
+  .agent-cell { min-width: 52px !important; width: 52px !important; max-width: 52px !important; }
+  .agent-cell-poste { left: 52px !important; min-width: 132px !important; width: 132px !important; max-width: 132px !important; }
+  .planning-table { font-size: 11px; }
+}
+
+/* Petits laptops / tablettes paysage */
+@media (max-width: 1100px) and (min-width: 701px) {
+  :root {
+    --planning-day-w: 32px;
+    --planning-cell-h: 36px;
+    --planning-badge-w: 24px;
+    --planning-badge-h: 24px;
+  }
+  .main { padding: 14px !important; }
+  .card { padding: 12px !important; }
+  .planning-table { font-size: 10px; min-width: max-content !important; }
+  .planning-table th { font-size: 9px !important; padding: 4px 2px !important; }
+  .agent-cell { min-width: 46px !important; width: 46px !important; max-width: 46px !important; padding: 4px 5px !important; }
+  .agent-cell-poste { left: 46px !important; min-width: 118px !important; width: 118px !important; max-width: 118px !important; padding: 4px 5px !important; }
+  .agent-cell-name { font-size: 11px !important; }
+  .agent-cell-info { font-size: 9px !important; }
+}
+
+/* Mobile : scroll fluide + cellules compactes */
+@media (max-width: 700px) {
+  :root {
+    --planning-day-w: 30px;
+    --planning-cell-h: 34px;
+    --planning-badge-w: 22px;
+    --planning-badge-h: 22px;
+  }
+  .planning-table { min-width: max-content !important; }
+  .shift-badge { font-size: 10px !important; border-radius: 5px !important; }
+  .agent-cell { min-width: 42px !important; width: 42px !important; max-width: 42px !important; padding: 3px 4px !important; }
+  .agent-cell-poste { left: 42px !important; min-width: 105px !important; width: 105px !important; max-width: 105px !important; padding: 3px 4px !important; }
+  .agent-cell-name { font-size: 10px !important; }
+  .agent-cell-info, .agent-cell-sector { font-size: 8px !important; }
+}
 </style>
 </head>
 <body>
@@ -1375,11 +1495,11 @@ body[data-qr-mode="1"] #qr-view {
     </div>
     <div class="form-group">
       <label>Identifiant</label>
-      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username">
+      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="form-group">
       <label>Mot de passe</label>
-      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary" onclick="doLogin()">Se connecter</button>
     <div id="login-error" class="error-msg"></div>
@@ -1452,11 +1572,14 @@ body[data-qr-mode="1"] #qr-view {
         <div class="online-count" id="sb-collapsed-online">1</div>
       </div>
     </div>
+    <div class="sidebar-nav-scroll">
     <div class="nav-section">
       <div class="nav-section-title">Direction</div>
       <div class="nav-item" id="nav-dir" onclick="showPage('direction')" data-tooltip="Vue Direction" style="display:none">
         <span class="icon">🏛️</span><span class="nav-label">Vue Direction</span>
       </div>
+    </div>
+    <div class="nav-section">
       <div class="nav-section-title">Planning</div>
       <div class="nav-item active" onclick="showPage('dashboard')" data-tooltip="Tableau de bord">
         <span class="icon">📊</span><span class="nav-label">Tableau de bord</span>
@@ -1500,7 +1623,8 @@ body[data-qr-mode="1"] #qr-view {
       <div class="nav-item" onclick="showPage('import')" data-tooltip="Import / Export">
         <span class="icon">📂</span><span class="nav-label">Import / Export</span>
       </div>
-    </div>
+    </div><!-- end nav-section Paramétrage -->
+    </div><!-- end sidebar-nav-scroll -->
     <div class="sidebar-footer">
       <!-- Actions footer groupées en ligne compacte -->
       <div style="display:flex;align-items:center;gap:2px;padding:4px 0">
@@ -1780,10 +1904,12 @@ body[data-qr-mode="1"] #qr-view {
       <!-- Légende impression (masquée à l'écran) -->
       <div id="print-legend" style="display:none"></div>
 
-      <!-- Légende horaires + planning -->
-      <div class="card" style="padding:0;overflow:hidden">
-        <div id="planning-legend" style="padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px"></div>
-        <div class="planning-wrap" id="planning-container" style="overflow-x:auto;width:100%;isolation:isolate"></div>
+      <!-- Légende horaires — sticky sous la toolbar dans le viewport -->
+      <div id="planning-legend" style="padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;position:sticky;top:0;z-index:39;box-shadow:0 2px 4px rgba(0,0,0,0.2)"></div>
+
+      <!-- Planning -->
+      <div class="card" style="padding:0;overflow-x:auto;width:100%">
+        <div class="planning-wrap" id="planning-container" style="width:100%"></div>
       </div>
       <!-- Totaux secteurs (maintenant en tfoot dans le même tableau) -->
       <div id="sector-daily-totals" style="display:none"></div>
@@ -1902,7 +2028,7 @@ body[data-qr-mode="1"] #qr-view {
       <div id="vac-tab-affectations" class="hidden">
         <div class="card mb-3">
           <div class="card-header">
-            <span class="card-title">🔍 Chercher un remplaçant</span>
+            <span class="card-title">🔍 Chercher un remplaçant disponible</span>
           </div>
           <div class="flex gap-3 flex-wrap mb-3">
             <div class="form-group" style="margin:0">
@@ -1928,7 +2054,10 @@ body[data-qr-mode="1"] #qr-view {
           <div id="rech-results"></div>
         </div>
         <div class="card">
-          <div class="card-title mb-3">📋 Toutes les disponibilités du mois</div>
+          <div class="card-header" style="margin-bottom:12px">
+            <span class="card-title">📋 Récapitulatif des affectations du mois</span>
+            <span style="font-size:11px;color:var(--text2);margin-left:8px">Vacataire · Code horaire · Créneau · Secteur · N° Poste remplacé</span>
+          </div>
           <div id="affectations-list"></div>
         </div>
       </div>
@@ -2369,6 +2498,20 @@ body[data-qr-mode="1"] #qr-view {
           </div>
         </div>
       </div>
+
+      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
+      <div id="config-tab-options" class="hidden">
+        <div class="config-section" style="max-width:600px">
+          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+            Activez ou désactivez les modules selon l'abonnement du client.
+            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
+          </p>
+          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
+          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- IMPORT/EXPORT -->
@@ -2421,19 +2564,6 @@ body[data-qr-mode="1"] #qr-view {
             🗑️ Vider le cache (repart de zéro)
           </button>
           <div id="save-status" class="text-xs text-muted mt-2"></div>
-        </div>
-      </div>
-
-      <!-- TAB OPTIONS SOUSCRITES (admin Horizon Studio seulement) -->
-      <div id="config-tab-options" class="hidden">
-        <div class="config-section" style="max-width:600px">
-          <div class="config-section-title">🔑 Options souscrites par l'établissement</div>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
-            Activez ou désactivez les modules selon l'abonnement du client.
-            Les fonctionnalités désactivées sont masquées pour tous les utilisateurs de cet établissement.
-          </p>
-          <div id="options-list" style="display:flex;flex-direction:column;gap:10px"></div>
-          <button class="btn btn-primary btn-sm mt-3" onclick="saveOptions()" style="margin-top:16px">💾 Enregistrer les options</button>
         </div>
       </div>
 
@@ -2962,18 +3092,27 @@ body[data-qr-mode="1"] #qr-view {
           <select id="ag-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
         </div>
         <div class="form-group">
+          <label>Numéro de poste <span style="font-size:11px;font-weight:400;color:var(--text3)">(ex&nbsp;: AS285, IDE02)</span></label>
+          <input type="text" id="ag-poste" placeholder="Ex: AS285" maxlength="10"
+            style="font-family:monospace;font-size:14px;letter-spacing:1px"
+            oninput="this.value=this.value.toUpperCase()">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Utilisé pour identifier l'agent dans le planning. Les 4 derniers chiffres servent de PIN QR par défaut.</div>
+        </div>
+        <div class="form-group">
           <label>Secteur fixe (optionnel)</label>
           <select id="ag-secteur" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
             <option value="">— Rotation normale —</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Taux de travail (%)</label>
-          <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
-        </div>
-        <div class="form-group">
-          <label>Date d'arrivée</label>
-          <input type="date" id="ag-date-arrivee">
+        <div style="display:flex;gap:12px">
+          <div class="form-group" style="flex:1">
+            <label>Taux de travail (%)</label>
+            <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Date d'arrivée</label>
+            <input type="date" id="ag-date-arrivee">
+          </div>
         </div>
       </div>
       <div>
@@ -3028,17 +3167,35 @@ body[data-qr-mode="1"] #qr-view {
       <span class="modal-title" id="vac-modal-title">Fiche vacataire</span>
       <button class="modal-close" onclick="closeModal('modal-vac')">✕</button>
     </div>
+    <!-- TYPE : vacataire ou intérimaire -->
+    <div class="form-group">
+      <label>Type</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <label id="vac-type-label-vac" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-vacataire" value="vacataire" style="accent-color:#38d9a9" onchange="setVacType('vacataire')">
+          👤 Vacataire
+        </label>
+        <label id="vac-type-label-interim" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:border-color 0.15s,background 0.15s">
+          <input type="radio" name="vac-type" id="vac-type-interimaire" value="interimaire" style="accent-color:#f7a94f" onchange="setVacType('interimaire')">
+          🏢 Intérimaire
+        </label>
+      </div>
+      <div id="vac-type-hint" style="font-size:11px;color:var(--text2);margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid #38d9a9">
+        👤 Vacataire direct — géré sans agence, n'est pas facturé via une boîte d'intérim.
+      </div>
+    </div>
     <div class="form-group"><label>Nom</label><input type="text" id="vac-nom" placeholder="NOM"></div>
     <div class="form-group"><label>Prénom</label><input type="text" id="vac-prenom" placeholder="Prénom"></div>
     <div class="form-group">
       <label>Spécialité</label>
       <select id="vac-spec" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none"></select>
     </div>
+    <!-- NOTE : Le numéro de poste remplacé est saisi lors de chaque affectation -->
     <div class="form-group"><label>Téléphone</label><input type="tel" id="vac-tel" placeholder="06 00 00 00 00"></div>
     <div class="form-group"><label>Email</label><input type="email" id="vac-email" placeholder="prenom.nom@email.fr"></div>
     <div class="form-group"><label>Code PIN (4 chiffres — pour accès QR)</label><input type="text" id="vac-pin" placeholder="ex: 1234" maxlength="4" pattern="[0-9]{4}"></div>
-    <div class="form-group">
-      <label>Agence intérim (si applicable)</label>
+    <div class="form-group" id="vac-agence-group">
+      <label>Agence intérim <span id="vac-agence-required" style="color:var(--accent4);font-size:11px;display:none">*obligatoire pour intérimaire</span></label>
       <select id="vac-agence" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;outline:none">
         <option value="">— Vacataire direct (pas d'agence) —</option>
       </select>
@@ -4017,9 +4174,12 @@ async function doLogin() {
       if (mobileNavEl) mobileNavEl.style.display = isMobile ? 'flex' : 'none';
       // Recalcule l'offset de la toolbar planning si elle est visible
       const tb = document.getElementById('planning-toolbar');
+      const leg = document.getElementById('planning-legend');
       if (tb) {
-        const h = tb.getBoundingClientRect().height;
-        document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+        const hTb = Math.round(tb.getBoundingClientRect().height);
+        if (leg) { leg.style.top = hTb + 'px'; }
+        const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
+        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
       }
     });
   }
@@ -4791,6 +4951,7 @@ function showPage(page) {
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
   if (page === 'astreintes') renderAstreintes();
+  if (page === 'config') switchConfigTab('general');
 }
 
 // ============================================================
@@ -6169,12 +6330,15 @@ function renderPlanning() {
   const etab = getEtab();
   if (!etab) return;
 
-  // Figer la ligne des dates : mesure la hauteur réelle de la toolbar sticky
+  // Figer la ligne des dates : mesure toolbar + légende
   (function updateToolbarOffset() {
     const tb = document.getElementById('planning-toolbar');
+    const leg = document.getElementById('planning-legend');
     if (tb) {
-      const h = tb.getBoundingClientRect().height;
-      document.documentElement.style.setProperty('--planning-toolbar-h', Math.round(h) + 'px');
+      const hTb = Math.round(tb.getBoundingClientRect().height);
+      if (leg) { leg.style.top = hTb + 'px'; }
+      const hLeg = leg ? Math.round(leg.getBoundingClientRect().height) : 36;
+      document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
     }
   })();
 
@@ -6204,10 +6368,12 @@ function renderPlanning() {
   const _container = document.getElementById('planning-container');
   const _availW = Math.max(600, (_container ? _container.offsetWidth : window.innerWidth - 80) - 294);
   const _dayW = Math.max(28, Math.min(46, Math.floor(_availW / daysInMonth)));
+  const _dayH = _dayW <= 28 ? 32 : (_dayW <= 34 ? 38 : (_dayW <= 40 ? 42 : _dayW));
   window._planningDayColW = _dayW; // exposé pour les vacataires
+  window._planningDayCellH = _dayH; // hauteur identique pour la ligne vacataires
 
   // Header row — thead sticky
-  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead style="position:sticky;top:0;z-index:30"><tr>
+  let html = `<table class="planning-table" style="min-width:${210 + daysInMonth*_dayW}px"><thead><tr>
     <th style="position:sticky;left:0;z-index:35;background:var(--bg3);min-width:60px;width:60px;padding:6px 8px;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">Poste</th>
     <th style="position:sticky;left:60px;z-index:35;background:var(--bg3);min-width:150px;width:150px;padding:6px 10px;font-size:10px;color:var(--text2);text-transform:uppercase;text-align:left;border-right:3px solid var(--accent)">Nom</th>`;
 
@@ -6421,7 +6587,7 @@ function renderPlanning() {
         const isNonTravaille = !shift || shift === 'R' || shift === 'RC' || shift === '';
 
         html += '<td class="shift-cell' + (isWE?' weekend':'') + (isHS ? (' shift-cell-hs-' + shift.substring(2).toLowerCase()) : '') + '"' +
-          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
+          ' style="width:' + _dayW + 'px;min-width:' + _dayW + 'px;max-width:' + _dayW + 'px;height:' + _dayH + 'px;background:' + cellBg + todayStyle + (retardEntry ? ';position:relative' : '') + '"' +
           ' onclick="openShiftPicker(\'' + agent.id + '\',' + d + ')"' +
           ' data-agent="' + agent.id + '" data-day="' + d + '">' +
           (shift && !isNonTravaille
@@ -6492,6 +6658,18 @@ function renderPlanning() {
     }).join('');
 
     legendEl.innerHTML = horPart + '<span style="width:1px;height:16px;background:var(--border);margin:0 8px;display:inline-block"></span>' + sectPart;
+
+    // Positionner la légende sticky juste sous la toolbar, et le thead sous les deux
+    requestAnimationFrame(function() {
+      const tb = document.getElementById('planning-toolbar');
+      const leg = document.getElementById('planning-legend');
+      if (tb && leg) {
+        const hTb = Math.round(tb.getBoundingClientRect().height);
+        leg.style.top = hTb + 'px';
+        const hLeg = Math.round(leg.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--planning-toolbar-h', (hTb + hLeg) + 'px');
+      }
+    });
   }
 
   // Sector daily totals
@@ -6774,12 +6952,13 @@ function renderPlanningVacataires(daysInMonth, etab) {
   const today = new Date();
   // Utiliser la même largeur que le planning principal pour l'alignement parfait
   const colWidth = window._planningDayColW || 46;
+  const cellHeight = window._planningDayCellH || 46;
   const posWidth = 60;   // identique à la colonne Poste du planning
   const nomWidth = 150;  // identique à la colonne Nom du planning
   const nameWidth = posWidth + nomWidth; // 210px total
 
   // Header row (aligned with planning columns)
-  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth + 80) + 'px;font-size:11px">';
+  let html = '<table style="border-collapse:collapse;width:max-content;min-width:' + (nameWidth + daysInMonth * colWidth) + 'px;font-size:11px">';
   html += '<thead><tr>';
   // Colonne "Poste" (sticky left:0, 60px)
   html += '<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:' + posWidth + 'px;width:' + posWidth + 'px;padding:3px 8px;text-align:left;font-size:10px;color:var(--text2);text-transform:uppercase;border-right:1px solid var(--border)">VAC</th>';
@@ -6799,19 +6978,24 @@ function renderPlanningVacataires(daysInMonth, etab) {
       '<div style="font-weight:400;font-size:8px">' + dowStr + '</div><div style="font-weight:800">' + d + '</div>' +
       '</th>';
   }
-  html += '<th style="min-width:80px;padding:3px 8px;text-align:center;font-size:9px;color:var(--text2);background:var(--bg3);border-left:1px solid var(--border)">Dispos</th>';
   html += '</tr></thead><tbody>';
 
   vacDispo.forEach(vac => {
     const specColor = getSpecColor(vac.spec);
+    const isInterim = vac.typeVac === 'interimaire';
     html += '<tr style="background:var(--card)">';
-    // Cellule "Poste" (sticky left:0, 60px) — spec badge
+    // Cellule "Poste" (sticky left:0, 60px) — type badge
     html += '<td style="position:sticky;left:0;z-index:5;background:var(--card);padding:4px 8px;border-right:1px solid var(--border);min-width:' + posWidth + 'px;width:' + posWidth + 'px;border-bottom:1px solid var(--border);text-align:center">';
-    html += '<span style="font-size:9px;font-weight:700;background:' + specColor + '22;color:' + specColor + ';padding:1px 5px;border-radius:4px">' + (vac.spec||'') + '</span>';
+    html += isInterim
+      ? '<span style="font-size:8px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">INTÉRIM</span>'
+      : '<span style="font-size:8px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;padding:1px 5px;border-radius:4px;display:block;line-height:1.5">VAC</span>';
     html += '</td>';
-    // Cellule "Nom" (sticky left:60px, 150px) — nom prénom
+    // Cellule "Nom" (sticky left:60px, 150px) — nom + poste remplacé
     html += '<td style="position:sticky;left:' + posWidth + 'px;z-index:5;background:var(--card);padding:4px 10px;border-right:3px solid var(--accent);min-width:' + nomWidth + 'px;width:' + nomWidth + 'px;border-bottom:1px solid var(--border)">';
     html += '<span style="font-weight:700;font-size:11px;color:var(--text)">' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</span>';
+    if (vac.posteRemplace) {
+      html += '<div style="font-size:9px;color:var(--accent3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:' + (nomWidth-20) + 'px" title="Remplace : ' + esc(vac.posteRemplace) + '">📌 ' + esc(vac.posteRemplace) + '</div>';
+    }
     html += '</td>';
 
     let nbDispo = 0;
@@ -6831,11 +7015,20 @@ function renderPlanningVacataires(daysInMonth, etab) {
         // Déjà affecté : montrer le shift réel depuis vacAffectations
         nbDispo++;
         const aff = (etab.affectationsVac||{})[dk] || {};
-        const affEntry = Object.values(aff).find(a => a);
+        const affArr = Array.isArray(aff) ? aff : Object.values(aff);
+        const affEntry = affArr.find(a => a && a.vacId === vac.id);
         const shiftLabel = (affEntry?.shift && affEntry.shift !== '') ? affEntry.shift : 'AFF';
+        const creneauLabel = affEntry?.creneau ? affEntry.creneau.debut + '–' + affEntry.creneau.fin : '';
+        const tooltipParts = [shiftLabel];
+        if (creneauLabel) tooltipParts.push(creneauLabel);
+        if (affEntry?.numPoste) tooltipParts.push('Poste: ' + affEntry.numPoste);
+        if (affEntry?.secteurNom) tooltipParts.push(affEntry.secteurNom);
         const specC = getSpecColor(vac.spec);
         cellContent = '<span style=\"background:' + specC + '33;color:' + specC + ';border:1px solid ' + specC + '66;border-radius:4px;' +
-          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block\">' + shiftLabel + '</span>';
+          'font-size:9px;font-weight:800;padding:2px 5px;font-family:monospace;display:inline-block;line-height:1.3\" title=\"' + tooltipParts.join(' · ') + '\">' + shiftLabel +
+          (creneauLabel ? '<div style="font-size:7px;font-weight:600;opacity:0.85;font-family:inherit">' + creneauLabel + '</div>' : '') +
+          (affEntry?.numPoste ? '<div style="font-size:6px;font-weight:600;color:var(--accent3);font-family:inherit;overflow:hidden;max-width:36px;text-overflow:ellipsis;white-space:nowrap">' + esc(affEntry.numPoste) + '</div>' : '') +
+          '</span>';
         cellBg = 'rgba(56,217,169,0.08)';
       } else if (st === 'oui' || st === 'hs') {
         nbDispo++;
@@ -6849,16 +7042,13 @@ function renderPlanningVacataires(daysInMonth, etab) {
         cellBg = bgC;
       }
 
-      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:38px;text-align:center;vertical-align:middle;' +
+      html += '<td style="min-width:' + colWidth + 'px;width:' + colWidth + 'px;height:' + cellHeight + 'px;text-align:center;vertical-align:middle;' +
         'background:' + cellBg + ';' +
         'border-left:' + (isMon ? '2px solid var(--border)' : '1px solid var(--border)') + ';' +
         'border-bottom:1px solid var(--border)">' +
         cellContent + '</td>';
     }
 
-    html += '<td style="min-width:80px;padding:2px 8px;text-align:center;border-left:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle">';
-    html += '<span style="font-size:11px;font-weight:700;color:var(--accent2)">' + nbDispo + 'j</span>';
-    html += '</td>';
     html += '</tr>';
   });
 
@@ -6875,7 +7065,7 @@ function affecterVacataireJour(vacId, day, statut) {
   const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   const dateLabel = new Date(currentYear, currentMonth, day).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long'});
 
-  // Détecter les postes manquants ce jour (shifts M/S/J sous la cible)
+  // Détecter les postes manquants ce jour
   const planMonth = ((etab.planning[currentYear]||{})[currentMonth]||{});
   const cibleM = etab.config.cibleM || 3;
   const cibleS = etab.config.cibleS || 3;
@@ -6887,7 +7077,6 @@ function affecterVacataireJour(vacId, day, statut) {
     if (sh==='S'||sh==='HSS') countS++;
     if (sh==='J'||sh==='HSJ') countJ++;
   });
-  // Vacataires déjà affectés ce jour
   const affAuj = (etab.affectationsVac||{})[dk] || [];
   affAuj.forEach(a => {
     if (a.shift==='M') countM++;
@@ -6899,39 +7088,158 @@ function affecterVacataireJour(vacId, day, statut) {
   if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
   if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
 
-  let shiftFinal;
-  if (manquants.length === 0) {
-    // Couverture atteinte — demander quand même
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n✔️ Couverture 3×3×3 atteinte.\nCode shift à affecter (M/S/J) :`, 'M');
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  } else if (manquants.length === 1) {
-    const ok = window.confirm(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Poste manquant → ${manquants[0].code} (-${manquants[0].manque})\n\nConfirmer affectation sur ${manquants[0].code} ?`);
-    if (!ok) return;
-    shiftFinal = manquants[0].code;
-  } else {
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Postes manquants :\n` +
-      manquants.map(m=>`  • ${m.code} (-${m.manque})`).join('\n') +
-      `\n\nCode shift à affecter (${manquants.map(m=>m.code).join('/')}) :`,
-      manquants[0].code);
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  }
-  if (!shiftFinal) return;
+  // Couleurs fixes pour M/S/J
+  const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9' };
+  const getCol = code => {
+    if (shiftColors[code]) return shiftColors[code];
+    const h = (etab.horaires||[]).find(h => h.code === code);
+    return (h && h.couleur) || '#4f8ef7';
+  };
 
-  // Enregistrer dans etab.affectationsVac
+  let boutonsHtml = '';
+  let sectionLabel = '';
+
+  if (manquants.length > 0) {
+    // Postes manquants → afficher uniquement ces codes
+    sectionLabel = '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Postes à pourvoir</div>';
+    boutonsHtml = manquants.map(m => {
+      const col = getCol(m.code);
+      const hor = (etab.horaires||[]).find(h => h.code === m.code);
+      return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'' + m.code + '\')" ' +
+        'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 18px;' +
+        'background:' + col + '33;color:' + col + ';border:2px solid ' + col + '99;' +
+        'border-radius:10px;cursor:pointer;font-family:monospace;min-width:70px" ' +
+        'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
+        '<span style="font-size:18px;font-weight:900">' + m.code + '</span>' +
+        '<span style="font-size:9px;font-family:inherit;opacity:0.8">' + (hor ? hor.label : '') + '</span>' +
+        '<span style="font-size:10px;font-weight:700;color:#f76f6f;margin-top:2px">−' + m.manque + ' poste' + (m.manque > 1 ? 's' : '') + '</span>' +
+        '</button>';
+    }).join('');
+  } else {
+    // Couverture atteinte → HS uniquement, avec choix du secteur
+    const secteurs = etab.secteurs || [];
+    sectionLabel = '<div style="color:#38d9a9;font-size:12px;margin-bottom:12px">✔️ Couverture atteinte — affectation en heure supplémentaire</div>' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Choisir le code + secteur</div>';
+
+    const codesHS = ['M', 'S', 'J'];
+    boutonsHtml = codesHS.map(code => {
+      const col = getCol(code);
+      const hor = (etab.horaires||[]).find(h => h.code === code);
+      const sectBtns = secteurs.map(s => {
+        const sc = s.couleur && s.couleur.startsWith('#') ? s.couleur : '#' + (s.couleur||'5a6480');
+        return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'HS' + code + '\')" ' +
+          'style="font-size:10px;padding:3px 8px;background:' + sc + '22;color:' + sc + ';border:1px solid ' + sc + '55;' +
+          'border-radius:6px;cursor:pointer;font-weight:600" ' +
+          'onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'">' +
+          esc(s.nom) + '</button>';
+      }).join('');
+      return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="font-size:15px;font-weight:900;color:' + col + ';font-family:monospace">' + code + '</span>' +
+        '<span style="font-size:11px;color:var(--text2)">' + (hor ? hor.label : '') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' + sectBtns + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  const isInterim = vac.typeVac === 'interimaire';
+  const typeBadgeHtml = isInterim
+    ? '<span style="font-size:10px;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">🏢 INTÉRIM</span>'
+    : '<span style="font-size:10px;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 7px;border-radius:10px;font-weight:700;margin-left:8px">👤 VAC</span>';
+
+  // Déduire le créneau par défaut selon le premier shift manquant
+  const getCreneauForCode = (code) => {
+    const hor = (etab.horaires||[]).find(h => h.code === code);
+    return { debut: hor?.debut || '07:00', fin: hor?.fin || '19:00' };
+  };
+  const defC = getCreneauForCode(manquants[0]?.code || 'M');
+
+  // Secteurs disponibles
+  const secteursOpts = (etab.secteurs||[]).map(s =>
+    '<option value="' + esc(s.id) + '">' + esc(s.nom) + '</option>'
+  ).join('');
+
+  const saisieHtml =
+    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">' +
+    '<div style="margin-bottom:10px">' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">📌 N° / Libellé du poste remplacé <span style="color:var(--accent3);font-weight:400;font-style:italic">(RH &amp; cadre)</span></label>' +
+    '<input type="text" id="vac-num-poste" placeholder="Ex : AS-282 · IDE-104 · Poste nuit sect. B · Remplacement M. Dupont…" ' +
+    'style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none">' +
+    '</div>' +
+    '<div style="margin-bottom:10px">' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">🏥 Secteur</label>' +
+    '<select id="vac-secteur-aff" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none">' +
+    '<option value="">— Secteur —</option>' + secteursOpts +
+    '</select>' +
+    '</div>' +
+    '<div>' +
+    '<label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">⏱ Créneau horaire <span style="font-weight:400;font-style:italic;color:var(--text3)">(si différent des fixes)</span></label>' +
+    '<div style="display:flex;align-items:center;gap:10px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Début</label>' +
+    '<input type="time" id="vac-creneau-debut" value="' + defC.debut + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Fin</label>' +
+    '<input type="time" id="vac-creneau-fin" value="' + defC.fin + '" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:120px">' +
+    '</div>' +
+    '</div>' +
+    '</div>';
+
+  const html = '<div id="modal-vac-shift-pick" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:360px;max-width:500px;max-height:90vh;overflow-y:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">' +
+    '<div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;flex-wrap:wrap">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + typeBadgeHtml + '</div>' +
+    '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + dateLabel + '</div>' +
+    '</div>' +
+    '<button onclick="document.getElementById(\'modal-vac-shift-pick\').remove()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px">×</button>' +
+    '</div>' +
+    saisieHtml +
+    sectionLabel +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHtml + '</div>' +
+    '</div></div>';
+
+  const existing = document.getElementById('modal-vac-shift-pick');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function affecterVacataireConfirm(vacId, day, statut, shiftFinal) {
+  // Récupérer les infos saisies avant de fermer la modal
+  const debutEl = document.getElementById('vac-creneau-debut');
+  const finEl = document.getElementById('vac-creneau-fin');
+  const numPosteEl = document.getElementById('vac-num-poste');
+  const secteurAffEl = document.getElementById('vac-secteur-aff');
+  const creneau = (debutEl && finEl && debutEl.value && finEl.value)
+    ? { debut: debutEl.value, fin: finEl.value }
+    : null;
+  const numPoste = numPosteEl ? numPosteEl.value.trim() : '';
+  const secteurAffId = secteurAffEl ? secteurAffEl.value : '';
+  document.getElementById('modal-vac-shift-pick')?.remove();
+  const etab = getEtab();
+  if (!etab) return;
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  if (!vac) return;
+  const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  const secteurObj = (etab.secteurs||[]).find(s => s.id === secteurAffId);
   if (!etab.affectationsVac) etab.affectationsVac = {};
   if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
   etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
-  etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, shift: shiftFinal, affecteLe: new Date().toISOString() });
-  // Marquer comme affecté dans vacDispos
+  etab.affectationsVac[dk].push({
+    vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec,
+    typeVac: vac.typeVac || 'vacataire',
+    statut, shift: shiftFinal,
+    creneau: creneau,
+    numPoste: numPoste,
+    secteurId: secteurAffId,
+    secteurNom: secteurObj ? secteurObj.nom : '',
+    affecteLe: new Date().toISOString()
+  });
   if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
   etab.vacDispos[vacId][dk] = 'affecte';
   saveToStorage();
-  showToast(`${vac.prenom||''} ${esc(vac.nom)} → ${shiftFinal} le ${day}/${currentMonth+1}`, 'success');
+  const creneauLabel = creneau ? ` (${creneau.debut}–${creneau.fin})` : '';
+  const posteLabel = numPoste ? ` · poste ${numPoste}` : '';
+  showToast(esc(vac.prenom||'') + ' ' + esc(vac.nom) + ' → ' + shiftFinal + creneauLabel + posteLabel, 'success');
   renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
   if (document.getElementById('page-vacataires')?.classList.contains('active')) {
     renderVacataires();
@@ -8534,6 +8842,7 @@ function openNewAgent() {
   document.getElementById('ag-taux').value = 100;
   document.getElementById('ag-notes').value = '';
   document.getElementById('ag-pin').value = '';
+  document.getElementById('ag-poste').value = '';
   document.getElementById('ag-date-arrivee').value = '';
   document.getElementById('ag-actif').className = 'toggle on';
   document.getElementById('ag-delete-btn').style.display = 'none';
@@ -8553,6 +8862,7 @@ function openEditAgent(agentId) {
   document.getElementById('ag-taux').value = agent.taux;
   document.getElementById('ag-notes').value = agent.notes || '';
   document.getElementById('ag-pin').value = agent.pin || '';
+  document.getElementById('ag-poste').value = agent.poste || '';
   document.getElementById('ag-date-arrivee').value = agent.dateArrivee || '';
   document.getElementById('ag-actif').className = 'toggle ' + (agent.actif ? 'on' : '');
   document.getElementById('ag-delete-btn').style.display = '';
@@ -8607,7 +8917,8 @@ function saveAgent() {
     notes: document.getElementById('ag-notes').value,
     actif: document.getElementById('ag-actif').classList.contains('on'),
     dateArrivee: document.getElementById('ag-date-arrivee').value,
-    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null)
+    pin: (document.getElementById('ag-pin').value.trim().replace(/\D/g,'') || null),
+    poste: (document.getElementById('ag-poste').value.trim().toUpperCase() || null)
   };
 
   if (editingAgentId) {
@@ -8876,17 +9187,29 @@ function renderVacListe() {
   const etab = getEtab();
   const grid = document.getElementById('vac-liste-grid');
   if (!grid) return;
-  document.getElementById('vac-count-label').textContent = `${etab.vacataires.length} vacataires`;
+  const total = etab.vacataires.length;
+  const nbInterim = etab.vacataires.filter(v => v.typeVac === 'interimaire').length;
+  const nbVac = total - nbInterim;
+  document.getElementById('vac-count-label').textContent =
+    `${total} personne(s) — ${nbVac} vacataire(s) · ${nbInterim} intérimaire(s)`;
   grid.innerHTML = etab.vacataires.map(v => {
     const specColor = getSpecColor(v.spec);
+    const isInterim = v.typeVac === 'interimaire';
+    const typeBadge = isInterim
+      ? `<span style="font-size:9px;font-weight:700;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">🏢 INTÉRIMAIRE</span>`
+      : `<span style="font-size:9px;font-weight:700;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.5);padding:1px 6px;border-radius:10px;margin-left:4px">👤 VACATAIRE</span>`;
+    const posteHtml = v.posteRemplace
+      ? `<div class="text-sm" style="color:var(--accent3);margin-top:3px">📌 Remplace : ${esc(v.posteRemplace)}</div>`
+      : '';
     return `<div class="agent-card" onclick="openEditVacataire('${v.id}')">
       <div class="agent-card-header">
-        <div class="agent-avatar" style="background:${specColor}22;color:${specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
+        <div class="agent-avatar" style="background:${isInterim ? 'rgba(247,169,79,0.2)' : specColor+'22'};color:${isInterim ? '#f7a94f' : specColor}">${(v.prenom||'?')[0]}${(v.nom||'?')[0]}</div>
         <div>
-          <div class="agent-card-name">${v.prenom} ${v.nom}</div>
+          <div class="agent-card-name" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">${v.prenom} ${v.nom}${typeBadge}</div>
           <div class="agent-card-spec">${v.spec||'—'}</div>
         </div>
       </div>
+      ${posteHtml}
       ${v.tel ? `<div class="text-sm text-muted">📞 ${v.tel}</div>` : ''}
       ${v.email ? `<div class="text-sm text-muted">✉️ ${v.email}</div>` : ''}
     </div>`;
@@ -8934,7 +9257,11 @@ function renderDispoGrid() {
   });
 
   etab.vacataires.forEach(vac => {
-    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}.<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
+    const isInterim = vac.typeVac === 'interimaire';
+    const typeTag = isInterim
+      ? `<span style="font-size:8px;background:rgba(247,169,79,0.2);color:#f7a94f;border-radius:4px;padding:0 4px;font-weight:700">INTÉRIM</span>`
+      : `<span style="font-size:8px;background:rgba(56,217,169,0.2);color:#38d9a9;border-radius:4px;padding:0 4px;font-weight:700">VAC</span>`;
+    html += `<div class="dg-name" style="font-size:12px">${esc(vac.prenom)} ${esc(vac.nom[0])}. ${typeTag}<br><span class="text-xs text-muted">${esc(vac.spec||'')}</span></div>`;
     days.forEach(d => {
       const k = dateStr(d);
       const st = (etab.vacDispos[vac.id] || {})[k] || '';
@@ -8972,17 +9299,41 @@ function updateVacBadge() {
   document.getElementById('vac-badge').textContent = cnt;
 }
 
+function setVacType(type) {
+  const isInterim = type === 'interimaire';
+  const labelVac = document.getElementById('vac-type-label-vac');
+  const labelInt = document.getElementById('vac-type-label-interim');
+  const hint = document.getElementById('vac-type-hint');
+  const agenceRequired = document.getElementById('vac-agence-required');
+  if (labelVac) labelVac.style.borderColor = !isInterim ? '#38d9a9' : 'var(--border)';
+  if (labelVac) labelVac.style.background = !isInterim ? 'rgba(56,217,169,0.12)' : 'var(--bg3)';
+  if (labelInt) labelInt.style.borderColor = isInterim ? '#f7a94f' : 'var(--border)';
+  if (labelInt) labelInt.style.background = isInterim ? 'rgba(247,169,79,0.12)' : 'var(--bg3)';
+  if (hint) {
+    hint.style.borderLeftColor = isInterim ? '#f7a94f' : '#38d9a9';
+    hint.textContent = isInterim
+      ? '🏢 Intérimaire — rattaché à une agence et facturé via cette boîte.'
+      : '👤 Vacataire direct — géré sans agence, n\'est pas facturé via une boîte d\'intérim.';
+  }
+  if (agenceRequired) agenceRequired.style.display = isInterim ? '' : 'none';
+  const radio = document.getElementById('vac-type-' + (isInterim ? 'interimaire' : 'vacataire'));
+  if (radio) radio.checked = true;
+}
+
 function openNewVacataire() {
   editingVacId = null;
-  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire';
+  document.getElementById('vac-modal-title').textContent = 'Nouveau vacataire / intérimaire';
   document.getElementById('vac-nom').value = '';
   document.getElementById('vac-prenom').value = '';
   document.getElementById('vac-tel').value = '';
   document.getElementById('vac-email').value = '';
   document.getElementById('vac-notes').value = '';
   document.getElementById('vac-pin').value = '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = getEtab().specialites.map(s => `<option>${esc(s)}</option>`).join('');
+  setVacType('vacataire');
   openModal('modal-vac');
 }
 
@@ -8991,7 +9342,8 @@ function openEditVacataire(vacId) {
   const vac = etab.vacataires.find(v => v.id === vacId);
   if (!vac) return;
   editingVacId = vacId;
-  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)}`;
+  const typeLabel = vac.typeVac === 'interimaire' ? '🏢 Intérimaire' : '👤 Vacataire';
+  document.getElementById('vac-modal-title').textContent = `${esc(vac.prenom)} ${esc(vac.nom)} — ${typeLabel}`;
   // Peupler select agences intérim
   const vacAgSel = document.getElementById('vac-agence');
   if (vacAgSel) {
@@ -9006,8 +9358,11 @@ function openEditVacataire(vacId) {
   document.getElementById('vac-email').value = vac.email || '';
   document.getElementById('vac-notes').value = vac.notes || '';
   document.getElementById('vac-pin').value = vac.pin || '';
+  const prEl = document.getElementById('vac-poste-remplace');
+  if (prEl) prEl.value = vac.posteRemplace || '';
   const sel = document.getElementById('vac-spec');
   sel.innerHTML = etab.specialites.map(s => `<option ${s===vac.spec?'selected':''}}>${esc(s)}</option>`).join('');
+  setVacType(vac.typeVac === 'interimaire' ? 'interimaire' : 'vacataire');
   openModal('modal-vac');
 }
 
@@ -9017,13 +9372,17 @@ function saveVacataire() {
   const prenom = document.getElementById('vac-prenom').value.trim();
   if (!nom || !prenom) { showToast('Nom et prénom requis', 'error'); return; }
   const pin = document.getElementById('vac-pin').value.trim();
+  const typeVacSel = document.querySelector('input[name="vac-type"]:checked');
+  const typeVac = typeVacSel ? typeVacSel.value : 'vacataire';
   const data = {
     nom, prenom,
+    typeVac,
     spec: document.getElementById('vac-spec').value,
     tel: document.getElementById('vac-tel').value,
     email: document.getElementById('vac-email').value,
     notes: document.getElementById('vac-notes').value,
     pin: pin || null,
+    posteRemplace: document.getElementById('vac-poste-remplace')?.value.trim() || '',
     agenceId: document.getElementById('vac-agence')?.value || '',
     tarif: parseFloat(document.getElementById('vac-tarif')?.value || '0') || 0,
   };
@@ -9037,7 +9396,8 @@ function saveVacataire() {
   saveToStorage();
   closeModal('modal-vac');
   renderVacataires();
-  showToast('Vacataire enregistré', 'success');
+  const typeLabel = typeVac === 'interimaire' ? 'Intérimaire' : 'Vacataire';
+  showToast(`${typeLabel} enregistré`, 'success');
 }
 
 function rechercherRemplacant() {
@@ -9156,33 +9516,114 @@ function renderAffectationsList() {
   const etab = getEtab();
   const el = document.getElementById('affectations-list');
   if (!el) return;
-  if (etab.vacataires.length === 0) {
-    el.innerHTML = '<p class="text-muted text-sm">Aucun vacataire enregistré.</p>';
+
+  // Collecter toutes les affectations du mois en cours
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const rows = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const affs = (etab.affectationsVac||{})[dk];
+    if (!affs) continue;
+    const affArr = Array.isArray(affs) ? affs : Object.values(affs);
+    affArr.forEach(a => {
+      if (!a || !a.vacId) return;
+      rows.push({ ...a, day: d, dk });
+    });
+  }
+
+  if (rows.length === 0) {
+    el.innerHTML = '<p class="text-muted text-sm" style="padding:12px 0">Aucune affectation ce mois-ci.</p>';
     return;
   }
-  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
-  let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr><th style="text-align:left;padding:4px 8px;color:var(--text2)">Vacataire</th>';
-  for (let d=1; d<=daysInMonth; d++) {
-    const date = new Date(currentYear, currentMonth, d);
-    const isWE = date.getDay()===0||date.getDay()===6;
-    html += `<th style="text-align:center;padding:2px;min-width:24px;color:${isWE?'var(--accent3)':'var(--text2)'};font-size:10px">${d}</th>`;
-  }
-  html += '</tr></thead><tbody>';
-  etab.vacataires.forEach(vac => {
-    html += `<tr><td style="padding:4px 8px;white-space:nowrap;font-weight:600">${esc(vac.prenom)} ${esc(vac.nom[0])}.<br><span style="font-size:9px;color:var(--text2)">${esc(vac.spec||'')}</span></td>`;
-    for (let d=1; d<=daysInMonth; d++) {
-      const date = new Date(currentYear, currentMonth, d);
-      const dk = dateStr(date);
-      const st = (etab.vacDispos[vac.id]||{})[dk]||'';
-      const bg = st==='oui'?'rgba(56,217,169,0.2)':st==='hs'?'rgba(247,169,79,0.2)':st==='non'?'rgba(247,111,111,0.1)':'transparent';
-      const lbl = st==='oui'?'✓':st==='hs'?'HS':st==='non'?'✗':'';
-      const col = st==='oui'?'#38d9a9':st==='hs'?'#f7a94f':st==='non'?'#f76f6f':'var(--text3)';
-      html += `<td style="text-align:center;background:${bg};border:1px solid var(--border);color:${col};font-size:10px;font-weight:700;cursor:pointer" onclick="toggleDispo('${vac.id}','${dk}')">${lbl}</td>`;
-    }
-    html += '</tr>';
+
+  // Tri par date
+  rows.sort((a, b) => a.day - b.day);
+
+  const shiftColors = { M: '#4f8ef7', S: '#f7a94f', J: '#38d9a9', NU: '#9b7fe8' };
+  const getShiftCol = s => {
+    const base = s ? s.replace(/^HS/, '') : '';
+    return shiftColors[base] || '#8892aa';
+  };
+
+  let html = '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">' +
+    '<thead><tr style="background:var(--bg3)">' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Date</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Vacataire / Intérimaire</th>' +
+    '<th style="padding:8px 10px;text-align:center;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Code</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Créneau</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Secteur</th>' +
+    '<th style="padding:8px 10px;text-align:left;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">N° Poste remplacé</th>' +
+    '<th style="padding:8px 10px;text-align:center;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Action</th>' +
+    '</tr></thead><tbody>';
+
+  rows.forEach((a, i) => {
+    const isInterim = a.typeVac === 'interimaire';
+    const typeBadge = isInterim
+      ? '<span style="font-size:9px;background:rgba(247,169,79,0.2);color:#f7a94f;border:1px solid rgba(247,169,79,0.4);padding:1px 6px;border-radius:8px;font-weight:700;display:inline-block">🏢 INTÉRIM</span>'
+      : '<span style="font-size:9px;background:rgba(56,217,169,0.2);color:#38d9a9;border:1px solid rgba(56,217,169,0.4);padding:1px 6px;border-radius:8px;font-weight:700;display:inline-block">👤 VAC</span>';
+    const col = getShiftCol(a.shift);
+    const isHS = (a.shift||'').startsWith('HS');
+    const shiftBadge = '<span style="font-family:monospace;font-weight:900;font-size:13px;color:' + col + ';background:' + col + '22;border:1px solid ' + col + '55;padding:2px 7px;border-radius:5px">' + esc(a.shift||'—') + '</span>';
+    const creneauLabel = a.creneau ? a.creneau.debut + ' – ' + a.creneau.fin : '<span style="color:var(--text3)">—</span>';
+    const secteurLabel = a.secteurNom ? esc(a.secteurNom) : '<span style="color:var(--text3)">—</span>';
+    const posteLabel = a.numPoste ? '<strong style="color:var(--accent3)">' + esc(a.numPoste) + '</strong>' : '<span style="color:var(--text3)">—</span>';
+    const dateObj = new Date(currentYear, currentMonth, a.day);
+    const dateFr = dateObj.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short'});
+    const bg = i % 2 === 0 ? 'var(--card)' : 'var(--bg2)';
+
+    html += '<tr style="background:' + bg + ';border-bottom:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;white-space:nowrap;font-weight:600;color:var(--text)">' + esc(dateFr) + '</td>' +
+      '<td style="padding:8px 10px">' +
+        '<div style="font-weight:700;color:var(--text)">' + esc(a.prenom||'') + ' ' + esc(a.nom||'') + '</div>' +
+        '<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">' + typeBadge +
+        (a.spec ? '<span style="font-size:9px;color:var(--text3)">' + esc(a.spec) + '</span>' : '') +
+        '</div>' +
+      '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' + shiftBadge + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px;color:var(--text2);white-space:nowrap">' + creneauLabel + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px;color:var(--text2)">' + secteurLabel + '</td>' +
+      '<td style="padding:8px 10px;font-size:11px">' + posteLabel + '</td>' +
+      '<td style="padding:8px 10px;text-align:center">' +
+        '<button onclick="supprimerAffectationVac(\'' + a.dk + '\',\'' + a.vacId + '\')" ' +
+        'title="Annuler cette affectation" ' +
+        'style="background:rgba(247,111,111,0.1);color:#f76f6f;border:1px solid rgba(247,111,111,0.3);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:600">✕</button>' +
+      '</td>' +
+      '</tr>';
   });
+
   html += '</tbody></table></div>';
+
+  // Résumé en bas
+  const nbVac = rows.filter(r => r.typeVac !== 'interimaire').length;
+  const nbInt = rows.filter(r => r.typeVac === 'interimaire').length;
+  html += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);display:flex;gap:16px;flex-wrap:wrap">' +
+    '<span>📊 <strong style="color:var(--text)">' + rows.length + '</strong> affectation(s) ce mois</span>' +
+    '<span>👤 <strong style="color:#38d9a9">' + nbVac + '</strong> vacataire(s)</span>' +
+    '<span>🏢 <strong style="color:#f7a94f">' + nbInt + '</strong> intérimaire(s)</span>' +
+    '</div>';
+
   el.innerHTML = html;
+}
+
+function supprimerAffectationVac(dk, vacId) {
+  const etab = getEtab();
+  if (!etab || !etab.affectationsVac || !etab.affectationsVac[dk]) return;
+  const affs = etab.affectationsVac[dk];
+  if (Array.isArray(affs)) {
+    etab.affectationsVac[dk] = affs.filter(a => a.vacId !== vacId);
+    if (etab.affectationsVac[dk].length === 0) delete etab.affectationsVac[dk];
+  } else {
+    delete etab.affectationsVac[dk][vacId];
+  }
+  // Remettre la dispo à "oui" si elle existait
+  if (etab.vacDispos[vacId] && etab.vacDispos[vacId][dk] === 'affecte') {
+    etab.vacDispos[vacId][dk] = 'oui';
+  }
+  saveToStorage();
+  renderAffectationsList();
+  renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
+  showToast('Affectation annulée', 'info');
 }
 
 // ============================================================
@@ -10318,8 +10759,15 @@ function validateQrPin(etab) {
     // Pas d'agent sélectionné, chercher par PIN parmi tous
     var matchAgent = null, matchType = 'agent';
     etab.agents.filter(function(a){ return a.actif; }).forEach(function(a) {
-      var num = (a.pin && /^\d{4}$/.test(a.pin)) ? a.pin : (a.id||'').replace(/[^0-9]/g,'');
-      if (_qrPinBuffer === num || _qrPinBuffer === num.padStart(4,'0')) { matchAgent = a; }
+      var num;
+      if (a.pin && /^\d{4}$/.test(a.pin)) {
+        num = a.pin;
+      } else if (a.poste) {
+        num = (a.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      } else {
+        num = (a.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+      }
+      if (_qrPinBuffer === num) { matchAgent = a; }
     });
     (etab.vacataires||[]).forEach(function(v) {
       if (v.pin && (_qrPinBuffer === v.pin || _qrPinBuffer === v.pin.padStart(4,'0'))) { matchAgent = v; matchType = 'vacataire'; }
@@ -10345,8 +10793,15 @@ function validateQrPin(etab) {
   if (!agent) { agent = (etab.vacataires||[]).find(function(v){ return v.id === targetId; }); isVac = true; }
   if (!agent) { if (errEl) errEl.style.display = 'block'; _qrPinBuffer=''; updatePinDots(); return; }
 
-  var num = (agent.pin && /^\d{4}$/.test(agent.pin)) ? agent.pin : (isVac ? (agent.pin||'') : (agent.id||'').replace(/[^0-9]/g,'').padStart(4,'0'));
-  var numAlt = (agent.pin && /^\d{4}$/.test(agent.pin)) ? '' : (isVac ? '' : (agent.id||'').replace(/[^0-9]/g,''));
+  var num;
+  if (agent.pin && /^\d{4}$/.test(agent.pin)) {
+    num = agent.pin;
+  } else if (!isVac && agent.poste) {
+    num = (agent.poste||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  } else {
+    num = (agent.id||'').replace(/[^0-9]/g,'').slice(-4).padStart(4,'0');
+  }
+  var numAlt = '';
 
   if (_qrPinBuffer === num || (numAlt && _qrPinBuffer === numAlt)) {
     var overlay = document.getElementById('qr-pin-overlay');
@@ -11283,20 +11738,33 @@ function qrShowTab(tab) {
   } else if (tab === 'planning') {
     qrRenderPlanning();
   } else if (tab === 'dispos') {
-    var etab2 = DB.etablissements[_qrEtabId];
-    var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
-                        || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
-    if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    // Recharger les données fraîches depuis Supabase pour avoir les dispos à jour
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    }).catch(function() {
+      var etab2 = DB.etablissements[_qrEtabId];
+      var agent2 = etab2 && (etab2.agents.find(function(a){ return a.id === _qrAgentId; })
+                          || (etab2.vacataires||[]).find(function(v){ return v.id === _qrAgentId; }));
+      if (etab2 && agent2) qrRenderDispos(etab2, agent2);
+    });
   } else if (tab === 'conges') {
     qrRenderCongeList();
     qrInitDateSelects();
   } else if (tab === 'messages') {
-    qrRenderMessages();
-    // Effacer badge
+    supaLoadEtab(_qrEtabId).then(function(fresh) {
+      if (fresh) DB.etablissements[_qrEtabId] = fresh;
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    }).catch(function() {
+      qrRenderMessages();
+      qrUpdateDestInfo();
+    });
     var badge = document.getElementById('qr-msg-badge');
     if (badge) badge.style.display = 'none';
-    // Afficher cadre destinataire
-    qrUpdateDestInfo();
   }
 }
 
@@ -11623,12 +12091,15 @@ function saveQRDispos() {
 function switchConfigTab(tab) {
   if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
   if (tab === 'options') { renderOptions(); }
-  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'].forEach(t => {
+  updateOptionsTabVisibility();
+  ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
   });
-  document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim'][i] === tab);
+  // Active le bon bouton sans dépendre de l'index (évite les faux positifs avec d'autres .tab de la page)
+  document.querySelectorAll('[onclick*="switchConfigTab"]').forEach(el => {
+    const match = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', match.includes("'" + tab + "'") || match.includes('"' + tab + '"'));
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
@@ -13895,6 +14366,7 @@ function autoFillMonth() {
   if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
 
   etab.agents.filter(a => a.actif).forEach(agent => {
+    // Ne jamais effacer un planning déjà saisi : Générer complète seulement les cases vides.
     if (!planMonth[agent.id]) planMonth[agent.id] = {};
 
     // Déterminer secteur + roulement effectif pour ce mois
@@ -13941,10 +14413,10 @@ function autoFillMonth() {
         shift = alts[0] || 'R';
       }
 
-      // Ne pas écraser les jours déjà saisis manuellement
-      if (!planMonth[agent.id][d]) {
-        planMonth[agent.id][d] = shift;
-      }
+      // Préserver toute donnée déjà saisie/modifiée manuellement (CA, HS, AM, M/S/J corrigés, etc.)
+      const existingShift = planMonth[agent.id][d];
+      if (existingShift !== undefined && existingShift !== null && String(existingShift).trim() !== '') continue;
+      planMonth[agent.id][d] = shift;
     }
   });
 
@@ -13952,7 +14424,7 @@ function autoFillMonth() {
   renderPlanning();
   renderComptage();
   renderDashboard();
-  showToast('Planning généré — les saisies manuelles existantes ont été préservées', 'success');
+  showToast('Planning ajusté : seules les cases vides ont été complétées', 'success');
 }
 
 // ============================================================
@@ -14697,13 +15169,13 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
         </label>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
-        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden">← Précédent</button>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
-          <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
-          <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden;min-width:110px">← Précédent</button>
+        <div style="display:flex;gap:8px;align-items:center;flex:1;justify-content:center">
+          <div id="ob-dot-1" style="width:10px;height:10px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
+          <div id="ob-dot-2" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+          <div id="ob-dot-3" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
         </div>
-        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm">Suivant →</button>
+        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm" style="min-width:110px">Suivant →</button>
       </div>
     </div>
   </div>
