@@ -1495,11 +1495,11 @@ body[data-qr-mode="1"] #qr-view {
     </div>
     <div class="form-group">
       <label>Identifiant</label>
-      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username">
+      <input type="text" id="login-user" placeholder="Identifiant cadre" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="form-group">
       <label>Mot de passe</label>
-      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-primary" onclick="doLogin()">Se connecter</button>
     <div id="login-error" class="error-msg"></div>
@@ -3100,13 +3100,15 @@ body[data-qr-mode="1"] #qr-view {
             <option value="">— Rotation normale —</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Taux de travail (%)</label>
-          <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
-        </div>
-        <div class="form-group">
-          <label>Date d'arrivée</label>
-          <input type="date" id="ag-date-arrivee">
+        <div style="display:flex;gap:12px">
+          <div class="form-group" style="flex:1">
+            <label>Taux de travail (%)</label>
+            <input type="number" id="ag-taux" value="100" min="10" max="100" step="10">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Date d'arrivée</label>
+            <input type="date" id="ag-date-arrivee">
+          </div>
         </div>
       </div>
       <div>
@@ -11807,8 +11809,10 @@ function switchConfigTab(tab) {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
   });
-  document.querySelectorAll('#page-config .tab').forEach((el, i) => {
-    el.classList.toggle('active', ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'][i] === tab);
+  // Active le bon bouton sans dépendre de l'index (évite les faux positifs avec d'autres .tab de la page)
+  document.querySelectorAll('[onclick*="switchConfigTab"]').forEach(el => {
+    const match = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', match.includes("'" + tab + "'") || match.includes('"' + tab + '"'));
   });
   if (tab === 'rotation') renderRotationConfig();
   if (tab === 'secteurs') renderCfgSectHorairesRules();
@@ -14878,13 +14882,13 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
         </label>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px">
-        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden">← Précédent</button>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
-          <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
-          <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+        <button id="ob-btn-prev" onclick="obNav(-1)" class="btn btn-secondary btn-sm" style="visibility:hidden;min-width:110px">← Précédent</button>
+        <div style="display:flex;gap:8px;align-items:center;flex:1;justify-content:center">
+          <div id="ob-dot-1" style="width:10px;height:10px;border-radius:50%;background:var(--accent1);transition:background 0.2s"></div>
+          <div id="ob-dot-2" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
+          <div id="ob-dot-3" style="width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.2s"></div>
         </div>
-        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm">Suivant →</button>
+        <button id="ob-btn-next" onclick="obNav(1)" class="btn btn-primary btn-sm" style="min-width:110px">Suivant →</button>
       </div>
     </div>
   </div>
