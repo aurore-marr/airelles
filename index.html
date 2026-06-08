@@ -4929,6 +4929,7 @@ function showPage(page) {
   if (page === 'vacataires') renderVacataires();
   if (page === 'qr') renderQRPage();
   if (page === 'astreintes') renderAstreintes();
+  if (page === 'config') switchConfigTab('general');
 }
 
 // ============================================================
@@ -7039,7 +7040,6 @@ function affecterVacataireJour(vacId, day, statut) {
     if (sh==='S'||sh==='HSS') countS++;
     if (sh==='J'||sh==='HSJ') countJ++;
   });
-  // Vacataires déjà affectés ce jour
   const affAuj = (etab.affectationsVac||{})[dk] || [];
   affAuj.forEach(a => {
     if (a.shift==='M') countM++;
@@ -7051,39 +7051,64 @@ function affecterVacataireJour(vacId, day, statut) {
   if (countS < cibleS) manquants.push({ code:'S', manque: cibleS - countS });
   if (countJ < cibleJ) manquants.push({ code:'J', manque: cibleJ - countJ });
 
-  let shiftFinal;
-  if (manquants.length === 0) {
-    // Couverture atteinte — demander quand même
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n✔️ Couverture 3×3×3 atteinte.\nCode shift à affecter (M/S/J) :`, 'M');
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  } else if (manquants.length === 1) {
-    const ok = window.confirm(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Poste manquant → ${manquants[0].code} (-${manquants[0].manque})\n\nConfirmer affectation sur ${manquants[0].code} ?`);
-    if (!ok) return;
-    shiftFinal = manquants[0].code;
-  } else {
-    const raw = window.prompt(
-      `Affecter ${vac.prenom||''} ${esc(vac.nom)} (${esc(vac.spec)})\nle ${dateLabel}\n\n📋 Postes manquants :\n` +
-      manquants.map(m=>`  • ${m.code} (-${m.manque})`).join('\n') +
-      `\n\nCode shift à affecter (${manquants.map(m=>m.code).join('/')}) :`,
-      manquants[0].code);
-    if (!raw) return;
-    shiftFinal = raw.trim().toUpperCase();
-  }
-  if (!shiftFinal) return;
+  // Codes horaires travail disponibles dans l'établissement
+  const codesHoraires = (etab.horaires || []).filter(h => h.comptage === 'travail' || h.comptage === 'presence');
 
-  // Enregistrer dans etab.affectationsVac
+  // Construire modal de sélection du code horaire
+  const manquantsHtml = manquants.length > 0
+    ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">' +
+      manquants.map(m => '<span style="background:#f76f6f22;color:#f76f6f;border:1px solid #f76f6f55;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700">⚠️ ' + m.code + ' manque ' + m.manque + '</span>').join('') +
+      '</div>'
+    : '<div style="color:#38d9a9;font-size:12px;margin-bottom:14px">✔️ Couverture atteinte — choix libre</div>';
+
+  const boutonsHoraires = codesHoraires.map(h => {
+    const isSuggested = manquants.some(m => m.code === h.code);
+    const col = h.couleur || '#4f8ef7';
+    return '<button onclick="affecterVacataireConfirm(\'' + vacId + '\',' + day + ',\'' + statut + '\',\'' + h.code + '\')" ' +
+      'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 14px;' +
+      'background:' + col + (isSuggested ? '33' : '18') + ';color:' + col + ';' +
+      'border:' + (isSuggested ? '2px solid ' + col + '99' : '1px solid ' + col + '44') + ';' +
+      'border-radius:10px;cursor:pointer;font-family:monospace;min-width:60px;transition:opacity 0.15s" ' +
+      'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
+      '<span style="font-size:16px;font-weight:900">' + h.code + '</span>' +
+      '<span style="font-size:9px;font-weight:400;font-family:inherit;text-transform:uppercase;opacity:0.8">' + (h.label||'') + '</span>' +
+      '</button>';
+  }).join('');
+
+  const html = '<div id="modal-vac-shift-pick" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:340px;max-width:480px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">' +
+    '<div>' +
+    '<div style="font-size:15px;font-weight:700;color:var(--text)">📋 Affecter ' + esc(vac.prenom||'') + ' ' + esc(vac.nom) + '</div>' +
+    '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + dateLabel + '</div>' +
+    '</div>' +
+    '<button onclick="document.getElementById(\'modal-vac-shift-pick\').remove()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px">×</button>' +
+    '</div>' +
+    manquantsHtml +
+    '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;font-weight:600">Choisir le code horaire</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + boutonsHoraires + '</div>' +
+    '</div></div>';
+
+  const existing = document.getElementById('modal-vac-shift-pick');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function affecterVacataireConfirm(vacId, day, statut, shiftFinal) {
+  document.getElementById('modal-vac-shift-pick')?.remove();
+  const etab = getEtab();
+  if (!etab) return;
+  const vac = (etab.vacataires||[]).find(v => v.id === vacId);
+  if (!vac) return;
+  const dk = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
   if (!etab.affectationsVac) etab.affectationsVac = {};
   if (!etab.affectationsVac[dk]) etab.affectationsVac[dk] = [];
   etab.affectationsVac[dk] = etab.affectationsVac[dk].filter(a => a.vacId !== vacId);
   etab.affectationsVac[dk].push({ vacId, nom: vac.nom, prenom: vac.prenom||'', spec: vac.spec, statut, shift: shiftFinal, affecteLe: new Date().toISOString() });
-  // Marquer comme affecté dans vacDispos
   if (!etab.vacDispos[vacId]) etab.vacDispos[vacId] = {};
   etab.vacDispos[vacId][dk] = 'affecte';
   saveToStorage();
-  showToast(`${vac.prenom||''} ${esc(vac.nom)} → ${shiftFinal} le ${day}/${currentMonth+1}`, 'success');
+  showToast(esc(vac.prenom||'') + ' ' + esc(vac.nom) + ' → ' + shiftFinal + ' le ' + day + '/' + (currentMonth+1), 'success');
   renderPlanningVacataires(new Date(currentYear, currentMonth+1, 0).getDate(), etab);
   if (document.getElementById('page-vacataires')?.classList.contains('active')) {
     renderVacataires();
@@ -11805,6 +11830,7 @@ function saveQRDispos() {
 function switchConfigTab(tab) {
   if (tab === 'logins') { setTimeout(renderMsgRouting, 100); }
   if (tab === 'options') { renderOptions(); }
+  updateOptionsTabVisibility();
   ['general','secteurs','horaires','roulement','rotation','postes','logins','interim','options'].forEach(t => {
     const el = document.getElementById('config-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
