@@ -2549,6 +2549,9 @@ body[data-qr-mode="1"] #qr-view {
             </ul>
           </div>
           <button class="btn btn-secondary btn-sm mt-3" onclick="downloadTemplate()">⬇️ Télécharger modèle Excel</button>
+          <button class="btn btn-secondary btn-sm mt-2 w-full" onclick="document.getElementById('file-diag').click()" style="background:rgba(247,169,79,0.12);border-color:var(--accent3);color:var(--accent3)">🔍 Diagnostiquer mon Excel roulement</button>
+          <input type="file" id="file-diag" accept=".xlsx,.xls" style="display:none" onchange="diagRoulExcel(this)">
+          <div id="diag-result" style="margin-top:8px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;background:var(--bg3);border-radius:6px;padding:0;display:none"></div>
         </div>
         <div class="card">
           <div class="card-header"><span class="card-title">⬆️ Exporter les données</span></div>
@@ -13170,6 +13173,50 @@ function removeLogin(idx) {
 // ============================================================
 function handleImport(input) { if (input.files[0]) handleImportFile(input.files[0]); }
 
+// ── Diagnostic Excel roulement ──
+function diagRoulExcel(input) {
+  if (!input.files[0]) return;
+  const diagEl = document.getElementById('diag-result');
+  diagEl.style.display = 'block';
+  diagEl.innerHTML = '<div style="padding:8px;color:var(--text2)">Lecture en cours...</div>';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      let html = '<div style="padding:8px">';
+      html += '<strong style="color:var(--accent)">Onglets trouvés :</strong> ' + wb.SheetNames.join(', ') + '<br><br>';
+
+      const roulSheets = wb.SheetNames.filter(n => n.toLowerCase().includes('roulement'));
+      if (roulSheets.length === 0) {
+        html += '<span style="color:var(--accent4)">⚠ Aucun onglet contenant "Roulement" trouvé !</span>';
+      } else {
+        roulSheets.forEach(sheetName => {
+          const ws = wb.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          html += '<strong style="color:var(--accent2)">📋 ' + sheetName + '</strong> — ' + raw.length + ' lignes<br>';
+
+          // Afficher les 8 premières lignes
+          const preview = raw.slice(0, 8);
+          preview.forEach((row, i) => {
+            const cells = row.slice(0, 6).map(c => (c||'').toString().substring(0,12).padEnd(12));
+            const color = i === 0 ? 'var(--accent3)' : 'var(--text)';
+            html += '<span style="color:' + color + '">' +
+              'L' + (i+1) + ': [' + cells.join(' | ') + (row.length > 6 ? ' …' : '') + ']</span><br>';
+          });
+          if (raw.length > 8) html += '<span style="color:var(--text3)">... + ' + (raw.length-8) + ' lignes</span><br>';
+          html += '<br>';
+        });
+      }
+      html += '</div>';
+      diagEl.innerHTML = html;
+    } catch(err) {
+      diagEl.innerHTML = '<div style="padding:8px;color:var(--accent4)">Erreur : ' + err.message + '</div>';
+    }
+  };
+  reader.readAsBinaryString(input.files[0]);
+  input.value = '';
+}
+
 function handleImportFile(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -13568,57 +13615,96 @@ function handleImportFile(file) {
       //    - Lignes de données : col0 = "Agent N", col1 = "L1"..."L9", col2-43/29 = codes shifts
       // ══════════════════════════════════════════════
 
-      // Helper : parser un onglet de roulement et retourner roulByLigne
+      // Helper : parser un onglet de roulement — supporte 3 formats :
+      //   FORMAT A (template principal) : col0=nom_agent | col1=L1..L9 | col2..=shifts
+      //   FORMAT B (export config)      : entête NOM|GROUPE|LIGNE|J1..J42, une ligne par agent
+      //   FORMAT C (onglet unique)      : lignes GROUPE x + col0=nom | col1=L1 | col2..=shifts
       function parseRoulSheet(ws) {
         if (!ws) return {};
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const validCodes = new Set(['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ']);
         const roulByLigne = {};
-        let currentGroupe = 1; // Démarre à 1 — clés G1_Lx même sans ligne GROUPE dans le fichier
-        const validCodes = ['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ'];
 
-        raw.forEach(row => {
-          const c0 = (row[0] || '').toString().trim();
-          const c1Raw = row[1];
-          const c1Str = (c1Raw === null || c1Raw === undefined || c1Raw === '') ? '' : c1Raw.toString().trim();
-
-          // Nouveau groupe : ligne dont col0 COMMENCE PAR "GROUPE" (pas le titre ROULEMENT)
-          // On ne compte plus sur "ROULEMENT" car le titre de l'onglet le contient aussi
-          if (c0.toUpperCase().startsWith('GROUPE')) {
-            // Si la ligne contient un numéro de groupe, l'utiliser directement
-            const numMatch = c0.match(/(\d+)/);
-            currentGroupe = numMatch ? parseInt(numMatch[1]) : currentGroupe + 1;
-            return;
+        // --- Détecter FORMAT B : chercher une ligne d'en-tête contenant J1 ou LIGNE ou GROUPE ---
+        let isFormatB = false;
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(raw.length, 6); i++) {
+          const row = raw[i];
+          const cells = row.map(x => (x||'').toString().trim().toUpperCase());
+          if (cells.some(c => c === 'J1') || (cells.includes('NOM') && cells.includes('LIGNE'))) {
+            isFormatB = true; headerRowIdx = i; break;
           }
-          // Ignorer les lignes de titre (HORIZON PLANNING...)
-          if (c0.toUpperCase().includes('HORIZON PLANNING') || c0.toUpperCase().includes('REMPLISSEZ') ||
-              c0.toUpperCase().includes('POINTS CLÉS') || c0.toUpperCase().startsWith('⚠') ||
-              c0.toUpperCase().startsWith('💡')) {
-            return;
+        }
+
+        if (isFormatB) {
+          // FORMAT B : une ligne par agent
+          const headers = raw[headerRowIdx].map(x => (x||'').toString().trim().toUpperCase());
+          const iNom    = headers.findIndex(h => ['NOM','AGENTID','ID','AGENT'].includes(h));
+          const iGroupe = headers.findIndex(h => ['GROUPE','GROUPEROT','GROUPE ROT'].includes(h));
+          const iLigne  = headers.findIndex(h => ['LIGNE','LIGNEROULEMENT','LIGNE ROULEMENT'].includes(h));
+          // Colonnes shifts = colonnes J1..J42 ou tout après les colonnes meta
+          const metaCols = new Set([iNom, iGroupe, iLigne].filter(x => x >= 0));
+          const shiftCols = headers
+            .map((h, i) => ({ h, i }))
+            .filter(({ h, i }) => !metaCols.has(i) && (/^J\d+$/.test(h) || (iLigne >= 0 && i > Math.max(iNom, iGroupe, iLigne))))
+            .map(({ i }) => i);
+
+          for (let r = headerRowIdx + 1; r < raw.length; r++) {
+            const row = raw[r];
+            const nom = iNom >= 0 ? (row[iNom]||'').toString().trim() : (row[0]||'').toString().trim();
+            if (!nom || nom.toUpperCase().includes('VALEURS') || nom.length < 2) continue;
+            const grp = iGroupe >= 0 ? (parseInt(row[iGroupe]) || 1) : 1;
+            const ligRaw = iLigne >= 0 ? (row[iLigne]||'').toString().trim() : '';
+            let lig = /^L\d+$/i.test(ligRaw) ? ligRaw.toUpperCase() : (/^\d+$/.test(ligRaw) ? 'L'+ligRaw : '');
+            const key = lig ? ('G' + grp + '_' + lig) : ('ID_' + nom);
+            const shifts = [];
+            shiftCols.forEach(ci => {
+              if (shifts.length >= 42) return;
+              const v = (row[ci]||'R').toString().trim().toUpperCase();
+              shifts.push(validCodes.has(v) ? v : 'R');
+            });
+            while (shifts.length < 28) shifts.push('R');
+            if (key) roulByLigne[key] = shifts;
           }
+        } else {
+          // FORMAT A / C : col0=nom_agent | col1=Lx | col2..=shifts
+          // avec éventuellement des lignes "GROUPE x" entre les blocs
+          let currentGroupe = 1;
+          raw.forEach(row => {
+            const c0   = (row[0] || '').toString().trim();
+            const c1R  = row[1];
+            const c1   = (c1R === null || c1R === undefined || c1R === '') ? '' : c1R.toString().trim();
+            const c0up = c0.toUpperCase();
 
-          // Ignorer les lignes d'en-tête du template (AGENT, LIGNE, jours L/M/ME...)
-          if (c0.toUpperCase() === 'AGENT' || c0.toUpperCase().startsWith('AGENT ')) return;
-          if (c1Str.toUpperCase() === 'LIGNE' || c1Str.toUpperCase() === 'SEM') return;
-          // La ligne des jours L/M/ME/JE... a c0="" et c1="" ou "L"
-          if (!c0 && (!c1Str || c1Str === 'L')) return;
+            // Ligne GROUPE → met à jour le groupe courant
+            if (c0up.startsWith('GROUPE') && c0up.length < 20) {
+              const m = c0.match(/(\d+)/);
+              currentGroupe = m ? parseInt(m[1]) : currentGroupe + 1;
+              return;
+            }
+            // Sauter les lignes de titre / décoration
+            if (!c0 && !c1) return;
+            const skipWords = ['HORIZON PLANNING','REMPLISSEZ','POINTS CLÉ','INSTRUCTIONS','⚠','💡','AGENT','NOM','ID'];
+            if (skipWords.some(k => c0up.startsWith(k.toUpperCase()))) return;
+            if (['LIGNE','SEM','L','J1'].includes(c1.toUpperCase())) return;
 
-          // Normaliser la ligne : "1" ou 1 → "L1", "L1" → "L1"
-          let ligneCode = '';
-          if (/^L\d+$/i.test(c1Str)) ligneCode = c1Str.toUpperCase();
-          else if (/^\d+$/.test(c1Str)) ligneCode = 'L' + c1Str;
-          else if (typeof c1Raw === 'number' && Number.isInteger(c1Raw)) ligneCode = 'L' + c1Raw;
+            // Lire la colonne ligne (col1)
+            let ligneCode = '';
+            if (/^L\d+$/i.test(c1)) ligneCode = c1.toUpperCase();
+            else if (/^\d+$/.test(c1)) ligneCode = 'L' + c1;
+            else if (typeof c1R === 'number' && Number.isInteger(c1R) && c1R > 0) ligneCode = 'L' + c1R;
+            if (!ligneCode) return;
 
-          if (!ligneCode) return;
+            const shifts = [];
+            for (let c = 2; c < row.length && shifts.length < 42; c++) {
+              const v = (row[c] || 'R').toString().trim().toUpperCase();
+              shifts.push(validCodes.has(v) ? v : 'R');
+            }
+            while (shifts.length < 28) shifts.push('R');
+            roulByLigne['G' + currentGroupe + '_' + ligneCode] = shifts;
+          });
+        }
 
-          // Lire tous les shifts de la ligne (jusqu'à 42 colonnes ou 28)
-          const shifts = [];
-          for (let c = 2; c < row.length && shifts.length < 42; c++) {
-            const v = (row[c] || 'R').toString().trim().toUpperCase();
-            shifts.push(validCodes.includes(v) ? v : 'R');
-          }
-          while (shifts.length < 28) shifts.push('R'); // minimum 28 jours
-          roulByLigne['G' + currentGroupe + '_' + ligneCode] = shifts;
-        });
         return roulByLigne;
       }
 
@@ -13634,18 +13720,21 @@ function handleImportFile(file) {
           if (/^\d+$/.test(ligneAgent)) ligneAgent = 'L' + ligneAgent;
           else ligneAgent = ligneAgent.toUpperCase();
 
-          const key = 'G' + (agent.groupeRot || 1) + '_' + ligneAgent;
-          const shifts = roulByLigne[key];
+          const keyGroupe = 'G' + (agent.groupeRot || 1) + '_' + ligneAgent;
+          const keyId     = 'ID_' + agent.id;
+          const keyNom    = 'ID_' + (agent.nom + ' ' + (agent.prenom || '')).trim();
+
+          // Essayer les 3 clés possibles
+          const shifts = roulByLigne[keyGroupe] || roulByLigne[keyId] || roulByLigne[keyNom];
           if (shifts) {
             etab.roulement[agent.id] = {};
             shifts.forEach((sh, i) => { etab.roulement[agent.id][i] = sh; });
             matched++;
           } else {
-            // N'afficher que les 3 premières clés disponibles pour aider au diagnostic
             const hint = availableKeys.length > 0
-              ? ' (clés dispo: ' + availableKeys.slice(0,3).join(', ') + (availableKeys.length > 3 ? '…' : '') + ')'
-              : ' (aucune clé dans cet onglet)';
-            warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (' + key + ')' + hint);
+              ? ' · clés dispo: ' + availableKeys.slice(0,4).join(', ') + (availableKeys.length > 4 ? '…' : '')
+              : ' · onglet vide';
+            warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (cherché: ' + keyGroupe + ')' + hint);
           }
         });
         return matched;
@@ -13895,18 +13984,58 @@ function exportConfig() {
 function exportRoulementExcel() {
   const etab = getEtab();
   const cycleLen = etab.config.cycleLen || 42;
-  const headers = ['AgentID'];
-  for (let i = 0; i < cycleLen; i++) headers.push('J' + (i+1));
-  const rows = [headers];
-  etab.agents.filter(a => a.actif).forEach(agent => {
-    const row = [agent.id];
-    for (let d = 0; d < cycleLen; d++) row.push((etab.roulement[agent.id] || {})[d] || '');
-    rows.push(row);
-  });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement');
-  XLSX.writeFile(wb, 'roulement.xlsx');
-  showToast('Roulement exporté', 'success');
+
+  // Une feuille par spécialité — format reimportable (NOM | GROUPE | LIGNE | J1..J42)
+  const specs = [...new Set(etab.agents.filter(a => a.actif).map(a => a.spec).filter(Boolean))].sort();
+  const shiftHeaders = [];
+  for (let i = 0; i < cycleLen; i++) shiftHeaders.push('J' + (i+1));
+
+  specs.forEach(spec => {
+    const agentsSpec = etab.agents.filter(a => a.actif && a.spec === spec);
+    if (agentsSpec.length === 0) return;
+
+    const header = ['NOM', 'GROUPE', 'LIGNE', ...shiftHeaders];
+    const rows = [header];
+
+    // Grouper par groupe
+    const groupes = [...new Set(agentsSpec.map(a => a.groupeRot || 1))].sort();
+    groupes.forEach(gr => {
+      const agGr = agentsSpec.filter(a => (a.groupeRot || 1) === gr);
+      if (agGr.length > 0 && groupes.length > 1) {
+        // Ligne séparateur GROUPE
+        rows.push(['GROUPE ' + gr, '', '', ...Array(cycleLen).fill('')]);
+      }
+      agGr.forEach(agent => {
+        const row = [
+          agent.nom + ' ' + (agent.prenom || ''),
+          agent.groupeRot || 1,
+          agent.ligneRoulement || 'L1'
+        ];
+        for (let d = 0; d < cycleLen; d++) {
+          row.push((etab.roulement[agent.id] || {})[d] || 'R');
+        }
+        rows.push(row);
+      });
+    });
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement ' + spec);
+  });
+
+  if (wb.SheetNames.length === 0) {
+    // Fallback : onglet unique si pas de spécialité
+    const header = ['NOM', 'GROUPE', 'LIGNE', ...shiftHeaders];
+    const rows = [header];
+    etab.agents.filter(a => a.actif).forEach(agent => {
+      const row = [agent.nom + ' ' + (agent.prenom || ''), agent.groupeRot || 1, agent.ligneRoulement || 'L1'];
+      for (let d = 0; d < cycleLen; d++) row.push((etab.roulement[agent.id] || {})[d] || 'R');
+      rows.push(row);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Roulement');
+  }
+
+  XLSX.writeFile(wb, 'roulement_export.xlsx');
+  showToast('Roulement exporté par spécialité — reimportable', 'success');
 }
 
 function exportAll() {
