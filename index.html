@@ -3469,7 +3469,7 @@ function defaultEtab(nom, ville, adminLogin, adminPwd) {
     vacataires: [],
     planning: {},
     vacDispos: {},
-    roulement: {},
+    roulement: generateDemoRoulement(),
     // Postes nommés pour IDE/ASH (planning indépendant des secteurs)
     postesNommes: [
       { id: 'IDE1', nom: 'IDE Matin', specialites: ['IDE'], couleur: '#38d9a9', roulement: {} },
@@ -3485,7 +3485,6 @@ function generateDemoAgents() {
   const prenoms = ['Marie','Sophie','Julie','Isabelle','Nathalie','Christine','Anne','Céline','Laura','Emma',
                    'Jean','Pierre','François','Marc','Paul','Luc','Nicolas','Antoine','Thomas','Julien'];
   const specs = ['AS','AS','AS','IDE','AMP','AS','AS','IDE','AMP','AS'];
-  const secteurs = ['NORD','NORD','NORD','ALZHEIMER','ALZHEIMER','ALZHEIMER','CANTOU','CANTOU','CANTOU',null];
   for (let i = 0; i < 12; i++) {
     agents.push({
       id: 'AG' + String(i+1).padStart(3,'0'),
@@ -3505,6 +3504,22 @@ function generateDemoAgents() {
     });
   }
   return agents;
+}
+
+function generateDemoRoulement() {
+  // 9 patterns de base (L1–L9) pour un cycle de 42 jours
+  // Chaque pattern est décalé d'un jour pour créer de la diversité
+  const base = ['M','M','R','R','M','M','S','S','R','R','S','S','M','M','R','R','M','M','S','R','R','M','M','S','S','R','R','M','S','S','R','R','M','M','R','R','S','S','M','M','R','R'];
+  const roulement = {};
+  for (let i = 0; i < 12; i++) {
+    const agId = 'AG' + String(i+1).padStart(3,'0');
+    const offset = (i % 9) * 4; // décalage de 4 jours par ligne
+    roulement[agId] = {};
+    for (let d = 0; d < 42; d++) {
+      roulement[agId][d] = base[(d + offset) % base.length];
+    }
+  }
+  return roulement;
 }
 
 // ============================================================
@@ -4114,13 +4129,20 @@ async function doLogin() {
   const login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
   if (!login) { err.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
 
-  // ── Bloquer si mot de passe trop faible (avant d'accéder à l'app) ──
+  // ── Avertissement/blocage si mot de passe trop faible ──
   const pwdWeakErrors = validatePasswordStrength(pwd);
   if (pwdWeakErrors.length > 0) {
-    err.innerHTML = '⚠️ <strong>Mot de passe trop faible</strong> — ' + pwdWeakErrors[0] + '.<br>' +
-      '<span style="font-size:12px;color:var(--text2)">Veuillez le changer dans <strong>Configuration → Utilisateurs</strong> avant de vous connecter.</span>';
-    if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
-    return;
+    if (login.role !== 'admin') {
+      // Non-admin : bloqué jusqu'au changement
+      err.innerHTML = '⚠️ <strong>Mot de passe trop faible</strong> — ' + pwdWeakErrors[0] + '.<br>' +
+        '<span style="font-size:12px;color:var(--text2)">Contactez votre administrateur pour réinitialiser votre mot de passe.</span>';
+      if (btn) { btn.disabled = false; btn.textContent = 'Se connecter'; }
+      return;
+    }
+    // Admin : avertissement toast mais connexion autorisée
+    setTimeout(function() {
+      showToast('⚠️ Mot de passe trop faible — ' + pwdWeakErrors[0] + '. Changez-le dans Configuration → Utilisateurs.', 'warning');
+    }, 1000);
   }
 
   // ── Supabase Auth — connexion/création en arrière-plan ──
@@ -13551,7 +13573,7 @@ function handleImportFile(file) {
         if (!ws) return {};
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         const roulByLigne = {};
-        let currentGroupe = 0;
+        let currentGroupe = 1; // Démarre à 1 — clés G1_Lx même sans ligne GROUPE dans le fichier
         const validCodes = ['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ'];
 
         raw.forEach(row => {
@@ -13562,7 +13584,9 @@ function handleImportFile(file) {
           // Nouveau groupe : ligne dont col0 COMMENCE PAR "GROUPE" (pas le titre ROULEMENT)
           // On ne compte plus sur "ROULEMENT" car le titre de l'onglet le contient aussi
           if (c0.toUpperCase().startsWith('GROUPE')) {
-            currentGroupe++;
+            // Si la ligne contient un numéro de groupe, l'utiliser directement
+            const numMatch = c0.match(/(\d+)/);
+            currentGroupe = numMatch ? parseInt(numMatch[1]) : currentGroupe + 1;
             return;
           }
           // Ignorer les lignes de titre (HORIZON PLANNING...)
@@ -13601,6 +13625,7 @@ function handleImportFile(file) {
       // Associer les roulements aux agents
       function applyRoulements(roulByLigne, specs) {
         let matched = 0;
+        const availableKeys = Object.keys(roulByLigne);
         etab.agents.forEach(agent => {
           // Filtrer par spécialité si specs est défini
           if (specs && specs.length > 0 && !specs.includes(agent.spec)) return;
@@ -13616,7 +13641,11 @@ function handleImportFile(file) {
             shifts.forEach((sh, i) => { etab.roulement[agent.id][i] = sh; });
             matched++;
           } else {
-            warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (' + key + ')');
+            // N'afficher que les 3 premières clés disponibles pour aider au diagnostic
+            const hint = availableKeys.length > 0
+              ? ' (clés dispo: ' + availableKeys.slice(0,3).join(', ') + (availableKeys.length > 3 ? '…' : '') + ')'
+              : ' (aucune clé dans cet onglet)';
+            warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (' + key + ')' + hint);
           }
         });
         return matched;
