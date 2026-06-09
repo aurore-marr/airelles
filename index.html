@@ -2577,8 +2577,8 @@ body[data-qr-mode="1"] #qr-view {
             <button class="btn btn-success btn-sm" style="flex:1" onclick="saveLocal()">💾 Sauvegarder</button>
             <button class="btn btn-secondary btn-sm" style="flex:1" onclick="loadLocal()">📂 Charger</button>
           </div>
-          <button class="btn btn-danger btn-sm w-full mt-2" onclick="clearCache()" style="margin-top:8px">
-            🗑️ Vider le cache (repart de zéro)
+          <button class="btn btn-danger btn-sm w-full mt-2" onclick="confirmFullReset()" style="margin-top:8px;background:#dc2626;border-color:#dc2626">
+            🔴 Tout remettre à zéro
           </button>
           <div id="save-status" class="text-xs text-muted mt-2"></div>
         </div>
@@ -3511,7 +3511,7 @@ function generateDemoAgents() {
       notes: '',
       actif: true,
       dateArrivee: '2022-01-01',
-      ligneRoulement: 'L' + ((i % 9) + 1),
+      ligneRoulement: 'L' + (i + 1),
       groupeRot: (i < 6) ? 1 : 2
     });
   }
@@ -3519,7 +3519,7 @@ function generateDemoAgents() {
 }
 
 function generateDemoRoulement() {
-  // 9 patterns de base (L1–L9) pour un cycle de 42 jours
+  // Patterns de base pour un cycle de 42 jours — autant de lignes que d'agents
   // Chaque pattern est décalé d'un jour pour créer de la diversité
   const base = ['M','M','R','R','M','M','S','S','R','R','S','S','M','M','R','R','M','M','S','R','R','M','M','S','S','R','R','M','S','S','R','R','M','M','R','R','S','S','M','M','R','R'];
   const roulement = {};
@@ -13752,11 +13752,11 @@ function handleImportFile(file) {
             shifts.forEach((sh, i) => { etab.roulement[agent.id][i] = sh; });
             matched++;
           } else {
-            // N'afficher que les 3 premières clés disponibles pour aider au diagnostic
+            // Agent sans ligne de roulement → planning vide, à saisir manuellement
             const hint = availableKeys.length > 0
-              ? ' (clés dispo: ' + availableKeys.slice(0,3).join(', ') + (availableKeys.length > 3 ? '…' : '') + ')'
-              : ' (aucune clé dans cet onglet)';
-            warnings.push('Roulement manquant: ' + esc(agent.nom) + ' (' + key + ')' + hint);
+              ? ' (lignes dispo: ' + availableKeys.slice(0,3).join(', ') + (availableKeys.length > 3 ? '…' : '') + ')'
+              : ' (aucune ligne dans cet onglet)';
+            warnings.push('Sans roulement (planning vide): ' + esc(agent.nom) + ' — ligne ' + key + ' introuvable' + hint);
           }
         });
         return matched;
@@ -14049,42 +14049,79 @@ function exportAll() {
   showToast('Backup exporté', 'success');
 }
 
-async function clearCache() {
-  const etab = getEtab();
-  // Garder seulement les infos essentielles : nom, ville, logins, config de base
-  const etabId = DB.currentEtab;
-  const nomEtab   = etab ? etab.nom   : 'EHPAD Les Airelles';
-  const villeEtab = etab ? etab.ville : 'Annecy';
-  // Conserver les logins existants (mots de passe déjà hashés) ou créer un admin par défaut sans mot de passe en clair
-  const existingLogins = etab ? etab.logins : null;
+function confirmFullReset() {
+  // Modal de confirmation avec double validation
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid #dc2626;border-radius:14px;padding:28px;max-width:420px;width:100%;box-shadow:0 8px 48px rgba(0,0,0,0.6)">
+      <div style="font-size:32px;text-align:center;margin-bottom:12px">⚠️</div>
+      <div style="font-size:16px;font-weight:700;color:#f87171;text-align:center;margin-bottom:8px">Tout remettre à zéro</div>
+      <p style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:16px;line-height:1.6">
+        Cette action supprime <strong style="color:var(--text)">tous les agents, plannings, roulements et configurations</strong>.<br>
+        L'établissement repart à zéro comme à la première installation.<br><br>
+        <strong style="color:#f87171">Cette action est irréversible.</strong>
+      </p>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px;text-align:center">Tapez <strong style="color:var(--text);font-family:monospace">RESET</strong> pour confirmer :</p>
+      <input type="text" id="reset-confirm-input" placeholder="RESET"
+        style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:monospace;font-size:14px;text-align:center;outline:none;margin-bottom:16px">
+      <div style="display:flex;gap:10px">
+        <button onclick="this.closest('div[style*=fixed]').remove()"
+          style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-family:inherit;font-size:13px">
+          Annuler
+        </button>
+        <button onclick="doFullReset(document.getElementById('reset-confirm-input').value)"
+          style="flex:1;padding:10px;background:#dc2626;border:none;border-radius:8px;color:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700">
+          Tout effacer
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('reset-confirm-input')?.focus(), 100);
+}
 
-  // Recréer l'établissement propre — le mot de passe admin sera à redéfinir si aucun login existant
-  const defaultHash = await hashPwd('admin123');
-  {
-    const freshEtab = defaultEtab(nomEtab, villeEtab, 'admin', defaultHash);
-    // Marquer le compte admin créé par défaut : mot de passe à changer à la première connexion
-    const _adminDefault = freshEtab.logins && freshEtab.logins.find(l => l.login === 'admin');
-    if (_adminDefault) _adminDefault.mustChangePassword = true;
-    // Conserver les logins existants (qui sont déjà hashés)
-    if (existingLogins && existingLogins.length > 0) {
-      freshEtab.logins = existingLogins;
-    }
-
-    DB = { etablissements: {}, currentEtab: null, currentUser: null };
-    DB.etablissements[etabId || 'etab_demo'] = freshEtab;
-
-    try { localStorage.setItem('horizon_db', JSON.stringify(DB)); } catch(e) {}
-
-    showToast('Cache vidé — reconnectez-vous et réimportez votre Excel', 'success');
-    setTimeout(() => {
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
-      populateLoginEtabs();
-      // Auto-sélectionner l'établissement
-      const sel = document.getElementById('login-etab');
-      if (sel && sel.options.length > 1) sel.selectedIndex = 1;
-    }, 1200);
+async function doFullReset(confirmText) {
+  if ((confirmText || '').trim().toUpperCase() !== 'RESET') {
+    showToast('Tapez RESET en majuscules pour confirmer', 'warning');
+    return;
   }
+  // Fermer le modal
+  document.querySelector('div[style*="position:fixed"][style*="9999"]')?.remove();
+
+  // Effacer TOUT le localStorage lié à l'app
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('horizon') || k === 'qr_session')) keysToRemove.push(k);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  // Recréer un établissement vierge avec les logins par défaut
+  const defaultHash = await hashPwd('admin123');
+  const freshEtab = defaultEtab('Mon EHPAD', '', 'admin', defaultHash);
+  if (freshEtab.logins) {
+    const adminLogin = freshEtab.logins.find(l => l.login === 'admin');
+    if (adminLogin) adminLogin.mustChangePassword = true;
+  }
+
+  // Repartir sur une base totalement vide
+  DB = { etablissements: {}, currentEtab: null, currentUser: null };
+  DB.etablissements['etab_demo'] = freshEtab;
+  try { localStorage.setItem('horizon_db', JSON.stringify(DB)); } catch(e) {}
+
+  showToast('✅ Remise à zéro complète — vous pouvez réimporter votre Excel', 'success');
+  setTimeout(() => {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    populateLoginEtabs();
+    const sel = document.getElementById('login-etab');
+    if (sel && sel.options.length > 1) sel.selectedIndex = 1;
+  }, 1500);
+}
+
+async function clearCache() {
+  // Garde l'ancien nom pour compatibilité — redirige vers le vrai reset
+  confirmFullReset();
 }
 
 function saveLocal() {
@@ -14717,7 +14754,7 @@ function autoFillMonth() {
     etab.rotationSectorielle[currentYear][currentMonth][agent.id] = secteur;
 
     if (!agRoul) {
-      showToast('Roulement manquant pour ' + agent.nom, 'warning');
+      // Pas de roulement = agent sans affectation, cases laissées vides (pas d'erreur)
       return;
     }
 
@@ -15462,7 +15499,7 @@ document.querySelectorAll('.modal-backdrop').forEach(bd => {
           <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">3 étapes pour démarrer</div>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">1</span>Configurez votre établissement (secteurs, horaires, spécialités)</div>
-            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">2</span>Ajoutez vos agents et attribuez leurs lignes de roulement (L1–L9)</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">2</span>Ajoutez vos agents et attribuez leurs lignes de roulement (L1, L2... autant que nécessaire)</div>
             <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text)"><span style="background:var(--accent1);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">3</span>Générez votre premier planning avec le bouton ✨ Générer</div>
           </div>
         </div>
