@@ -1504,6 +1504,7 @@ body[data-qr-mode="1"] #qr-view {
     <button class="btn btn-primary" onclick="doLogin()">Se connecter</button>
     <div id="login-error" class="error-msg"></div>
     <hr class="divider" style="margin:20px 0 14px">
+    <p class="text-muted text-xs" style="text-align:center;margin-bottom:10px"><span style="color:var(--accent3);cursor:pointer;font-weight:600" onclick="resetSelectedEtabPassword()">Mot de passe oublié / bloqué</span></p>
     <p class="text-muted text-xs" style="text-align:center">Pas encore d'établissement ? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showNewEtab()">Créer un compte</span></p>
   </div>
 </div>
@@ -3311,7 +3312,7 @@ body[data-qr-mode="1"] #qr-view {
     <div class="form-group"><label>Mot de passe admin</label><input type="password" id="ne-pwd" placeholder="••••••"></div>
     <div class="form-group"><label>🔗 URL de l'app <span style="font-weight:400;color:var(--text3)">(pour les QR codes)</span></label><input type="url" id="ne-url" placeholder="https://monehpad.vercel.app" style="font-family:monospace;font-size:12px"></div>
     <div class="form-group"><label>🔔 Clé VAPID publique <span style="font-weight:400;color:var(--text3)">(notifications push, optionnel)</span></label><input type="text" id="ne-vapid" placeholder="BxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAAAA" style="font-family:monospace;font-size:11px"><p style="font-size:11px;color:var(--text3);margin-top:4px">Génère tes clés sur <strong>vapidkeys.com</strong>. Laisse vide pour configurer plus tard.</p></div>
-    <div class="alert alert-info mt-2"><span>ℹ️</span>Un établissement démo sera pré-configuré avec des agents et secteurs exemples.</div>
+    <div class="alert alert-info mt-2"><span>ℹ️</span>Un établissement propre sera créé. Les agents, secteurs et roulements pourront ensuite être importés depuis Excel.</div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-new-etab')">Annuler</button>
       <button class="btn btn-primary" style="flex:1" onclick="createNewEtab()">Créer</button>
@@ -3477,16 +3478,13 @@ function defaultEtab(nom, ville, adminLogin, adminPwd) {
       { code: 'GR', label: 'Grève',          heures: 0,  impact: 'absent'   },
       { code: 'RC', label: 'Repos Compens.', heures: 0,  impact: 'repos'    }
     ],
-    agents: generateDemoAgents(),
+    agents: [],
     vacataires: [],
     planning: {},
     vacDispos: {},
-    roulement: generateDemoRoulement(),
+    roulement: {},
     // Postes nommés pour IDE/ASH (planning indépendant des secteurs)
-    postesNommes: [
-      { id: 'IDE1', nom: 'IDE Matin', specialites: ['IDE'], couleur: '#38d9a9', roulement: {} },
-      { id: 'IDE2', nom: 'IDE Soir',  specialites: ['IDE'], couleur: '#f7a94f', roulement: {} }
-    ]
+    postesNommes: []
   };
 }
 
@@ -3680,6 +3678,8 @@ window.onload = async function() {
       } catch(ex) {}
     }
   }
+
+  await cleanupDemoEtabs();
 
   if (sel) sel.disabled = false;
 
@@ -3997,6 +3997,64 @@ function loadFromStorage() {
   } catch(e) {}
 }
 
+function isDemoEtab(etabId, etab) {
+  const text = [
+    etabId,
+    etab && etab.nom,
+    etab && etab.ville
+  ].join(' ').toLowerCase();
+  const agents = (etab && etab.agents) || [];
+  const hasHistoricalDemoName = text.includes('les airelles');
+  const hasGeneratedDemoAgents = agents.length >= 10
+    && agents.some(a => a && a.id === 'AG001')
+    && agents.some(a => a && a.id === 'AG012');
+  return !!(etab && (
+    etab.demo === true ||
+    etab.isDemo === true ||
+    text.includes('demo') ||
+    text.includes('démo') ||
+    hasHistoricalDemoName ||
+    hasGeneratedDemoAgents
+  ));
+}
+
+async function cleanupDemoEtabs() {
+  const demoIds = Object.entries(DB.etablissements || {})
+    .filter(([id, etab]) => isDemoEtab(id, etab))
+    .map(([id]) => id);
+
+  if (demoIds.length === 0) return;
+
+  demoIds.forEach(id => delete DB.etablissements[id]);
+
+  if (demoIds.includes(DB.currentEtab)) {
+    DB.currentEtab = null;
+    DB.currentUser = null;
+  }
+
+  try {
+    const rawSession = localStorage.getItem('horizon_session');
+    if (rawSession && demoIds.includes((JSON.parse(rawSession) || {}).etabId)) {
+      localStorage.removeItem('horizon_session');
+    }
+  } catch(e) {}
+
+  try {
+    const rawAuth = localStorage.getItem('horizon_auth_token');
+    if (rawAuth && demoIds.includes((JSON.parse(rawAuth) || {}).etabId)) {
+      localStorage.removeItem('horizon_auth_token');
+    }
+  } catch(e) {}
+
+  try {
+    await supa.from('horizon_data').delete().in('etab_id', demoIds);
+  } catch(e) {
+    console.warn('Suppression établissements demo côté Supabase impossible:', e);
+  }
+
+  saveToStorage();
+}
+
 // HTML de la vue QR (pour la recréer après chargement Supabase)
 function getQRViewHTML() {
   return document.getElementById('qr-view-template') ?
@@ -4294,6 +4352,70 @@ async function doLogin() {
   updateOptionsTabVisibility();
   // ── Onboarding nouvel établissement ──
   setTimeout(showOnboardingIfNeeded, 800);
+}
+
+async function resetSelectedEtabPassword() {
+  const etabId = document.getElementById('login-etab').value;
+  const userInput = document.getElementById('login-user').value.trim();
+  const err = document.getElementById('login-error');
+
+  if (!etabId) {
+    err.textContent = 'Sélectionnez d’abord l’établissement à dépanner.';
+    return;
+  }
+
+  let etab = DB.etablissements[etabId];
+  try {
+    const fresh = await supaLoadEtab(etabId);
+    if (fresh) {
+      DB.etablissements[etabId] = fresh;
+      etab = fresh;
+    }
+  } catch(e) {}
+
+  if (!etab || !Array.isArray(etab.logins) || etab.logins.length === 0) {
+    err.textContent = 'Aucun compte cadre trouvé pour cet établissement.';
+    return;
+  }
+
+  const login = userInput
+    ? etab.logins.find(l => l.login === userInput)
+    : (etab.logins.find(l => l.role === 'admin') || etab.logins[0]);
+
+  if (!login) {
+    err.textContent = 'Identifiant introuvable dans cet établissement.';
+    return;
+  }
+
+  const newPwd = prompt('Nouveau mot de passe pour ' + login.login + ' :');
+  if (!newPwd) return;
+  if (newPwd.length < 6) {
+    err.textContent = 'Choisissez au moins 6 caractères pour ce mot de passe.';
+    return;
+  }
+
+  login.pwd = await hashPwd(newPwd);
+  login.mustChangePassword = false;
+  DB.etablissements[etabId] = etab;
+
+  try { localStorage.removeItem('horizon_session'); } catch(e) {}
+  try { localStorage.removeItem('horizon_auth_token'); } catch(e) {}
+  try { localStorage.setItem('horizon_db', JSON.stringify(DB)); } catch(e) {}
+
+  try {
+    await supa.from('horizon_data').upsert({
+      etab_id: etabId,
+      data: etab,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'etab_id' });
+  } catch(e) {
+    console.warn('Réinitialisation Supabase impossible:', e);
+  }
+
+  document.getElementById('login-user').value = login.login;
+  document.getElementById('login-pwd').value = newPwd;
+  err.textContent = 'Mot de passe réinitialisé. Cliquez sur Se connecter.';
+  showToast('Mot de passe réinitialisé pour ' + login.login, 'success');
 }
 
 // ============================================================
@@ -7377,8 +7499,7 @@ function autoFillIfEmpty() {
         Date.UTC(refDate.getFullYear(), refDate.getMonth(), refDate.getDate())
       ) / 86400000);
       const pos = (((diff + off) % cycleLen) + cycleLen) % cycleLen;
-      let sh = roul[pos] || 'R';
-      const dow = (dt.getDay() + 6) % 7;
+      let sh = roul[pos] || roul[String(pos)] || 'R';
       if ((agent.joursOff||[]).includes(dow)) sh = 'R';
       if ((agent.exclusHoraires||[]).includes(sh)) {
         const alts = ['M','S','J','NU'].filter(c=>!(agent.exclusHoraires||[]).includes(c));
@@ -13283,10 +13404,32 @@ function handleImportFile(file) {
       let imported = [];
       let warnings = [];
 
-      // ── Onglet helper : trouve un sheet peu importe la casse / les emojis ──
+      // ── Onglet helper : trouve un sheet malgré casse, accents, emojis et séparateurs ──
+      function normalizeSheetToken(value) {
+        return (value || '')
+          .toString()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+      }
+      function getSheetName(keyword) {
+        const needle = normalizeSheetToken(keyword);
+        return wb.SheetNames.find(function(name) {
+          return normalizeSheetToken(name).includes(needle);
+        }) || null;
+      }
       function getSheet(keyword) {
-        const name = wb.SheetNames.find(n => n.toLowerCase().includes(keyword.toLowerCase()));
+        const name = getSheetName(keyword);
         return name ? wb.Sheets[name] : null;
+      }
+      function normalizeSpecKey(value) {
+        return (value || '')
+          .toString()
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, '-');
       }
 
       // ══════════════════════════════════════════════
@@ -13477,13 +13620,25 @@ function handleImportFile(file) {
         const rows = XLSX.utils.sheet_to_json(wsReg, { header: 1 });
         rows.forEach(row => {
           const key = (row[0] || '').toString().trim();
+          const keyNorm = normalizeSheetToken(key);
           const val = row[1];
-          if (key.includes('annuelles FPT') || key.includes('Heures annuelles')) {
+          if (keyNorm.includes('annuelles fpt') || keyNorm.includes('heures annuelles')) {
             etab.config.baseAnnuelle = parseFloat(val) || 1607;
             etab.config.baseMensuelle = Math.round(parseFloat(val) / 12 * 100) / 100;
           }
-          if (key.includes('Durée référence CA')) etab.config.travailH = parseFloat(val) || 10;
-          if (key.includes('CA annuels')) etab.config.caAnnuels = parseFloat(val) || 17.5;
+          if (keyNorm.includes('duree reference ca')) etab.config.travailH = parseFloat(val) || 10;
+          if (keyNorm.includes('ca annuels')) etab.config.caAnnuels = parseFloat(val) || 17.5;
+          if (keyNorm.includes('cyclelen') || keyNorm.includes('duree cycle') || keyNorm.includes('longueur cycle')) {
+            etab.config.cycleLen = parseInt(val, 10) || etab.config.cycleLen || 42;
+          }
+          if (keyNorm.includes('refdate') || keyNorm.includes('date de reference') || keyNorm.includes('date reference')) {
+            const parsedDate = val instanceof Date
+              ? val
+              : new Date((val || '').toString().trim());
+            if (!Number.isNaN(parsedDate.getTime())) {
+              etab.config.refDate = parsedDate.toISOString().slice(0, 10);
+            }
+          }
         });
         imported.push('Règles générales');
       }
@@ -13719,11 +13874,17 @@ function handleImportFile(file) {
           const shifts = [];
           for (var c = 2; c < row.length && shifts.length < maxCycle; c++) {
             var v = (row[c] === null || row[c] === undefined) ? '' : row[c].toString().trim().toUpperCase();
-            // Ignorer les séparateurs de semaine (SEM. 1, SEM. 2...) et noms de jours
-            if (/^SEM\.?\s*\d/i.test(v) || ['L','M','ME','J','V','S','D','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE'].includes(v)) continue;
-            shifts.push(validCodes.has(v) ? v : (v === '' ? 'R' : 'R'));
+            // Ignorer UNIQUEMENT les séparateurs de semaine (SEM. 1, SEM. 2...)
+            // et les noms de jours LONGS — ne pas filtrer M/J/S/D qui sont des codes horaires valides !
+            if (/^SEM\.?\s*\d/i.test(v)) continue;
+            if (['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE','ME','L'].includes(v)) continue;
+            shifts.push(validCodes.has(v) ? v : (v === '' ? '' : 'R'));
           }
-          // Compléter si nécessaire jusqu'au cycle réel (et pas systématiquement 28)
+          // Retirer les vides en fin de tableau (cellules vides après le dernier shift)
+          while (shifts.length > 0 && shifts[shifts.length-1] === '') shifts.pop();
+          // Remplacer les vides internes par 'R'
+          for (var si = 0; si < shifts.length; si++) { if (shifts[si] === '') shifts[si] = 'R'; }
+          // Compléter si nécessaire jusqu'au cycle réel
           const targetLen = specCycleLen || shifts.length;
           while (shifts.length < targetLen) shifts.push('R');
 
@@ -13737,9 +13898,12 @@ function handleImportFile(file) {
       function applyRoulements(roulByLigne, specs) {
         let matched = 0;
         const availableKeys = Object.keys(roulByLigne);
+        const wantedSpecs = specs && specs.length > 0
+          ? specs.map(normalizeSpecKey)
+          : null;
         etab.agents.forEach(agent => {
           // Filtrer par spécialité si specs est défini
-          if (specs && specs.length > 0 && !specs.includes(agent.spec)) return;
+          if (wantedSpecs && !wantedSpecs.includes(normalizeSpecKey(agent.spec))) return;
 
           let ligneAgent = (agent.ligneRoulement || 'L1').toString().trim();
           if (/^\d+$/.test(ligneAgent)) ligneAgent = 'L' + ligneAgent;
@@ -13756,7 +13920,7 @@ function handleImportFile(file) {
             const hint = availableKeys.length > 0
               ? ' (lignes dispo: ' + availableKeys.slice(0,3).join(', ') + (availableKeys.length > 3 ? '…' : '') + ')'
               : ' (aucune ligne dans cet onglet)';
-            warnings.push('Sans roulement (planning vide): ' + esc(agent.nom) + ' — ligne ' + key + ' introuvable' + hint);
+            warnings.push('Sans roulement (planning vide): ' + esc(agent.nom) + ' [' + normalizeSpecKey(agent.spec) + '] — ligne ' + key + ' introuvable' + hint);
           }
         });
         return matched;
@@ -13765,16 +13929,28 @@ function handleImportFile(file) {
       etab.roulement = {};
       let totalRoulLignes = 0, totalMatched = 0;
 
-      // ── Nouveau template : onglets par spécialité ──
-      const specs_roul = ['AS','IDE','AUX','ASH','Nuit'];
+      // ── Nouveau template : onglets par spécialité détectés dynamiquement ──
+      const agentSpecsRoulement = [...new Set(etab.agents.map(a => normalizeSpecKey(a.spec)).filter(Boolean))];
+      const sheetSpecsRoulement = wb.SheetNames
+        .map(function(name) {
+          const normalized = normalizeSheetToken(name);
+          if (!normalized.startsWith('roulement ')) return null;
+          return normalizeSpecKey(normalized.replace(/^roulement\s+/, ''));
+        })
+        .filter(Boolean);
+      const specs_roul = [...new Set([...agentSpecsRoulement, ...sheetSpecsRoulement])];
       let hasSpecRoul = false;
 
       specs_roul.forEach(spec => {
-        const ws = getSheet('Roulement ' + spec) || getSheet('roulement ' + spec);
+        const ws = getSheet('Roulement ' + spec);
         if (!ws) return;
         hasSpecRoul = true;
         // Utiliser le cycleLen configuré pour cette spécialité
-        const specCycleLen = ((etab.config.cycleLenBySpec || {})[spec]) || etab.config.cycleLen || 42;
+        const cycleBySpec = (etab.config.cycleLenBySpec || {});
+        const specCycleEntry = Object.entries(cycleBySpec).find(function(entry) {
+          return normalizeSpecKey(entry[0]) === normalizeSpecKey(spec);
+        });
+        const specCycleLen = (specCycleEntry ? specCycleEntry[1] : 0) || etab.config.cycleLen || 42;
         const roulByLigne = parseRoulSheet(ws, specCycleLen);
         const nb = Object.keys(roulByLigne).length;
         if (nb > 0) {
@@ -13782,6 +13958,9 @@ function handleImportFile(file) {
           totalRoulLignes += nb;
           totalMatched += matched;
           imported.push('Roulement ' + spec + ' (' + nb + ' lignes, ' + matched + ' agents)');
+          if (matched === 0) {
+            warnings.push('Onglet "' + getSheetName('Roulement ' + spec) + '" trouvé mais aucun agent ne correspond à la spécialité/groupe/ligne.');
+          }
         }
       });
 
@@ -13817,20 +13996,32 @@ function handleImportFile(file) {
         if (!etab.rotationSectorielle[currentYear]) etab.rotationSectorielle[currentYear] = {};
         if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
         const _pm = etab.planning[currentYear][currentMonth];
+        console.log('[IMPORT] Génération planning — agents actifs:', etab.agents.filter(a=>a.actif).length);
+        console.log('[IMPORT] Roulements disponibles:', Object.keys(etab.roulement).length);
+        console.log('[IMPORT] cycleLen config:', etab.config.cycleLen, '| cycleLenBySpec:', etab.config.cycleLenBySpec);
+        console.log('[IMPORT] refDate:', etab.config.refDate, '→ _rf:', _rf);
+        let _genCount = 0;
         etab.agents.filter(a => a.actif).forEach(function(ag) {
           const _cl = getCycleLenForAgent(ag, etab);
           const _res = getRoulementEffectif(ag, currentYear, currentMonth, etab);
           const _r = _res.roulement;
           etab.rotationSectorielle[currentYear][currentMonth][ag.id] = _res.secteur;
-          if (!_r) return;
+          if (!_r) { console.log('[IMPORT] Sans roulement:', ag.nom, ag.id); return; }
           if (!_pm[ag.id]) _pm[ag.id] = {};
           const _off = ag.rotOffset || 0;
+          // Debug premier agent
+          if (_genCount === 0) {
+            const _dt0 = new Date(currentYear, currentMonth, 1);
+            const _df0 = Math.floor((Date.UTC(_dt0.getFullYear(),_dt0.getMonth(),_dt0.getDate()) - Date.UTC(_rf.getFullYear(),_rf.getMonth(),_rf.getDate())) / 86400000);
+            const _p0 = (((_df0+_off)%_cl)+_cl)%_cl;
+            console.log('[IMPORT] Premier agent:', ag.nom, '| spec:', ag.spec, '| cycleLen:', _cl, '| offset:', _off, '| diff j1:', _df0, '| pos j1:', _p0, '| shift j1:', _r[_p0], '| roul keys sample:', Object.keys(_r).slice(0,5));
+          }
           for (let _d = 1; _d <= _dim; _d++) {
             const _dt = new Date(currentYear, currentMonth, _d);
             const _df = Math.floor((Date.UTC(_dt.getFullYear(),_dt.getMonth(),_dt.getDate()) -
               Date.UTC(_rf.getFullYear(),_rf.getMonth(),_rf.getDate())) / 86400000);
             const _p = (((_df+_off)%_cl)+_cl)%_cl;
-            let _s = _r[_p]||'R';
+            let _s = _r[_p] || _r[String(_p)] || 'R';
             const _dw = (_dt.getDay()+6)%7;
             if ((ag.joursOff||[]).includes(_dw)) _s='R';
             if ((ag.exclusHoraires||[]).includes(_s)) {
@@ -13839,7 +14030,9 @@ function handleImportFile(file) {
             }
             _pm[ag.id][_d] = _s;
           }
+          _genCount++;
         });
+        console.log('[IMPORT] Planning généré pour', _genCount, 'agents');
       }
       // S'assurer que currentEtab est défini avant initApp
       if (!DB.currentEtab) {
@@ -14653,9 +14846,12 @@ function getLigneRoulementEffective(agent, secteurDuMois) {
 // Retourne le roulement effectif d'un agent — il garde toujours son propre roulement
 // Retourne la durée de cycle effective pour un agent (par spécialité ou défaut)
 function getCycleLenForAgent(agent, etab) {
-  const spec = agent.spec || '';
+  const spec = normalizeSpecKey(agent.spec || '');
   const cycleBySpec = (etab.config && etab.config.cycleLenBySpec) || {};
-  const specCycle = cycleBySpec[spec];
+  const specCycleEntry = Object.entries(cycleBySpec).find(function(entry) {
+    return normalizeSpecKey(entry[0]) === spec;
+  });
+  const specCycle = specCycleEntry ? specCycleEntry[1] : 0;
   if (specCycle && specCycle > 0) return specCycle;
   return (etab.config && etab.config.cycleLen) || 42;
 }
@@ -14767,7 +14963,7 @@ function autoFillMonth() {
         Date.UTC(refDate.getFullYear(), refDate.getMonth(), refDate.getDate())
       ) / 86400000);
       const pos = (((diff + offset) % cycleLen) + cycleLen) % cycleLen;
-      let shift = agRoul[pos] || 'R';
+      let shift = agRoul[pos] || agRoul[String(pos)] || 'R';
 
       // Respecter joursOff
       const dow = (date.getDay() + 6) % 7;
