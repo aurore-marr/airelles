@@ -3387,6 +3387,14 @@ function esc(s) {
     .replace(/'/g, '&#39;');
 }
 
+function normalizeSpecKey(value) {
+  return (value || '')
+    .toString()
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '-');
+}
+
 async function hashPwd(pwd) {
   if (!pwd) return '';
   // Si déjà hashé (64 hex chars), ne pas re-hasher
@@ -14846,10 +14854,17 @@ function getLigneRoulementEffective(agent, secteurDuMois) {
 // Retourne le roulement effectif d'un agent — il garde toujours son propre roulement
 // Retourne la durée de cycle effective pour un agent (par spécialité ou défaut)
 function getCycleLenForAgent(agent, etab) {
-  const spec = normalizeSpecKey(agent.spec || '');
+  const normSpec = function(value) {
+    return (value || '')
+      .toString()
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '-');
+  };
+  const spec = normSpec(agent.spec || '');
   const cycleBySpec = (etab.config && etab.config.cycleLenBySpec) || {};
   const specCycleEntry = Object.entries(cycleBySpec).find(function(entry) {
-    return normalizeSpecKey(entry[0]) === spec;
+    return normSpec(entry[0]) === spec;
   });
   const specCycle = specCycleEntry ? specCycleEntry[1] : 0;
   if (specCycle && specCycle > 0) return specCycle;
