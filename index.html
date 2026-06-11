@@ -16294,8 +16294,14 @@ function removeLogin(idx) {
 // ============================================================
 // IMPORT / EXPORT
 // ============================================================
-function handleImport(input) { if (input.files[0]) handleImportFile(input.files[0], false); }
-function handleImportPreview(input) { if (input.files[0]) handleImportFile(input.files[0], true); }
+function handleImport(input) {
+  if (input.files[0]) handleImportFile(input.files[0], false);
+  try { input.value = ''; } catch(e) {}
+}
+function handleImportPreview(input) {
+  if (input.files[0]) handleImportFile(input.files[0], true);
+  try { input.value = ''; } catch(e) {}
+}
 function clearImportStatus() {
   const el = document.getElementById('import-status');
   if (el) el.innerHTML = '';
@@ -16385,6 +16391,10 @@ function runClientDemoScenario() {
 function handleImportFile(file, dryRun) {
   if (!file) return;
   clearImportStatus();
+  const importEl = document.getElementById('import-status');
+  if (importEl) {
+    importEl.innerHTML = `<div class="alert alert-info">Lecture du fichier en cours...<br>${file.name || 'Excel'}${file.size ? ' • ' + Math.max(1, Math.round(file.size / 1024)) + ' Ko' : ''}</div>`;
+  }
   const reader = new FileReader();
   reader.onload = e => {
     try {
