@@ -15265,6 +15265,10 @@ function renderConfigHoraires() {
   const etab = getEtab();
   if (!etab) return;
   const el = document.getElementById('cfg-horaire-list');
+  const format1 = n => {
+    const value = Number(n || 0);
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
+  };
   const newSecteurEl = document.getElementById('new-hor-secteur');
   if (newSecteurEl) {
     const cur = newSecteurEl.value;
@@ -16459,26 +16463,45 @@ function handleImportFile(file, dryRun) {
           .toUpperCase()
           .replace(/\s+/g, '-');
       }
+      function parseBooleanLike(value, fallback) {
+        const raw = (value || '').toString().trim().toLowerCase();
+        if (!raw) return fallback;
+        if (['oui','yes','true','1','x'].includes(raw)) return true;
+        if (['non','no','false','0'].includes(raw)) return false;
+        return fallback;
+      }
       function buildImportSummary() {
-        const presentSheets = [
-          'Config','Secteurs','Horaires','Agents','Roulement','Planning'
-        ].filter(name => getSheetName(name));
-        const missingSheets = [
-          'Config','Secteurs','Horaires','Agents','Roulement','Planning'
-        ].filter(name => !getSheetName(name));
+        const hasAgentsSheets = !!(getSheetName('Agents') || getSheetName('Agents AS-IDE') || getSheetName('Agents AUX-ASH'));
+        const hasRoulementSheets = !!(getSheetName('Roulement') || getSheetName('Roulement AS') || getSheetName('Roulement IDE') || getSheetName('Roulement AUX') || getSheetName('Roulement ASH') || getSheetName('Roulement Nuit'));
+        const hasSpecRulesSheet = !!(getSheetName('Règles spécialités') || getSheetName('Règles') || getSheetName('specialites'));
+        const hasGeneralRulesSheet = !!(getSheetName('Règles générales') || getSheetName('generales'));
+        const hasAbsencesSheet = !!(getSheetName('Absences') || getSheetName('Congés'));
+        const presentSheets = [];
+        if (hasGeneralRulesSheet) presentSheets.push('Config');
+        if (getSheetName('Secteurs')) presentSheets.push('Secteurs');
+        if (hasSpecRulesSheet) presentSheets.push('Horaires');
+        if (hasAgentsSheets) presentSheets.push('Agents');
+        if (hasRoulementSheets) presentSheets.push('Roulement');
+        if (hasAbsencesSheet) presentSheets.push('Absences');
+        const missingSheets = ['Config','Secteurs','Horaires','Agents','Roulement'].filter(name => !presentSheets.includes(name));
         const activeAgents = (etab.agents || []).filter(a => a.actif !== false).length;
         const asAgents = (etab.agents || []).filter(a => a.actif !== false && String(a.spec || '').toUpperCase() === 'AS').length;
         const roulements = Object.keys(etab.roulement || {}).length;
         return {
           presentSheets,
           missingSheets,
+          hasAgentsSheets,
+          hasRoulementSheets,
+          hasSpecRulesSheet,
+          hasGeneralRulesSheet,
+          hasAbsencesSheet,
           activeAgents,
           asAgents,
           roulements
         };
       }
       function buildCompatibilityStatus(summary, warningsList) {
-        const hasCoreSheets = ['Agents', 'Roulement'].every(name => summary.presentSheets.includes(name));
+        const hasCoreSheets = summary.hasAgentsSheets && summary.hasRoulementSheets;
         if (hasCoreSheets && summary.activeAgents > 0 && summary.roulements > 0 && warningsList.length === 0) {
           return {
             label: 'Compatible',
@@ -16507,8 +16530,8 @@ function handleImportFile(file, dryRun) {
       }
       function buildImportBlockers(summary) {
         const blockers = [];
-        if (!summary.presentSheets.includes('Agents')) blockers.push('L onglet Agents est introuvable.');
-        if (!summary.presentSheets.includes('Roulement')) blockers.push('L onglet Roulement est introuvable.');
+        if (!summary.hasAgentsSheets) blockers.push('Aucun onglet agents exploitable n a ete trouve.');
+        if (!summary.hasRoulementSheets) blockers.push('Aucun onglet roulement exploitable n a ete trouve.');
         if (summary.activeAgents === 0) blockers.push('Aucun agent actif n a ete detecte apres lecture du fichier.');
         if (summary.presentSheets.includes('Roulement') && summary.roulements === 0) blockers.push('Le roulement est present mais aucune ligne exploitable n a ete reconnue.');
         return blockers;
@@ -16516,8 +16539,8 @@ function handleImportFile(file, dryRun) {
       function buildImportNextSteps(summary, blockers, warningsList) {
         const steps = [];
         if (blockers.length > 0) {
-          if (!summary.presentSheets.includes('Agents')) steps.push('Ajouter ou renommer l onglet Agents pour qu il soit reconnu.');
-          if (!summary.presentSheets.includes('Roulement')) steps.push('Ajouter ou renommer l onglet Roulement pour permettre la generation du planning.');
+          if (!summary.hasAgentsSheets) steps.push('Verifier les onglets agents ou leur entete pour qu ils soient reconnus.');
+          if (!summary.hasRoulementSheets) steps.push('Verifier les onglets roulement ou leur structure pour permettre la generation du planning.');
           if (summary.activeAgents === 0) steps.push('Verifier l entete et les colonnes du ou des onglets agents.');
           if (summary.presentSheets.includes('Roulement') && summary.roulements === 0) steps.push('Verifier les groupes, lignes L1 L2... et les codes de roulement.');
           return steps;
@@ -16698,12 +16721,17 @@ function handleImportFile(file, dryRun) {
           codes.forEach((code, ci) => {
             const str = (row[1 + ci] || '').toString().trim();
             const dur = parseFloat(row[5 + ci]) || 0;
+            const pause = parseFloat(row[9 + ci]) || 0;
             if (str && str !== '—' && str !== '-' && dur > 0) {
               if (!horairesMap[code]) {
                 const h = parseHorStr(str);
                 horairesMap[code] = {
                   code, label: code === 'M' ? 'Matin' : code === 'S' ? 'Soir' : code === 'J' ? 'Journée' : 'Nuit',
                   debut: h.debut, fin: h.fin, duree: dur,
+                  dureePresence: dur + pause,
+                  presence: dur + pause,
+                  pauses: pause > 0 ? [{ debut: '', fin: '', duree: pause }] : [],
+                  pauseNonDecomptee: false,
                   couleur: horColors[code] || '#4f8ef7'
                 };
               }
@@ -16736,6 +16764,9 @@ function handleImportFile(file, dryRun) {
 
           // Construire les règles par spécialité (durée, pause, seuils) depuis le fichier
           if (!etab.specRegles) etab.specRegles = {};
+          if (!etab.config.cycleLenBySpec) etab.config.cycleLenBySpec = {};
+          if (!etab.config.cycleUnitBySpec) etab.config.cycleUnitBySpec = {};
+          if (!etab.config.specsNoRotation) etab.config.specsNoRotation = ['IDE','IDEC'];
           rows.forEach(row => {
             const specCode = (row[0] || '').toString().trim();
             if (!specCode || specCode.includes('SPÉCIALITÉ') || specCode.includes('💡') ||
@@ -16744,16 +16775,32 @@ function handleImportFile(file, dryRun) {
             const durS = parseFloat(row[6]) || 0;
             const durJ = parseFloat(row[7]) || 0;
             const durN = parseFloat(row[8]) || 0;
-            const pause = parseFloat(row[9]) || 0;
+            const pauseM = parseFloat(row[9]) || 0;
+            const pauseS = parseFloat(row[10]) || 0;
+            const pauseJ = parseFloat(row[11]) || 0;
+            const pauseN = parseFloat(row[12]) || 0;
+            const seuilMin = parseInt(row[13], 10) || 0;
+            const seuilMax = parseInt(row[14], 10) || 0;
+            const hasSecteurs = parseBooleanLike(row[15], true);
             const travailH = Math.max(durM, durS, durJ, durN) || 10;
-            const pause_h = pause || 0;
+            const pause_h = Math.max(pauseM, pauseS, pauseJ, pauseN) || 0;
             if (!etab.specRegles[specCode]) etab.specRegles[specCode] = {};
             etab.specRegles[specCode].travailH = travailH;
             etab.specRegles[specCode].presenceH = travailH + pause_h;
+            etab.specRegles[specCode].pauseH = pause_h;
+            etab.specRegles[specCode].seuilMin = seuilMin;
+            etab.specRegles[specCode].seuilMax = seuilMax;
+            etab.specRegles[specCode].hasSecteurs = hasSecteurs;
             // baseMensuelle proratisée : baseAnnuelle * (travailH/10) / 12
             const baseAnn = etab.config.baseAnnuelle || 1607;
             etab.specRegles[specCode].baseMensuelle = 
               Math.round(baseAnn * (travailH / 10) / 12 * 100) / 100;
+            if (!hasSecteurs) {
+              const specUp = normalizeSpecKey(specCode);
+              if (!etab.config.specsNoRotation.map(s => s.toUpperCase()).includes(specUp)) {
+                etab.config.specsNoRotation.push(specUp);
+              }
+            }
           });
 
           imported.push('Spécialités (' + specs.join(', ') + ')');
@@ -16778,6 +16825,11 @@ function handleImportFile(file, dryRun) {
           }
           if (keyNorm.includes('duree reference ca')) etab.config.travailH = parseFloat(val) || 10;
           if (keyNorm.includes('ca annuels')) etab.config.caAnnuels = parseFloat(val) || 17.5;
+          if (keyNorm.includes('seuil fractionnement 1')) etab.config.cfFrac1Seuil = parseInt(val, 10) || 5;
+          if (keyNorm.includes('seuil fractionnement 2')) etab.config.cfFrac2Seuil = parseInt(val, 10) || 8;
+          if (keyNorm.includes('seuil dim feries')) etab.config.seuilDimFeries = parseInt(val, 10) || 10;
+          if (keyNorm.includes('repos compensateur m s j')) etab.config.reposDimFeriesJourH = parseFloat(val) || 14;
+          if (keyNorm.includes('repos compensateur nuit')) etab.config.reposDimFeriesNuitH = parseFloat(val) || 30;
           if (keyNorm.includes('cyclelen') || keyNorm.includes('duree cycle') || keyNorm.includes('longueur cycle')) {
             etab.config.cycleLen = parseInt(val, 10) || etab.config.cycleLen || 42;
           }
@@ -16971,6 +17023,25 @@ function handleImportFile(file, dryRun) {
       //   "AGENT | LIGNE | SEM. 1 ..." → en-tête à ignorer
       //   "[vide] | [vide] | L | M | ME | J ..." → noms de jours, ignorer
       //   "Agent 1 | L1 | R | M | M | R ..." → données réelles (col0=nom, col1=Lx, col2+=shifts)
+      function detectCycleLenFromSheet(ws, fallbackLen) {
+        if (!ws) return fallbackLen || 42;
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        let detected = 0;
+        raw.forEach(function(row) {
+          const c1 = (row[1] === null || row[1] === undefined) ? '' : row[1].toString().trim().toUpperCase();
+          if (!/^L\d+$/.test(c1)) return;
+          const shifts = [];
+          for (var c = 2; c < row.length; c++) {
+            var v = (row[c] === null || row[c] === undefined) ? '' : row[c].toString().trim().toUpperCase();
+            if (/^SEM\.?\s*\d/i.test(v)) continue;
+            if (['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE','ME','L'].includes(v)) continue;
+            shifts.push(v);
+          }
+          while (shifts.length > 0 && !shifts[shifts.length - 1]) shifts.pop();
+          if (shifts.length > detected) detected = shifts.length;
+        });
+        return detected || fallbackLen || 42;
+      }
       function parseRoulSheet(ws, specCycleLen) {
         if (!ws) return {};
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -17097,6 +17168,8 @@ function handleImportFile(file, dryRun) {
         const ws = getSheet('Roulement ' + spec);
         if (!ws) return;
         hasSpecRoul = true;
+        if (!etab.config.cycleLenBySpec) etab.config.cycleLenBySpec = {};
+        if (!etab.config.cycleUnitBySpec) etab.config.cycleUnitBySpec = {};
         // Utiliser le cycleLen configuré pour cette spécialité
         const cycleBySpec = (etab.config.cycleLenBySpec || {});
         const specCycleEntry = Object.entries(cycleBySpec).find(function(entry) {
@@ -17104,7 +17177,11 @@ function handleImportFile(file, dryRun) {
         });
         const specCycleRaw = (specCycleEntry ? parseInt(specCycleEntry[1]) || 0 : 0);
         const specCycleUnit = getConfigValueBySpec(etab.config.cycleUnitBySpec || {}, spec, 'jours');
-        const specCycleLen = (specCycleRaw > 0 ? (specCycleUnit === 'semaines' ? specCycleRaw * 7 : specCycleRaw) : 0) || etab.config.cycleLen || 42;
+        const configuredCycleLen = (specCycleRaw > 0 ? (specCycleUnit === 'semaines' ? specCycleRaw * 7 : specCycleRaw) : 0);
+        const detectedCycleLen = detectCycleLenFromSheet(ws, etab.config.cycleLen || 42);
+        const specCycleLen = configuredCycleLen || detectedCycleLen || etab.config.cycleLen || 42;
+        etab.config.cycleLenBySpec[spec] = specCycleLen;
+        etab.config.cycleUnitBySpec[spec] = 'jours';
         const roulByLigne = parseRoulSheet(ws, specCycleLen);
         const nb = Object.keys(roulByLigne).length;
         if (nb > 0) {
