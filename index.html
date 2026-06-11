@@ -16400,6 +16400,7 @@ function handleImportFile(file, dryRun) {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array' });
       let etab = getEtab();
+      let statusHtml = '';
       // Si pas d'établissement actif, utiliser le premier disponible
       if (!etab) {
         const etabIds = Object.keys(DB.etablissements);
@@ -17200,12 +17201,12 @@ function handleImportFile(file, dryRun) {
       const summary = buildImportSummary();
       const compatibility = buildCompatibilityStatus(summary, warnings);
       const blockers = buildImportBlockers(summary);
-      const nextSteps = buildImportNextSteps(summary, blockers, warnings);
+      const importNextSteps = buildImportNextSteps(summary, blockers, warnings);
       const preview = buildImportPreview();
       const importScore = buildImportScore(summary, blockers, warnings);
       const sectionScores = buildImportSections(summary, warnings);
       const fileSizeKb = Math.max(1, Math.round((file.size || 0) / 1024));
-      let statusHtml = `<div class="alert alert-success">✅ ${dryRun ? 'Test d\'import réussi' : 'Import réussi'} :<br>${imported.map(s=>'• '+s).join('<br>')}</div>`;
+      statusHtml = `<div class="alert alert-success">✅ ${dryRun ? 'Test d\'import réussi' : 'Import réussi'} :<br>${imported.map(s=>'• '+s).join('<br>')}</div>`;
       statusHtml += `<div class="alert alert-info">Fichier teste :<br>` +
         `• Nom: ${file.name || 'Excel'}<br>` +
         `• Taille: ${fileSizeKb} Ko<br>` +
@@ -17243,6 +17244,9 @@ function handleImportFile(file, dryRun) {
       // Résumé roulement
       if (blockers.length > 0) {
         statusHtml += `<div class="alert alert-error">ðŸš« Points bloquants :<br>${blockers.map(s=>'â€¢ '+s).join('<br>')}</div>`;
+      }
+      if (importNextSteps.length > 0) {
+        statusHtml += `<div class="alert alert-info">Prochaines actions :<br>${importNextSteps.map(s=>'• '+s).join('<br>')}</div>`;
       }
       const nbRoul = Object.keys(etab.roulement||{}).length;
       if (nbRoul > 0) {
