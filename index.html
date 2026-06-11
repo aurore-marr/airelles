@@ -16435,6 +16435,7 @@ function handleImportFile(file, dryRun) {
       }
       let imported = [];
       let warnings = [];
+      let importRoulementMode = 'Non detecte';
 
       // ── Onglet helper : trouve un sheet malgré casse, accents, emojis et séparateurs ──
       function normalizeSheetToken(value) {
@@ -16557,12 +16558,13 @@ function handleImportFile(file, dryRun) {
       function buildImportPreview() {
         const specs = [...new Set((etab.specialites || []).filter(Boolean))].slice(0, 6);
         const secteurs = (etab.secteurs || []).slice(0, 6).map(s => s.nom || s.id || '');
+        const groupes = [...new Set((etab.agents || []).filter(a => a.actif !== false).map(a => a.groupeRot).filter(Boolean))];
         const agentsPreview = (etab.agents || [])
           .filter(a => a.actif !== false)
           .slice(0, 5)
           .map(a => `${a.nom || ''} ${a.prenom || ''}`.trim() + (a.spec ? ` (${a.spec})` : ''))
           .filter(Boolean);
-        return { specs, secteurs, agentsPreview };
+        return { specs, secteurs, agentsPreview, groupes, roulementMode: importRoulementMode };
       }
       function buildImportScore(summary, blockers, warningsList) {
         let score = 100;
@@ -17048,6 +17050,7 @@ function handleImportFile(file, dryRun) {
         const validCodes = new Set(['M','S','J','NU','N','R','RC','CA','CF','MO','EM','AT','FO','GR','AM','CP','HSM','HSS','HSJ']);
         const roulByLigne = {};
         let currentGroupe = 1;
+        let lastLineNum = 0;
         // Utiliser la longueur fournie ou détecter automatiquement la max
         const maxCycle = specCycleLen || 365;
 
@@ -17090,6 +17093,13 @@ function handleImportFile(file, dryRun) {
             ligneCode = 'L' + c1R;
           }
           if (!ligneCode) return;
+          const lineNum = parseInt(ligneCode.replace(/^L/i, ''), 10) || 0;
+          const currentGroupLines = Object.keys(roulByLigne).filter(function(key) {
+            return key.startsWith('G' + currentGroupe + '_');
+          }).length;
+          if (lineNum === 1 && currentGroupLines >= 5 && roulByLigne['G' + currentGroupe + '_L1'] && lastLineNum >= 3) {
+            currentGroupe += 1;
+          }
 
           // ── Lire les shifts à partir de col2 ──
           const shifts = [];
@@ -17111,6 +17121,7 @@ function handleImportFile(file, dryRun) {
 
           const key = 'G' + currentGroupe + '_' + ligneCode;
           roulByLigne[key] = shifts;
+          lastLineNum = lineNum;
         });
 
         return roulByLigne;
@@ -17119,6 +17130,13 @@ function handleImportFile(file, dryRun) {
       function applyRoulements(roulByLigne, specs) {
         let matched = 0;
         const availableKeys = Object.keys(roulByLigne);
+        const lineKeyMap = {};
+        availableKeys.forEach(function(key) {
+          const parts = key.split('_');
+          const ligne = parts[1];
+          if (!lineKeyMap[ligne]) lineKeyMap[ligne] = [];
+          lineKeyMap[ligne].push(key);
+        });
         const wantedSpecs = specs && specs.length > 0
           ? specs.map(normalizeSpecKey)
           : null;
@@ -17132,7 +17150,10 @@ function handleImportFile(file, dryRun) {
           else ligneAgent = ligneAgent.toUpperCase();
 
           const key = 'G' + (agent.groupeRot || 1) + '_' + ligneAgent;
-          const shifts = roulByLigne[key];
+          let shifts = roulByLigne[key];
+          if (!shifts && lineKeyMap[ligneAgent] && lineKeyMap[ligneAgent].length === 1) {
+            shifts = roulByLigne[lineKeyMap[ligneAgent][0]];
+          }
           if (shifts) {
             etab.roulement[agent.id] = {};
             shifts.forEach((sh, i) => { etab.roulement[agent.id][i] = sh; });
@@ -17162,6 +17183,8 @@ function handleImportFile(file, dryRun) {
         .filter(Boolean);
       const specs_roul = [...new Set([...agentSpecsRoulement, ...sheetSpecsRoulement])];
       let hasSpecRoul = false;
+      const detectedRoulementGroups = new Set();
+      let detectedUniqueLineFallback = false;
 
       specs_roul.forEach(spec => {
         if (!specHasRoulement(spec, etab)) return;
@@ -17183,19 +17206,36 @@ function handleImportFile(file, dryRun) {
         etab.config.cycleLenBySpec[spec] = specCycleLen;
         etab.config.cycleUnitBySpec[spec] = 'jours';
         const roulByLigne = parseRoulSheet(ws, specCycleLen);
+        Object.keys(roulByLigne).forEach(function(key) {
+          const groupMatch = key.match(/^G(\d+)_/);
+          if (groupMatch) detectedRoulementGroups.add(groupMatch[1]);
+        });
         const nb = Object.keys(roulByLigne).length;
         if (nb > 0) {
           const matched = applyRoulements(roulByLigne, [spec]);
+          const activeSpecAgents = etab.agents.filter(function(agent) {
+            return agent.actif !== false && normalizeSpecKey(agent.spec) === normalizeSpecKey(spec);
+          }).length;
           totalRoulLignes += nb;
           totalMatched += matched;
           imported.push('Roulement ' + spec + ' (' + nb + ' lignes, ' + matched + ' agents)');
-          if (matched === 0) {
+          if (matched === 0 && activeSpecAgents > 0) {
             warnings.push('Onglet "' + getSheetName('Roulement ' + spec) + '" trouvé mais aucun agent ne correspond à la spécialité/groupe/ligne.');
           }
         }
       });
 
       // ── Ancien template : onglet unique "Roulement" (fallback) ──
+      const activeGroupCount = new Set((etab.agents || []).filter(function(agent) {
+        return agent.actif !== false && agent.groupeRot;
+      }).map(function(agent) {
+        return String(agent.groupeRot);
+      })).size;
+      if (detectedRoulementGroups.size > 1 || activeGroupCount > 1) {
+        importRoulementMode = 'Groupe + ligne';
+      } else if (detectedRoulementGroups.size === 1 || totalRoulLignes > 0) {
+        importRoulementMode = 'Lignes uniques / groupe unique';
+      }
       if (!hasSpecRoul) {
         const wsRoul = getSheet('Roulement') || getSheet('roulement');
         if (wsRoul) {
@@ -17205,6 +17245,7 @@ function handleImportFile(file, dryRun) {
             const matched = applyRoulements(roulByLigne, null);
             totalRoulLignes += nb;
             totalMatched += matched;
+            importRoulementMode = activeGroupCount > 1 ? 'Groupe + ligne' : 'Lignes uniques / groupe unique';
             imported.push('Roulement (' + nb + ' lignes, ' + matched + '/' + etab.agents.length + ' agents)');
           } else {
             warnings.push('Aucune ligne de roulement trouvée dans l\'onglet Roulement');
@@ -17297,6 +17338,8 @@ function handleImportFile(file, dryRun) {
       statusHtml += `<div class="alert alert-info">Apercu detecte :<br>` +
         `â€¢ Specialites: ${preview.specs.length ? preview.specs.join(', ') : 'aucune'}<br>` +
         `â€¢ Secteurs: ${preview.secteurs.length ? preview.secteurs.join(', ') : 'aucun'}<br>` +
+        `â€¢ Mode roulement: ${preview.roulementMode || 'non detecte'}<br>` +
+        `â€¢ Groupes actifs: ${preview.groupes && preview.groupes.length ? preview.groupes.join(', ') : 'aucun'}<br>` +
         `â€¢ Premiers agents: ${preview.agentsPreview.length ? preview.agentsPreview.join(' | ') : 'aucun'}</div>`;
       statusHtml += `<div class="alert alert-info">Diagnostic par rubrique :<br>` +
         sectionScores.map(s => `â€¢ ${s.label}: ${s.score}/100 â€” ${s.hint}`).join('<br>') + `</div>`;
