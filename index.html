@@ -2725,6 +2725,13 @@ body[data-qr-mode="1"] #qr-view {
         </div>
       </div>
       <div class="stats-row" id="dash-stats"></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">Priorites cadre</span>
+          <button class="btn btn-secondary btn-sm" onclick="showPage('planning')">Traiter le planning</button>
+        </div>
+        <div id="dash-cadre-focus"></div>
+      </div>
       <!-- Vue du jour pleine largeur -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
@@ -3306,20 +3313,21 @@ body[data-qr-mode="1"] #qr-view {
                 <input type="number" id="cfg-repos-nuit" value="30" step="0.5">
               </div>
             </div>
-            <div class="input-row">
-              <div class="form-group">
-                <label>Seuil CF frac. 1 (jours)</label>
-                <input type="number" id="cfg-cf-frac1" value="5" min="1">
+              <div class="input-row">
+                <div class="form-group">
+                  <label>Seuil CF frac. 1 (jours)</label>
+                  <input type="number" id="cfg-cf-frac1" value="5" min="1">
+                </div>
+                <div class="form-group">
+                  <label>Seuil CF frac. 2 (jours)</label>
+                  <input type="number" id="cfg-cf-frac2" value="8" min="1">
+                </div>
               </div>
-              <div class="form-group">
-                <label>Seuil CF frac. 2 (jours)</label>
-                <input type="number" id="cfg-cf-frac2" value="8" min="1">
+              <div id="cfg-conges-thresholds"></div>
+              <div class="flex items-center gap-2 mt-2">
+                <label class="text-sm" style="flex:1">Arrondi demi-jour supérieur (CA)</label>
+                <div class="toggle on" id="tog-arrondi" onclick="toggleEl(this)"></div>
               </div>
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-              <label class="text-sm" style="flex:1">Arrondi demi-jour supérieur (CA)</label>
-              <div class="toggle on" id="tog-arrondi" onclick="toggleEl(this)"></div>
-            </div>
             <div class="flex items-center gap-2 mt-2">
               <label class="text-sm" style="flex:1">Codes CA/CF comptent comme présence</label>
               <div class="toggle on" id="tog-ca-cf" onclick="toggleEl(this)"></div>
@@ -6219,7 +6227,7 @@ function exportComptage() {
     ['Poste','Nom','Prenom','Spec.','Statut','Taux','Secteur','H. theor.','H. travaillees','H. effectives','HS mois','HS repos','H. sujetion','DA','Retards','Variables paie','Solde','CA droit','CA mois','CA annuel','CA restants','CF droit','CF mois','CF annuel','CF restants','RC mois','RC annuel','MO mois','EM mois','GR mois','Dim/Fer mois','Dim/Fer annuel']
   ];
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const rh = buildRhCounter(agent, etab, currentYear, currentMonth);
     const cpt = rh.cpt;
     rows.push([
@@ -6269,6 +6277,8 @@ function exportComptage() {
 function exportRH() {
   const etab = getEtab();
   if (!etab) return;
+  const specFilter = document.getElementById('filter-spec-comptage')?.value || '';
+  const agentsFiltres = getComptageFilteredAgents(etab, specFilter);
 
   const wb = XLSX.utils.book_new();
   const monthNames = ['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
@@ -6296,7 +6306,7 @@ function exportRH() {
     ['Poste','Nom','Prenom','Spec.','Statut','Taux','Secteur','Base mensuelle h','H. effectives','HS a payer','HS repos travaille','Sujetion','DA a deduire','Retards a deduire','Regularisation nette h','Total indicatif payable h','CA mois','CF mois','RC mois','MO mois','EM mois','Observation']
   ];
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const rh = buildRhCounter(agent, etab, currentYear, currentMonth);
     const cpt = rh.cpt;
     compteurRows.push([
@@ -6328,7 +6338,7 @@ function exportRH() {
   });
 
   const planningRows = [['Poste','Nom','Prenom','Spec.','Secteur'].concat(Array.from({ length: daysInMonth }, (_, i) => i + 1))];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const rh = buildRhCounter(agent, etab, currentYear, currentMonth);
     const agPlan = planMonth[agent.id] || {};
     const row = [agent.id, agent.nom, agent.prenom || '', agent.spec || '', rh.secteurNom || ''];
@@ -6346,7 +6356,7 @@ function exportRH() {
   });
 
   const absRows = [['Poste','Nom','Prenom','Spec.'].concat(allAbsCodes).concat(['Total absences'])];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const agPlan = planMonth[agent.id] || {};
     const counts = {};
     allAbsCodes.forEach(code => { counts[code] = 0; });
@@ -6899,6 +6909,38 @@ function renderNotificationsRH() {
   const colors = { M:'#4f8ef7', S:'#f7a94f', J:'#38d9a9', NU:'#a07ee8' };
 
   el.innerHTML = notifs.map((n, i) => {
+    if (n.type === 'cadre_reminder') {
+      const dtR = new Date(n.createdAt);
+      const dateLabelR = dtR.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' à ' +
+        dtR.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      const bgReminder = n.lu ? 'var(--bg3)' : 'var(--card)';
+      const borderReminder = n.lu ? 'var(--border)' : '#6366f1';
+      const goBtn = n.actionPage
+        ? `<button onclick="showPage('${n.actionPage}')"
+            style="font-size:11px;padding:5px 10px;background:#6366f122;border:1px solid #6366f155;border-radius:6px;cursor:pointer;color:#6366f1;font-weight:700">
+            Ouvrir
+          </button>`
+        : '';
+      return `<div style="background:${bgReminder};border:1.5px solid ${borderReminder};border-radius:12px;padding:16px;margin-bottom:10px;${n.lu ? 'opacity:0.6' : ''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              ${!n.lu ? '<span style="width:8px;height:8px;border-radius:50%;background:#6366f1;display:inline-block;flex-shrink:0"></span>' : ''}
+              <span style="font-size:13px;font-weight:700;color:var(--text)">Mémo cadre</span>
+              <span style="font-size:10px;background:#6366f122;color:#6366f1;border:1px solid #6366f144;padding:1px 6px;border-radius:8px;font-weight:700">Rappel</span>
+            </div>
+            <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">${esc(n.title || 'Rappel')}</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${esc(n.message || '')}</div>
+            <div style="font-size:11px;color:var(--text3)">${dateLabelR}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            ${!n.lu ? `<button onclick="marquerNotifLue(${notifs.length - 1 - i})" 
+              style="font-size:11px;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text2)">✓ Lu</button>` : ''}
+            ${goBtn}
+          </div>
+        </div>
+      </div>`;
+    }
     const col = colors[n.shiftCode] || '#888';
     const dt = new Date(n.createdAt);
     const dateStr = dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' à ' +
@@ -7743,6 +7785,7 @@ function renderDashboard() {
   if (pendingConges.length > 0) {
     alerts.push({ type: 'warning', msg: `🌴 ${pendingConges.length} demande(s) de congé en attente — <a href="#" onclick="openCongesValidation();return false;" style="color:var(--accent4);text-decoration:underline">Voir</a>` });
   }
+  renderDashboardCadreFocus(etab, pendingConges, hasTravailToday ? shortages : [], _totalAbs, presentToday, todayDate);
 
   const alertsEl = document.getElementById('dash-alerts');
   if (alerts.length === 0) {
@@ -10065,6 +10108,278 @@ function resetCongesFilters() {
   else _renderCongesModal();
 }
 
+function buildCongesChargeSummary(demandes, etab) {
+  if (!Array.isArray(demandes) || demandes.length === 0) return '';
+  const dailyCounts = {};
+  const weekCounts = {};
+  const years = new Set();
+  const activeDemandes = demandes.filter(function(d) {
+    return d && d.debut && d.fin && d.statut !== 'refuse';
+  });
+  activeDemandes.forEach(function(d) {
+    const start = new Date(d.debut + 'T00:00:00');
+    const end = new Date(d.fin + 'T00:00:00');
+    if (isNaN(start) || isNaN(end) || start > end) return;
+    years.add(start.getFullYear());
+    years.add(end.getFullYear());
+    const touchedWeeks = new Set();
+    for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+      const key = dateStr(dt);
+      dailyCounts[key] = (dailyCounts[key] || 0) + 1;
+      const monday = new Date(dt);
+      monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+      const weekKey = dateStr(monday);
+      if (!touchedWeeks.has(weekKey)) {
+        weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+        touchedWeeks.add(weekKey);
+      }
+    }
+  });
+  const topDays = Object.entries(dailyCounts)
+    .sort(function(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); })
+    .slice(0, 6);
+  const topWeeks = Object.entries(weekCounts)
+    .sort(function(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); })
+    .slice(0, 5);
+
+  const periods = [];
+  Array.from(years).sort().forEach(function(year) {
+    periods.push({
+      label: 'Été ' + year,
+      start: year + '-07-01',
+      end: year + '-08-31'
+    });
+    periods.push({
+      label: 'Noël ' + year,
+      start: year + '-12-20',
+      end: year + '-12-31'
+    });
+    periods.push({
+      label: 'Nouvel An ' + (year + 1),
+      start: (year + 1) + '-01-01',
+      end: (year + 1) + '-01-05'
+    });
+  });
+
+  const periodRows = periods.map(function(period) {
+    const start = new Date(period.start + 'T00:00:00');
+    const end = new Date(period.end + 'T00:00:00');
+    let overlap = 0;
+    activeDemandes.forEach(function(d) {
+      const ds = new Date(d.debut + 'T00:00:00');
+      const de = new Date(d.fin + 'T00:00:00');
+      if (ds <= end && de >= start) overlap++;
+    });
+    return { label: period.label, overlap: overlap, start: period.start, end: period.end };
+  }).filter(function(p) { return p.overlap > 0; })
+    .sort(function(a, b) { return b.overlap - a.overlap || a.start.localeCompare(b.start); })
+    .slice(0, 6);
+
+  const fmtDay = function(key) {
+    const dt = new Date(key + 'T00:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
+  const fmtWeek = function(key) {
+    const dt = new Date(key + 'T00:00:00');
+    const end = new Date(dt);
+    end.setDate(end.getDate() + 6);
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' → ' +
+      end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Jours les plus demandés</div>
+        ${topDays.length ? topDays.map(function(entry) {
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <span style="font-size:13px;color:var(--text)">${fmtDay(entry[0])}</span>
+            <strong style="font-size:13px;color:var(--accent4)">${entry[1]} demande${entry[1] > 1 ? 's' : ''}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Pas encore de pic détecté.</div>'}
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Semaines les plus chargées</div>
+        ${topWeeks.length ? topWeeks.map(function(entry) {
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <span style="font-size:13px;color:var(--text)">${fmtWeek(entry[0])}</span>
+            <strong style="font-size:13px;color:#f59e0b">${entry[1]} demande${entry[1] > 1 ? 's' : ''}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Aucune semaine sensible détectée.</div>'}
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Périodes sensibles</div>
+        ${periodRows.length ? periodRows.map(function(period) {
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <span style="font-size:13px;color:var(--text)">${esc(period.label)}</span>
+            <strong style="font-size:13px;color:${period.overlap >= 6 ? '#ef4444' : period.overlap >= 3 ? '#f59e0b' : '#38d9a9'}">${period.overlap}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Été, Noël et Nouvel An sont encore calmes.</div>'}
+      </div>
+    </div>`;
+}
+
+function buildCongesChargeSummary(demandes, etab) {
+  if (!Array.isArray(demandes) || demandes.length === 0) return '';
+  const dailyCounts = {};
+  const dailyStatusCounts = {};
+  const weekCounts = {};
+  const years = new Set();
+  const validDemandes = demandes.filter(function(d) {
+    return d && d.debut && d.fin;
+  });
+  const activeDemandes = validDemandes.filter(function(d) { return d.statut !== 'refuse'; });
+  validDemandes.forEach(function(d) {
+    const start = new Date(d.debut + 'T00:00:00');
+    const end = new Date(d.fin + 'T00:00:00');
+    if (isNaN(start) || isNaN(end) || start > end) return;
+    years.add(start.getFullYear());
+    years.add(end.getFullYear());
+    const touchedWeeks = new Set();
+    for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+      const key = dateStr(dt);
+      if (d.statut !== 'refuse') dailyCounts[key] = (dailyCounts[key] || 0) + 1;
+      if (!dailyStatusCounts[key]) dailyStatusCounts[key] = { en_attente: 0, accepte: 0, refuse: 0 };
+      if (dailyStatusCounts[key][d.statut] !== undefined) dailyStatusCounts[key][d.statut]++;
+      const monday = new Date(dt);
+      monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+      const weekKey = dateStr(monday);
+      if (!touchedWeeks.has(weekKey) && d.statut !== 'refuse') {
+        weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+        touchedWeeks.add(weekKey);
+      }
+    }
+  });
+
+  const topDays = Object.entries(dailyCounts)
+    .sort(function(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); })
+    .slice(0, 6);
+  const topWeeks = Object.entries(weekCounts)
+    .sort(function(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); })
+    .slice(0, 5);
+
+  const periods = [];
+  Array.from(years).sort().forEach(function(year) {
+    periods.push({ label: 'Été ' + year, start: year + '-07-01', end: year + '-08-31' });
+    periods.push({ label: 'Noël ' + year, start: year + '-12-20', end: year + '-12-31' });
+    periods.push({ label: 'Nouvel An ' + (year + 1), start: (year + 1) + '-01-01', end: (year + 1) + '-01-05' });
+  });
+
+  const periodRows = periods.map(function(period) {
+    const start = new Date(period.start + 'T00:00:00');
+    const end = new Date(period.end + 'T00:00:00');
+    let overlap = 0, pending = 0, accepted = 0, refused = 0;
+    const bySpec = {};
+    validDemandes.forEach(function(d) {
+      const ds = new Date(d.debut + 'T00:00:00');
+      const de = new Date(d.fin + 'T00:00:00');
+      if (ds <= end && de >= start) {
+        if (d.statut !== 'refuse') overlap++;
+        if (d.statut === 'en_attente') pending++;
+        else if (d.statut === 'accepte') accepted++;
+        else if (d.statut === 'refuse') refused++;
+        const ag = etab && etab.agents ? etab.agents.find(function(a) { return a.id === d.agentId; }) : null;
+        const spec = ag && ag.spec ? ag.spec : 'Autre';
+        bySpec[spec] = (bySpec[spec] || 0) + (d.statut !== 'refuse' ? 1 : 0);
+      }
+    });
+    const topSpecs = Object.entries(bySpec)
+      .sort(function(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); })
+      .slice(0, 3);
+    return { label: period.label, overlap: overlap, pending: pending, accepted: accepted, refused: refused, topSpecs: topSpecs, start: period.start };
+  }).filter(function(p) { return p.overlap > 0; })
+    .sort(function(a, b) { return b.overlap - a.overlap || a.start.localeCompare(b.start); })
+    .slice(0, 6);
+
+  const fmtDay = function(key) {
+    const dt = new Date(key + 'T00:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
+  const fmtWeek = function(key) {
+    const dt = new Date(key + 'T00:00:00');
+    const end = new Date(dt);
+    end.setDate(end.getDate() + 6);
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' → ' +
+      end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
+  const topSpecWarnings = periodRows.flatMap(function(period) {
+    return (period.topSpecs || []).filter(function(entry) {
+      return entry[1] >= getCongeThresholdForSpec(etab, entry[0]);
+    }).map(function(entry) {
+      return { period: period.label, spec: entry[0], count: entry[1], threshold: getCongeThresholdForSpec(etab, entry[0]) };
+    });
+  }).slice(0, 4);
+  const heatDays = Object.entries(dailyCounts)
+    .sort(function(a, b) { return a[0].localeCompare(b[0]); })
+    .slice(0, 42);
+  const maxHeat = heatDays.reduce(function(max, entry) { return Math.max(max, entry[1]); }, 0) || 1;
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Jours les plus demandés</div>
+        ${topDays.length ? topDays.map(function(entry) {
+          const status = dailyStatusCounts[entry[0]] || {};
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <div>
+              <div style="font-size:13px;color:var(--text)">${fmtDay(entry[0])}</div>
+              <div style="font-size:10px;color:var(--text3)">⏳ ${status.en_attente || 0} · ✓ ${status.accepte || 0} · ✕ ${status.refuse || 0}</div>
+            </div>
+            <strong style="font-size:13px;color:var(--accent4)">${entry[1]} demande${entry[1] > 1 ? 's' : ''}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Pas encore de pic détecté.</div>'}
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Semaines les plus chargées</div>
+        ${topWeeks.length ? topWeeks.map(function(entry) {
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <span style="font-size:13px;color:var(--text)">${fmtWeek(entry[0])}</span>
+            <strong style="font-size:13px;color:#f59e0b">${entry[1]} demande${entry[1] > 1 ? 's' : ''}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Aucune semaine sensible détectée.</div>'}
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Périodes sensibles</div>
+        ${periodRows.length ? periodRows.map(function(period) {
+          const specInfo = (period.topSpecs || []).map(function(entry) { return entry[0] + ' ' + entry[1]; }).join(' · ');
+          return `<div style="padding:7px 0;border-bottom:1px solid var(--border)22">
+            <div style="display:flex;justify-content:space-between;gap:10px">
+              <span style="font-size:13px;color:var(--text)">${esc(period.label)}</span>
+              <strong style="font-size:13px;color:${period.overlap >= 6 ? '#ef4444' : period.overlap >= 3 ? '#f59e0b' : '#38d9a9'}">${period.overlap}</strong>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">⏳ ${period.pending} · ✓ ${period.accepted} · ✕ ${period.refused}</div>
+            ${specInfo ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">${esc(specInfo)}</div>` : ''}
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Été, Noël et Nouvel An sont encore calmes.</div>'}
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3))">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em;margin-bottom:8px">Alerte par spécialité ${uiHint("Chaque métier a maintenant son propre seuil. Dès qu'une période atteint ce seuil, elle remonte ici pour attirer l'œil du cadre.")}</div>
+        ${topSpecWarnings.length ? topSpecWarnings.map(function(item) {
+          return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)22">
+            <div>
+              <div style="font-size:13px;color:var(--text)">${esc(item.period)}</div>
+              <div style="font-size:10px;color:var(--text3)">${esc(item.spec)} · seuil ${item.threshold}</div>
+            </div>
+            <strong style="font-size:13px;color:${item.count >= item.threshold + 1 ? '#ef4444' : '#f59e0b'}">${item.count}</strong>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--text2)">Aucune spécialité n\'atteint un niveau de tension notable.</div>'}
+      </div>
+    </div>
+    <div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,var(--bg2),var(--bg3));margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:800;letter-spacing:.08em">Mini charge congés</div>
+        <div style="font-size:11px;color:var(--text2)">Plus la case est forte, plus la période est demandée</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(28px,1fr));gap:6px">
+        ${heatDays.map(function(entry) {
+          const level = entry[1] / maxHeat;
+          const bg = level > 0.8 ? 'rgba(239,68,68,.90)' : level > 0.55 ? 'rgba(245,158,11,.85)' : level > 0.25 ? 'rgba(59,130,246,.80)' : 'rgba(148,163,184,.35)';
+          return `<div title="${fmtDay(entry[0])} · ${entry[1]} demande(s)" style="height:34px;border-radius:10px;background:${bg};display:flex;align-items:flex-end;justify-content:center;padding:4px;color:#fff;font-size:10px;font-weight:800">${entry[1]}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
 
 let _congesActiveTab = 'liste';
 
@@ -10122,14 +10437,15 @@ function renderCongesCalendrier() {
 
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:14px 16px;border-radius:16px;background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid var(--border)">
     <div>
-      <div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:4px">Vue calendrier des congés</div>
-      <div style="font-size:13px;color:var(--text2)">Lecture par mois pour repérer vite les périodes chargées et les décisions en attente.</div>
+      <div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:4px">Vue calendrier des congés ${uiHint("Cette vue aide le cadre à repérer les chevauchements, les demandes en attente et les périodes qui deviennent tendues selon le métier.")}</div>
+      <div style="font-size:13px;color:var(--text2)">Lecture par mois pour repérer vite les périodes chargées, les seuils métier et les décisions en attente.</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--text2)">${demandes.length} demande${demandes.length>1?'s':''}</span>
       ${(_congesSpecFilter || _congesSearch) ? `<button onclick="resetCongesFilters()" style="border:none;background:#eef2ff;color:#3b82f6;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800;cursor:pointer">Afficher tout</button>` : ''}
     </div>
   </div>`;
+  html += buildCongesChargeSummary(demandes, etab);
   monthKeys.forEach(key => {
     const items = byMonth[key];
     const pending = items.filter(d => d.statut === 'en_attente').length;
@@ -10150,6 +10466,7 @@ function renderCongesCalendrier() {
         <span style="font-size:11px;color:var(--text2)">${items.length} demande${items.length>1?'s':''}</span>
         ${pending > 0 ? `<span style="font-size:10px;font-weight:700;background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:6px">${pending} en attente</span>` : ''}
       </div>
+      ${buildMiniCongesMonthCalendar(key, items, etab)}
       <table style="width:100%;border-collapse:collapse;font-size:12px;background:var(--bg2);border-radius:14px;overflow:hidden">
         <thead>
           <tr style="background:var(--bg3)">
@@ -10182,6 +10499,14 @@ function renderCongesCalendrier() {
       const ag = etab.agents.find(a => a.id === d.agentId);
       const spec = ag ? ag.spec : '?';
       const specColor = { AS:'#4f8ef7', IDE:'#38d9a9', AUX:'#a78bfa', ASH:'#fb923c', AMP:'#f472b6' }[spec] || '#6b7fa8';
+      const ctx = summarizeCongeDemandContext(etab, d);
+      const riskLabel = ctx.risk === 'impact'
+        ? `<span style="background:#ef444422;color:#ef4444;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800">impact planning</span>`
+        : ctx.risk === 'threshold'
+          ? `<span style="background:#f59e0b22;color:#f59e0b;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800">seuil ${ctx.spec || spec} atteint</span>`
+          : ctx.risk === 'watch'
+            ? `<span style="background:#3b82f622;color:#2563eb;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800">à surveiller</span>`
+            : '';
 
       html += `<tr style="border-bottom:1px solid var(--border)22;background:${d.statut==='en_attente'?'rgba(245,158,11,0.04)':'transparent'}">
         <td style="padding:6px 8px;border:1px solid var(--border);font-weight:700;color:var(--text)">${esc(d.agentNom)}</td>
@@ -10189,7 +10514,12 @@ function renderCongesCalendrier() {
         <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${fmtDate(d.debut)} → ${fmtDate(d.fin)}</td>
         <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-size:11px;font-weight:700;color:var(--accent4)">${d.type||'CA'}</td>
         <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-weight:800;color:var(--accent)">${nbJours}j</td>
-        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center"><span style="background:${col}22;color:${col};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">${icon} ${d.statut==='en_attente'?'Attente':d.statut==='accepte'?'Accepté':'Refusé'}</span></td>
+        <td style="padding:6px 8px;border:1px solid var(--border);text-align:center">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span style="background:${col}22;color:${col};padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">${icon} ${d.statut==='en_attente'?'Attente':d.statut==='accepte'?'Accepté':'Refusé'}</span>
+            ${riskLabel}
+          </div>
+        </td>
         <td style="padding:6px 8px;border:1px solid var(--border);text-align:center;font-size:10px;color:var(--text2)">${demandeLe}</td>
         <td style="padding:6px 8px;border:1px solid var(--border);text-align:center">
           ${d.statut === 'en_attente' ? `
@@ -10318,21 +10648,40 @@ function _renderCongesModal() {
       const origIdx = etab.demandesConges.findIndex(x => x.id === d.id);
       const col = statutColors[d.statut] || '#6b7fa8';
       const nbJours = Math.ceil((new Date(d.fin) - new Date(d.debut)) / 86400000) + 1;
+      const ctx = summarizeCongeDemandContext(etab, d);
+      const riskTone = ctx.risk === 'impact' ? '#ef4444' : ctx.risk === 'threshold' ? '#f59e0b' : ctx.risk === 'watch' ? '#3b82f6' : '#94a3b8';
+      const riskBg = ctx.risk === 'impact' ? '#ef444422' : ctx.risk === 'threshold' ? '#f59e0b22' : ctx.risk === 'watch' ? '#3b82f622' : '#f8fafc';
+      const riskText = ctx.risk === 'impact'
+        ? 'Risque de manque si validation'
+        : ctx.risk === 'threshold'
+          ? `Seuil ${ctx.spec} atteint (${ctx.sameSpec}/${ctx.threshold})`
+          : ctx.risk === 'watch'
+            ? `Période sensible ${ctx.spec} (${ctx.sameSpec}/${ctx.threshold})`
+            : 'Période fluide';
       return `<div style="padding:14px 16px;border-radius:16px;background:linear-gradient(180deg,var(--bg3),var(--bg2));margin-bottom:10px;border:1px solid var(--border);box-shadow:0 14px 30px rgba(15,23,42,.05)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-          <div>
-            <div style="font-size:15px;font-weight:800;color:var(--text)">${esc(d.agentNom)}</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:2px">
-              <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${d.joursTravailles !== undefined ? d.joursTravailles + 'j travaillés' : nbJours + 'j'}</strong>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <div>
+              <div style="font-size:15px;font-weight:800;color:var(--text)">${esc(d.agentNom)}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">
+                <strong>${d.type}</strong> · ${d.debut} → ${d.fin} · <strong>${d.joursTravailles !== undefined ? d.joursTravailles + 'j travaillés' : nbJours + 'j'}</strong>
+              </div>
+              ${d.motif ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic">"${d.motif}"</div>` : ''}
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">${new Date(d.createdAt).toLocaleString('fr-FR')}</div>
             </div>
-            ${d.motif ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic">"${d.motif}"</div>` : ''}
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">${new Date(d.createdAt).toLocaleString('fr-FR')}</div>
+            <span style="font-size:10px;font-weight:700;color:${col};padding:4px 10px;border-radius:10px;background:${col}20;flex-shrink:0">${statutLabels[d.statut]||d.statut}</span>
           </div>
-          <span style="font-size:10px;font-weight:700;color:${col};padding:4px 10px;border-radius:10px;background:${col}20;flex-shrink:0">${statutLabels[d.statut]||d.statut}</span>
-        </div>
-        ${d.statut === 'en_attente' ? `
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-sm" onclick="repondreConge(${origIdx},'accepte')"
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px">
+            <span style="background:${riskBg};color:${riskTone};padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800">${riskText}</span>
+            <span style="background:#eef2ff;color:#475569;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800">${ctx.overlap} autre(s) demande(s) sur la période</span>
+            ${ctx.sameSpec > 0 ? `<span style="background:#f8fafc;color:#64748b;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800">${ctx.sameSpec} en ${ctx.spec || spec}</span>` : ''}
+          </div>
+          ${ctx.impact.warnings && ctx.impact.warnings.length ? `<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:#fff5f5;border:1px solid rgba(239,68,68,.18);font-size:11px;color:#b91c1c">
+            <div style="font-weight:900;margin-bottom:4px">Si validé, le planning peut manquer sur :</div>
+            ${ctx.impact.warnings.slice(0,2).map(function(w) { return `<div>• ${esc(w.date)} · ${esc((w.entries[0] && formatShortageSentence(w.entries[0].secteurNom, w.entries[0].entry, w.entries[0].mode)) || '')}</div>`; }).join('')}
+          </div>` : ''}
+          ${d.statut === 'en_attente' ? `
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-sm" onclick="repondreConge(${origIdx},'accepte')"
             style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;flex:1;border-radius:12px;font-weight:800">✓ Accepter</button>
           <button class="btn btn-sm" onclick="repondreConge(${origIdx},'refuse')"
             style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;flex:1;border-radius:12px;font-weight:800">✗ Refuser</button>
@@ -10358,6 +10707,20 @@ function repondreConge(index, statut) {
   const etab = getEtab();
   if (!etab || !etab.demandesConges[index]) return;
   const d = etab.demandesConges[index];
+
+  if (statut === 'accepte') {
+    const impact = previewCongeImpactOnPlanning(etab, d);
+    if (impact.warnings.length) {
+      const lines = impact.warnings.map(function(w) {
+        return '- ' + w.date + ' : ' + w.entries.map(function(item) {
+          return formatShortageSentence(item.secteurNom, item.entry, item.mode);
+        }).join(' | ');
+      }).join('\n');
+      const msg = `Cette validation retire ${impact.impactedDays} jour(s) travaillé(s) et peut créer ou aggraver des manques :\n\n${lines}\n\nVoulez-vous valider quand même ?`;
+      if (!window.confirm(msg)) return;
+    }
+  }
+
   d.statut = statut;
   d.reponduPar = DB.currentUser ? DB.currentUser.nom : 'Cadre';
   d.reponduAt = new Date().toISOString();
@@ -10409,6 +10772,8 @@ function repondreConge(index, statut) {
 function exportRH() {
   const etab = getEtab();
   if (!etab) return;
+  const specFilter = document.getElementById('filter-spec-comptage')?.value || '';
+  const agentsFiltres = getComptageFilteredAgents(etab, specFilter);
 
   const wb = XLSX.utils.book_new();
   const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -10443,7 +10808,7 @@ function exportRH() {
   const feries = getJoursFeries(currentYear);
   const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const cpt = calcComptageAgent(agent, planMonth, etab, currentYear, currentMonth);
     const droits = calcDroitsConges(agent, planMonth, etab, currentYear, currentMonth);
 
@@ -10493,6 +10858,9 @@ function exportRH() {
   const ws1 = XLSX.utils.aoa_to_sheet(rows);
   const colWidths = [8,18,14,6,10,6,12,8,8,8,8,8, ...allAbsCodes.filter(c=>!['CA','CF'].includes(c)).map(()=>6), 8,8,8,8,8];
   ws1['!cols'] = colWidths.map(w => ({ wch: w }));
+  enhanceExportSheet(ws1, 5);
+  enhanceExportSheet(ws1, 5);
+  enhanceExportSheet(ws1, 5);
   XLSX.utils.book_append_sheet(wb, ws1, 'Synthèse ' + monthLabel);
 
   // ── Feuille 2 : Planning détaillé ──
@@ -10502,7 +10870,7 @@ function exportRH() {
     header2.push(['Lu','Ma','Me','Je','Ve','Sa','Di'][(dt.getDay()+6)%7] + d);
   }
   const planRows = [header2];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const agPlan = planMonth[agent.id] || {};
     const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
     const sect = etab.secteurs ? etab.secteurs.find(s => s.id === sectId) : null;
@@ -10512,6 +10880,9 @@ function exportRH() {
   });
   const ws2 = XLSX.utils.aoa_to_sheet(planRows);
   ws2['!cols'] = [8,18,14,6,12].concat(Array(daysInMonth).fill({wch:4}));
+  enhanceExportSheet(ws2, 0);
+  enhanceExportSheet(ws2, 0);
+  enhanceExportSheet(ws2, 0);
   XLSX.utils.book_append_sheet(wb, ws2, 'Planning détaillé');
 
   // ── Feuille 3 : Demandes de congés (toutes, avec spécialité) ──
@@ -10539,6 +10910,9 @@ function exportRH() {
   });
   const ws3 = XLSX.utils.aoa_to_sheet(congRows);
   ws3['!cols'] = [8,18,8,8,10,10,8,20,10,14,10].map(w=>({wch:w}));
+  enhanceExportSheet(ws3, 0);
+  enhanceExportSheet(ws3, 0);
+  enhanceExportSheet(ws3, 0);
   XLSX.utils.book_append_sheet(wb, ws3, 'Demandes congés');
 
   // ── Feuille 4 : Récap absences — UNE LIGNE PAR AGENT avec tous ses codes en colonnes ──
@@ -10558,7 +10932,7 @@ function exportRH() {
     sheet4Header
   ];
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const agPlan = planMonth[agent.id] || {};
     const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
     const sect = etab.secteurs ? etab.secteurs.find(s => s.id === sectId) : null;
@@ -10610,6 +10984,9 @@ function exportRH() {
   const ws4 = XLSX.utils.aoa_to_sheet(recapRows);
   const ws4Cols = [8, 18, 14, 8, 14, ...absCodesForSheet4.map(() => 8), 12];
   ws4['!cols'] = ws4Cols.map(w => ({ wch: w }));
+  enhanceExportSheet(ws4, 3);
+  enhanceExportSheet(ws4, 3);
+  enhanceExportSheet(ws4, 3);
   XLSX.utils.book_append_sheet(wb, ws4, 'Récap absences');
 
   const prepaieRows = buildPrepaieRows(etab, currentYear, currentMonth);
@@ -14932,6 +15309,7 @@ function renderConfigGeneral() {
   document.getElementById('cfg-cycle-len').value = etab.config.cycleLen || 42;
   document.getElementById('cfg-ref-date').value = etab.config.refDate || '2020-11-23';
   renderCycleBySpec();
+  renderCongesThresholdConfig();
   // Champs localStorage (URL app + VAPID)
   var appUrlEl = document.getElementById('cfg-app-url');
   if (appUrlEl) appUrlEl.value = localStorage.getItem('horizon_app_url') || '';
@@ -14969,6 +15347,12 @@ function saveConfigRegles() {
   etab.config.reposDimFeriesNuitH = parseFloat(document.getElementById('cfg-repos-nuit').value) || 30;
   etab.config.cfFrac1Seuil   = parseInt(document.getElementById('cfg-cf-frac1').value)    || 5;
   etab.config.cfFrac2Seuil   = parseInt(document.getElementById('cfg-cf-frac2').value)    || 8;
+  etab.config.congesThresholdBySpec = {};
+  document.querySelectorAll('.cfg-conges-threshold').forEach(function(inp) {
+    const spec = inp.dataset.spec || '';
+    const value = parseInt(inp.value, 10);
+    if (spec) etab.config.congesThresholdBySpec[spec] = Number.isFinite(value) && value > 0 ? value : 2;
+  });
   etab.config.arrondiDemiJour = document.getElementById('tog-arrondi').classList.contains('on');
   etab.config.caCfPoste       = document.getElementById('tog-ca-cf').classList.contains('on');
   etab.config.hsAutorise      = document.getElementById('tog-hs').classList.contains('on');
@@ -15009,6 +15393,207 @@ function getAvailableSpecs(etab) {
   if (!specs.length) specs = fallback;
   etab.specialites = specs.slice();
   return specs;
+}
+
+function uiHint(text) {
+  return `<span title="${esc(text || '')}" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#eef4ff;color:#3b82f6;border:1px solid rgba(59,130,246,.20);font-size:11px;font-weight:900;cursor:help;vertical-align:middle;margin-left:6px">i</span>`;
+}
+
+function getCongeThresholds(etab) {
+  if (!etab) return {};
+  if (!etab.config) etab.config = {};
+  if (!etab.config.congesThresholdBySpec || typeof etab.config.congesThresholdBySpec !== 'object') {
+    etab.config.congesThresholdBySpec = {};
+  }
+  return etab.config.congesThresholdBySpec;
+}
+
+function getCongeThresholdForSpec(etab, spec) {
+  const thresholds = getCongeThresholds(etab);
+  const raw = parseInt(thresholds[spec], 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 2;
+}
+
+function renderCongesThresholdConfig() {
+  const etab = getEtab();
+  const host = document.getElementById('cfg-conges-thresholds');
+  if (!etab || !host) return;
+  const specs = getAvailableSpecs(etab);
+  const thresholds = getCongeThresholds(etab);
+  host.innerHTML = `
+    <div style="margin-top:14px;padding:16px;border-radius:14px;background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:.06em">Seuils congés par spécialité</div>
+        ${uiHint("Ce seuil sert à repérer les périodes sensibles. Exemple: mettre 2 en IDE signifie qu'à partir de 2 demandes sur la même journée, la période remonte comme point de vigilance.")}
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Réglage simple pour dire combien d'absences simultanées commencent à devenir sensibles, métier par métier.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+        ${specs.map(function(spec) {
+          const val = parseInt(thresholds[spec], 10);
+          return `<label style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--border)">
+            <span style="font-size:12px;font-weight:800;color:var(--text)">${esc(spec)}</span>
+            <input type="number" class="cfg-conges-threshold" data-spec="${esc(spec)}" min="1" max="20" value="${Number.isFinite(val) && val > 0 ? val : 2}" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 10px;color:var(--text);font-family:inherit;outline:none">
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function buildMiniCongesMonthCalendar(monthKey, items, etab) {
+  if (!monthKey || monthKey === '?') return '';
+  const parts = monthKey.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return '';
+  const first = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = (first.getDay() + 6) % 7;
+  const dayMap = {};
+  items.forEach(function(d) {
+    if (!d.debut || !d.fin) return;
+    const ag = (etab.agents || []).find(function(a) { return a.id === d.agentId; });
+    const spec = ag ? (ag.spec || '') : '';
+    for (let dt = new Date(d.debut); dt <= new Date(d.fin); dt.setDate(dt.getDate() + 1)) {
+      if (dt.getFullYear() !== year || dt.getMonth() !== month) continue;
+      const key = dt.getDate();
+      if (!dayMap[key]) dayMap[key] = { total: 0, pending: 0, accepted: 0, refused: 0, specs: {} };
+      dayMap[key].total++;
+      if (d.statut === 'accepte') dayMap[key].accepted++;
+      else if (d.statut === 'refuse') dayMap[key].refused++;
+      else dayMap[key].pending++;
+      if (spec) dayMap[key].specs[spec] = (dayMap[key].specs[spec] || 0) + 1;
+    }
+  });
+  const maxTotal = Math.max(1, ...Object.values(dayMap).map(function(v) { return v.total; }));
+  const weekdayLabels = ['L','M','M','J','V','S','D'];
+  let cells = '';
+  for (let i = 0; i < firstWeekday; i++) {
+    cells += `<div style="height:42px;border-radius:10px;background:rgba(148,163,184,.08)"></div>`;
+  }
+  for (let day = 1; day <= lastDay; day++) {
+    const info = dayMap[day];
+    let bg = 'rgba(148,163,184,.12)';
+    let border = 'rgba(148,163,184,.18)';
+    let color = 'var(--text2)';
+    if (info) {
+      const overload = Object.entries(info.specs || {}).some(function(entry) {
+        return entry[1] >= getCongeThresholdForSpec(etab, entry[0]);
+      });
+      if (overload) {
+        bg = 'linear-gradient(180deg,rgba(239,68,68,.20),rgba(248,113,113,.12))';
+        border = 'rgba(239,68,68,.30)';
+        color = '#ef4444';
+      } else if (info.pending > 0) {
+        bg = 'linear-gradient(180deg,rgba(245,158,11,.18),rgba(250,204,21,.10))';
+        border = 'rgba(245,158,11,.26)';
+        color = '#d97706';
+      } else if (info.accepted > 0) {
+        bg = 'linear-gradient(180deg,rgba(34,197,94,.18),rgba(74,222,128,.10))';
+        border = 'rgba(34,197,94,.24)';
+        color = '#16a34a';
+      } else {
+        const alpha = Math.min(0.24, 0.08 + (info.total / maxTotal) * 0.16);
+        bg = `rgba(59,130,246,${alpha})`;
+        border = 'rgba(59,130,246,.18)';
+        color = '#2563eb';
+      }
+    }
+    const title = info
+      ? `${day}/${parts[1]} · ${info.total} demande(s) · attente ${info.pending} · validées ${info.accepted}`
+      : `${day}/${parts[1]} · aucune demande`;
+    cells += `<div title="${esc(title)}" style="height:42px;border-radius:10px;background:${bg};border:1px solid ${border};display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:6px 7px;color:${color};box-shadow:inset 0 1px 0 rgba(255,255,255,.18)">
+      <span style="font-size:11px;font-weight:900;line-height:1">${day}</span>
+      <span style="font-size:10px;font-weight:800;line-height:1">${info ? info.total : ''}</span>
+    </div>`;
+  }
+  return `<div style="padding:12px;border-radius:14px;background:linear-gradient(180deg,var(--bg2),var(--bg3));border:1px solid var(--border);margin:0 0 12px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:800;color:var(--text)">Mini calendrier coloré</div>
+      <div style="font-size:11px;color:var(--text2)">Orange = attente, vert = validé, rouge = seuil métier atteint</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:6px">
+      ${weekdayLabels.map(function(label) { return `<div style="font-size:10px;font-weight:900;color:var(--text3);text-align:center;text-transform:uppercase">${label}</div>`; }).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${cells}</div>
+  </div>`;
+}
+
+function previewCongeImpactOnPlanning(etab, demande) {
+  if (!etab || !demande || !demande.agentId) return { warnings: [], impactedDays: 0 };
+  const agent = (etab.agents || []).find(function(a) { return a.id === demande.agentId; });
+  if (!agent) return { warnings: [], impactedDays: 0 };
+  const workCodes = ['M','S','J','NU','N'];
+  const warnings = [];
+  let impactedDays = 0;
+  const byMonth = {};
+
+  for (let dt = new Date(demande.debut); dt <= new Date(demande.fin); dt.setDate(dt.getDate() + 1)) {
+    const y = dt.getFullYear();
+    const m = dt.getMonth();
+    const day = dt.getDate();
+    const monthKey = y + '-' + m;
+    if (!byMonth[monthKey]) {
+      byMonth[monthKey] = JSON.parse(JSON.stringify((((etab.planning || {})[y] || {})[m]) || {}));
+    }
+    if (!byMonth[monthKey][demande.agentId]) byMonth[monthKey][demande.agentId] = {};
+    const original = byMonth[monthKey][demande.agentId][day] || '';
+    if (!workCodes.includes(original)) continue;
+    impactedDays++;
+
+    const agentsScope = (etab.agents || []).filter(function(a) { return a && a.actif !== false; });
+    const before = computeSectorShortagesForDay(etab, byMonth[monthKey], y, m, day, agentsScope, agent.spec || '');
+    byMonth[monthKey][demande.agentId][day] = demande.type || 'CA';
+    const after = computeSectorShortagesForDay(etab, byMonth[monthKey], y, m, day, agentsScope, agent.spec || '');
+
+    const diffEntries = [];
+    after.forEach(function(shortage) {
+      (shortage.entries || []).forEach(function(entry) {
+        const beforeShortage = before.find(function(item) { return item.secteurId === shortage.secteurId && item.mode === shortage.mode; });
+        const beforeEntry = beforeShortage ? (beforeShortage.entries || []).find(function(e) {
+          return (e.spec || '') === (entry.spec || '') && (e.code || '') === (entry.code || '');
+        }) : null;
+        const beforeMissing = beforeEntry ? (beforeEntry.missing || 0) : 0;
+        if ((entry.missing || 0) > beforeMissing) {
+          diffEntries.push({
+            secteurNom: shortage.secteurNom,
+            mode: shortage.mode,
+            entry: Object.assign({}, entry, { missing: (entry.missing || 0) - beforeMissing })
+          });
+        }
+      });
+    });
+
+    if (diffEntries.length) {
+      warnings.push({
+        date: new Date(y, m, day).toLocaleDateString('fr-FR', { weekday:'short', day:'2-digit', month:'2-digit' }),
+        entries: diffEntries.slice(0, 3)
+      });
+    }
+  }
+
+  return { warnings: warnings.slice(0, 5), impactedDays: impactedDays };
+}
+
+function summarizeCongeDemandContext(etab, demande) {
+  if (!etab || !demande) return { overlap: 0, sameSpec: 0, threshold: 2, risk: 'ok', impact: { warnings: [], impactedDays: 0 } };
+  const agent = (etab.agents || []).find(function(a) { return a.id === demande.agentId; });
+  const spec = agent ? (agent.spec || '') : '';
+  const threshold = getCongeThresholdForSpec(etab, spec);
+  const overlap = (etab.demandesConges || []).filter(function(other) {
+    if (!other || other.id === demande.id || other.statut === 'refuse') return false;
+    return other.debut <= demande.fin && other.fin >= demande.debut;
+  }).length;
+  const sameSpec = (etab.demandesConges || []).filter(function(other) {
+    if (!other || other.id === demande.id || other.statut === 'refuse') return false;
+    const otherAgent = (etab.agents || []).find(function(a) { return a.id === other.agentId; });
+    return otherAgent && (otherAgent.spec || '') === spec && other.debut <= demande.fin && other.fin >= demande.debut;
+  }).length;
+  const impact = demande.statut === 'en_attente' ? previewCongeImpactOnPlanning(etab, demande) : { warnings: [], impactedDays: 0 };
+  let risk = 'ok';
+  if (impact.warnings.length) risk = 'impact';
+  else if (sameSpec >= threshold) risk = 'threshold';
+  else if (sameSpec >= Math.max(1, threshold - 1)) risk = 'watch';
+  return { overlap, sameSpec, threshold, risk, impact, spec };
 }
 
 function renderSpecList() {
@@ -16992,7 +17577,7 @@ function handleImportFile(file, dryRun) {
         const specsAS  = agAS.map(a => a.spec);
         const specsAUX = agAUX.map(a => a.spec);
         // Agents existants dont la spécialité n'est pas dans ce fichier → préserver
-        const preserved = etab.agents.filter(a => {
+        const preserved = dryRun ? [] : etab.agents.filter(a => {
           if (agAS.length > 0 && specsAS.includes(a.spec)) return false;
           if (agAUX.length > 0 && specsAUX.includes(a.spec)) return false;
           return true;
@@ -17471,7 +18056,7 @@ function exportPlanning() {
   for (let d = 1; d <= daysInMonth; d++) headers.push(d);
   headers.push('Total h');
   const rows = [headers];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const row = [agent.nom + ' ' + agent.prenom, agent.spec, agent.secteurFixe || 'Rotation'];
     let total = 0;
     for (let d = 1; d <= daysInMonth; d++) {
@@ -17495,7 +18080,7 @@ function exportComptage() {
   const planMonth = ((etab.planning[currentYear] || {})[currentMonth]) || {};
   const headers = ['Agent', 'Spec', 'Taux', ...etab.horaires.map(h => h.code), 'Total h', 'Théorique', 'Écart'];
   const rows = [headers];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const counts = {};
     etab.horaires.forEach(h => counts[h.code] = 0);
     let totalH = 0;
@@ -17510,7 +18095,10 @@ function exportComptage() {
       ...etab.horaires.map(h => counts[h.code] || 0), totalH, baseH, totalH - baseH]);
   });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Comptage');
+  const wsComptage = XLSX.utils.aoa_to_sheet(rows);
+  wsComptage['!cols'] = [22,8,10,14,9,8,10,9,8,8,10,10,10,8,8,8,8, ...etab.horaires.map(() => 6)].map(w => ({ wch: w }));
+  enhanceExportSheet(wsComptage, 0);
+  XLSX.utils.book_append_sheet(wb, wsComptage, 'Comptage');
   XLSX.writeFile(wb, `comptage_${getMonthLabel()}.xlsx`);
   showToast('Comptage exporté', 'success');
 }
@@ -18409,7 +18997,7 @@ function autoFillMonth() {
   if (!etab.rotationSectorielle[currentYear]) etab.rotationSectorielle[currentYear] = {};
   if (!etab.rotationSectorielle[currentYear][currentMonth]) etab.rotationSectorielle[currentYear][currentMonth] = {};
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     // Ne jamais effacer un planning déjà saisi : Générer complète seulement les cases vides.
     if (!planMonth[agent.id]) planMonth[agent.id] = {};
 
@@ -19092,7 +19680,7 @@ function exportComptage() {
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const planMonth = ((etab.planning[currentYear] || {})[currentMonth]) || {};
   const specFilter = document.getElementById('filter-spec-comptage')?.value || '';
-  const agentsFiltres = etab.agents.filter(a => a.actif && (!specFilter || getAgentSpecValue(a) === specFilter));
+  const agentsFiltres = getComptageFilteredAgents(etab, specFilter);
   const headers = ['Agent', 'Spec', 'Taux', 'Statut', 'CA droit', 'CA mois', 'CA restant', 'CF droit', 'CF mois', 'RC mois', 'Planifie', 'Effectif', 'Theorique', 'HS', 'DA', 'Retards', 'Solde', ...etab.horaires.map(h => h.code)];
   const rows = [headers];
 
@@ -19142,19 +19730,280 @@ function exportComptage() {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Comptage');
-  const prepaieRows = buildPrepaieRows(etab, currentYear, currentMonth);
+  const prepaieRows = buildPrepaieRows(etab, currentYear, currentMonth, agentsFiltres);
   const wsPrepaie = XLSX.utils.aoa_to_sheet(prepaieRows);
-  wsPrepaie['!cols'] = [12, 18, 14, 10, 12, 8, 16, 24, 10, 8, 12, 34].map(w => ({ wch: w }));
+  wsPrepaie['!cols'] = [12, 18, 14, 10, 12, 8, 16, 24, 16, 28, 14, 10, 8, 12, 34].map(w => ({ wch: w }));
+  enhanceExportSheet(wsPrepaie, 0);
   XLSX.utils.book_append_sheet(wb, wsPrepaie, 'Prepaie');
-  XLSX.writeFile(wb, `comptage_${getMonthLabel()}.xlsx`);
+  const exportSuffix = specFilter ? '_' + specFilter : '';
+  XLSX.writeFile(wb, `comptage_${getMonthLabel()}${exportSuffix}.xlsx`);
   showToast(specFilter ? ('Export ' + specFilter + ' + prepaie exportes') : 'Comptage + prepaie exportes', 'success');
 }
 
-function buildPrepaieRows(etab, year, month) {
+function getComptageFilteredAgents(etab, specFilter) {
+  if (!etab) return [];
+  return (etab.agents || []).filter(function(agent) {
+    return agent.actif && (!specFilter || getAgentSpecValue(agent) === specFilter);
+  });
+}
+
+function enhanceExportSheet(ws, headerRowIndex) {
+  if (!ws || !ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const safeHeaderRow = Math.max(0, Math.min(headerRowIndex || 0, range.e.r));
+  ws['!autofilter'] = {
+    ref: XLSX.utils.encode_range({
+      s: { r: safeHeaderRow, c: range.s.c },
+      e: { r: range.e.r, c: range.e.c }
+    })
+  };
+  ws['!freeze'] = { xSplit: 0, ySplit: safeHeaderRow + 1 };
+}
+
+function addLegendPrefix(label, family, color) {
+  const marker = family === 'presence' ? 'BLEU'
+    : family === 'travail' ? 'VERT'
+    : family === 'repos' ? 'ORANGE'
+    : family === 'absent' ? 'ROUGE'
+    : 'GRIS';
+  const safeLabel = label || '';
+  const safeColor = color || '';
+  return marker + ' | ' + safeLabel + (safeColor ? ' | ' + safeColor : '');
+}
+
+function buildExportOverviewRows(etab, monthLabel, specFilter, agentsFiltres, prepaieRows, recapRows) {
+  const rows = [
+    ['HORIZON PLANNING - SYNTHESE EXPORT'],
+    [],
+    ['Etablissement', etab ? etab.nom : ''],
+    ['Periode', monthLabel || ''],
+    ['Filtre applique', specFilter || 'Toutes specialites'],
+    ['Agents exportes', (agentsFiltres || []).length],
+    ['Lignes prepaie', Math.max(0, (prepaieRows || []).length - 1)],
+    ['Agents avec absence', Math.max(0, (recapRows || []).length - 4)],
+    [],
+    ['Conseil lecture'],
+    ['1.', 'Verifier les volumes dans Controle paie'],
+    ['2.', 'Verifier les absences dans Recap absences'],
+    ['3.', 'Verifier les lignes individuelles dans Prepaie'],
+    [],
+    ['Legende familles'],
+    ['BLEU', 'Presence / solde'],
+    ['VERT', 'Travail / heures a payer'],
+    ['ORANGE', 'Repos / conges'],
+    ['ROUGE', 'Absence / retenue ou suivi'],
+    ['GRIS', 'Autre cas a verifier']
+  ];
+  return rows;
+}
+
+function openPlanningForSpec(spec) {
+  if (spec) currentSpecFilter = spec;
+  if (typeof updateSpecTabsUI === 'function') updateSpecTabsUI();
+  showPage('planning');
+}
+
+function pushCadreReminder(title, message, actionPage) {
+  const etab = getEtab();
+  if (!etab) return;
+  if (!etab.notificationsRH) etab.notificationsRH = [];
+  etab.notificationsRH.push({
+    id: 'CADRE_' + Date.now(),
+    type: 'cadre_reminder',
+    title: title || 'Rappel cadre',
+    message: message || '',
+    actionPage: actionPage || '',
+    lu: false,
+    createdAt: new Date().toISOString()
+  });
+  saveToStorage();
+  saveToSupabase().catch(() => {});
+  updateNotifRHBadge();
+  updateMobileNotifBadge();
+  showToast('Rappel ajouté dans Notifications', 'success');
+}
+
+function renderDashboardCadreFocus(etab, pendingConges, shortages, totalAbs, presentToday, todayDate) {
+  const el = document.getElementById('dash-cadre-focus');
+  if (!el || !etab) return;
+  const cards = [];
+  const shortageTotal = (shortages || []).reduce(function(sum, shortage) {
+    return sum + (shortage.totalMissing || 0);
+  }, 0);
+  const todayObj = new Date(currentYear, currentMonth, todayDate);
+  const tomorrowObj = new Date(currentYear, currentMonth, todayDate);
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+  const tomorrowYear = tomorrowObj.getFullYear();
+  const tomorrowMonth = tomorrowObj.getMonth();
+  const tomorrowDay = tomorrowObj.getDate();
+  const tomorrowPlanMonth = (((etab.planning || {})[tomorrowYear]) || {})[tomorrowMonth] || {};
+  const tomorrowAgents = (etab.agents || []).filter(function(agent) { return agent.actif; });
+  const tomorrowShortages = computeSectorShortagesForDay(
+    etab,
+    tomorrowPlanMonth,
+    tomorrowYear,
+    tomorrowMonth,
+    tomorrowDay,
+    tomorrowAgents,
+    ''
+  );
+  const tomorrowShortageTotal = (tomorrowShortages || []).reduce(function(sum, shortage) {
+    return sum + (shortage.totalMissing || 0);
+  }, 0);
+  const oldestPendingConges = (pendingConges || []).slice().sort(function(a, b) {
+    const aDate = new Date(a.createdAt || a.debut || 0).getTime();
+    const bDate = new Date(b.createdAt || b.debut || 0).getTime();
+    return aDate - bDate;
+  }).slice(0, 3);
+  const checklistItems = [];
+
+  cards.push(
+    '<div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(99,102,241,.05));display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-weight:800">Aujourd hui</div><div style="font-size:24px;font-weight:900;color:var(--text)">'
+          + presentToday + ' presents · ' + totalAbs + ' absence' + (totalAbs > 1 ? 's' : '') + '</div></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-secondary btn-sm" onclick="showPage(\'planning\')">Voir le planning</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="showPage(\'vacataires\')">Ouvrir les vacataires</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text2)">Point rapide cadre: verifier les manques, valider les demandes en attente et lancer les remplacements si besoin.</div>' +
+    '</div>'
+  );
+
+  cards.push(
+    '<div style="padding:14px;border:1px solid ' + (pendingConges.length ? 'rgba(247,169,79,.35)' : 'var(--border)') + ';border-radius:16px;background:' + (pendingConges.length ? 'rgba(247,169,79,.08)' : 'var(--bg2)') + ';display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">' +
+        '<div><div style="font-size:12px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:.08em">Demandes a valider</div>' +
+        '<div style="font-size:22px;font-weight:900;color:' + (pendingConges.length ? 'var(--accent3)' : 'var(--text)') + '">' + pendingConges.length + '</div></div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="openCongesValidation()">Voir</button>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text2)">' + (pendingConges.length ? 'Des decisions sont en attente aujourd hui.' : 'Aucune demande en attente pour le moment.') + '</div>' +
+      (
+        oldestPendingConges.length
+          ? '<div style="display:grid;gap:8px">' + oldestPendingConges.map(function(d) {
+              const refDate = new Date(d.createdAt || d.debut || todayObj);
+              const ageDays = Math.max(0, Math.floor((todayObj.getTime() - refDate.getTime()) / 86400000));
+              return '<div style="padding:10px;border:1px solid rgba(247,169,79,.20);border-radius:12px;background:rgba(255,255,255,.35)">' +
+                '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center">' +
+                  '<div style="font-size:13px;font-weight:700;color:var(--text)">' + esc(d.agentNom || d.agentId || 'Demande') + '</div>' +
+                  '<div style="font-size:11px;font-weight:800;color:var(--accent3)">' + ageDays + ' j attente</div>' +
+                '</div>' +
+                '<div style="font-size:12px;color:var(--text2);margin-top:4px">' + esc(d.type || 'Conge') + ' · ' + esc(d.debut || '?') + (d.fin && d.fin !== d.debut ? ' au ' + esc(d.fin) : '') + '</div>' +
+              '</div>';
+            }).join('') + '</div>'
+          : ''
+      ) +
+    '</div>'
+  );
+
+  const shortageItems = [];
+  (shortages || []).slice(0, 3).forEach(function(shortage) {
+    (shortage.entries || []).slice(0, 2).forEach(function(entry) {
+      const suggestions = suggestVacataires(todayDate, entry.code, shortage.secteurId);
+      const suggestionCount = suggestions.length;
+      const topSuggestions = suggestions.slice(0, 2).map(function(vac) {
+        return '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(56,217,169,.10);border:1px solid rgba(56,217,169,.18);font-size:11px;color:var(--text)">' +
+          '<strong style="color:#38d9a9">' + esc(vac.spec || 'VAC') + '</strong>' +
+          '<span>' + esc((vac.nom || '') + (vac.prenom ? ' ' + vac.prenom : '')) + '</span>' +
+        '</span>';
+      }).join('');
+      const specBtn = shortage.mode === 'detail' && entry.spec
+        ? '<button class="btn btn-secondary btn-sm" onclick=\'openPlanningForSpec(' + JSON.stringify(entry.spec) + ')\'>Voir ' + esc(entry.spec) + '</button>'
+        : '<button class="btn btn-secondary btn-sm" onclick="showPage(\'planning\')">Voir</button>';
+      const reminderBtn = '<button class="btn btn-secondary btn-sm" onclick=\'pushCadreReminder('
+        + JSON.stringify('Remplacement à confirmer')
+        + ','
+        + JSON.stringify(formatShortageSentence(shortage.secteurNom, entry, shortage.mode) + ' · penser à confirmer un remplaçant.')
+        + ','
+        + JSON.stringify('planning')
+        + ')\'>Relancer</button>';
+      shortageItems.push(
+        '<div style="padding:12px;border:1px solid rgba(247,111,111,.20);border-radius:14px;background:rgba(247,111,111,.06);display:flex;justify-content:space-between;gap:10px;align-items:center">' +
+          '<div>' +
+            '<div style="font-size:13px;font-weight:800;color:#f76f6f">' + esc(formatShortageSentence(shortage.secteurNom, entry, shortage.mode)) + '</div>' +
+            '<div style="font-size:12px;color:var(--text2);margin-top:4px">' + suggestionCount + ' vacataire' + (suggestionCount > 1 ? 's' : '') + ' mobilisable' + (suggestionCount > 1 ? 's' : '') + ' aujourd hui</div>' +
+            (topSuggestions ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + topSuggestions + '</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:8px">Aucun remplaçant propose automatiquement pour l instant.</div>') +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">' + specBtn + '<button class="btn btn-secondary btn-sm" onclick="showPage(\'vacataires\')">Remplacer</button>' + reminderBtn + '</div>' +
+        '</div>'
+      );
+    });
+  });
+
+  cards.push(
+    '<div style="padding:14px;border:1px solid ' + (shortageTotal ? 'rgba(247,111,111,.30)' : 'var(--border)') + ';border-radius:16px;background:' + (shortageTotal ? 'rgba(247,111,111,.05)' : 'var(--bg2)') + ';display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div><div style="font-size:12px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:.08em">Couverture du jour</div>' +
+        '<div style="font-size:22px;font-weight:900;color:' + (shortageTotal ? '#f76f6f' : '#38d9a9') + '">' + (shortageTotal ? shortageTotal + ' manque' + (shortageTotal > 1 ? 's' : '') : 'Aucun manque') + '</div></div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="showPage(\'planning\')">Corriger</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">' +
+        (shortageItems.length ? shortageItems.join('') : '<div style="padding:12px;border:1px solid rgba(56,217,169,.22);border-radius:14px;background:rgba(56,217,169,.08);font-size:13px;color:var(--text2)">La couverture du jour est correcte sur les secteurs deja travailles.</div>') +
+      '</div>' +
+    '</div>'
+  );
+
+  cards.push(
+    '<div style="padding:14px;border:1px solid ' + (tomorrowShortageTotal ? 'rgba(99,102,241,.28)' : 'var(--border)') + ';border-radius:16px;background:' + (tomorrowShortageTotal ? 'rgba(99,102,241,.06)' : 'var(--bg2)') + ';display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div><div style="font-size:12px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:.08em">A surveiller demain matin</div>' +
+        '<div style="font-size:18px;font-weight:900;color:var(--text)">' + tomorrowObj.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) + '</div></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-secondary btn-sm" onclick="showPage(\'planning\')">Anticiper</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="pushCadreReminder(\'Controle demain matin\', \'Verifier la couverture de demain matin et les remplacements a confirmer.\', \'planning\')">Me le rappeler</button>' +
+        '</div>' +
+      '</div>' +
+      (
+        tomorrowShortageTotal
+          ? '<div style="display:grid;gap:8px">' + tomorrowShortages.slice(0, 3).map(function(shortage) {
+              const firstEntry = (shortage.entries || [])[0];
+              return '<div style="padding:10px 12px;border:1px solid rgba(99,102,241,.20);border-radius:12px;background:rgba(99,102,241,.08)">' +
+                '<div style="font-size:13px;font-weight:800;color:#6366f1">' + esc(firstEntry ? formatShortageSentence(shortage.secteurNom, firstEntry, shortage.mode) : shortage.secteurNom) + '</div>' +
+                '<div style="font-size:12px;color:var(--text2);margin-top:4px">' + (shortage.totalMissing || 0) + ' remplacement(s) a anticiper</div>' +
+              '</div>';
+            }).join('') + '</div>'
+          : '<div style="padding:12px;border:1px solid rgba(56,217,169,.22);border-radius:12px;background:rgba(56,217,169,.08);font-size:13px;color:var(--text2)">Aucun manque visible pour demain sur les equipes deja planifiees.</div>'
+      ) +
+    '</div>'
+  );
+
+  if (pendingConges.length > 0) checklistItems.push({ done: false, text: pendingConges.length + ' demande(s) de conge a valider' });
+  if (shortageTotal > 0) checklistItems.push({ done: false, text: shortageTotal + ' remplacement(s) a securiser sur les secteurs en tension' });
+  if (totalAbs > 0) checklistItems.push({ done: false, text: 'Verifier les absences du jour et leur couverture' });
+  if (pendingConges.length === 0) checklistItems.push({ done: true, text: 'Aucune demande de conge en attente' });
+  if (shortageTotal === 0) checklistItems.push({ done: true, text: 'Couverture du jour correcte sur les equipes travaillees' });
+  checklistItems.push({ done: true, text: 'Penser a lancer l export RH / paie en fin de periode' });
+
+  cards.push(
+    '<div style="padding:14px;border:1px solid var(--border);border-radius:16px;background:var(--bg2);display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div><div style="font-size:12px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:.08em">Checklist avant de partir</div>' +
+        '<div style="font-size:18px;font-weight:900;color:var(--text)">Rien oublier ce soir</div></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-secondary btn-sm" onclick="showPage(\'planning\')">Planning</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="showPage(\'comptage\')">Comptage</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;gap:8px">' +
+        checklistItems.map(function(item) {
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid ' + (item.done ? 'rgba(56,217,169,.22)' : 'rgba(247,169,79,.22)') + ';border-radius:12px;background:' + (item.done ? 'rgba(56,217,169,.08)' : 'rgba(247,169,79,.08)') + '">' +
+            '<div style="font-size:15px;line-height:1">' + (item.done ? '✓' : '•') + '</div>' +
+            '<div style="font-size:13px;color:var(--text)">' + esc(item.text) + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>'
+  );
+
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">' + cards.join('') + '</div>';
+}
+
+function buildPrepaieRows(etab, year, month, agentsSource) {
   const monthLabel = String(month + 1).padStart(2, '0') + '/' + year;
   const rows = [[
     'Poste', 'Nom', 'Prenom', 'Specialite', 'Statut', 'Taux',
-    'Code variable', 'Libelle', 'Famille', 'Couleur famille', 'Quantite', 'Unite', 'Periode', 'Commentaire'
+    'Code variable', 'Libelle', 'Famille', 'Repere visuel', 'Couleur famille', 'Quantite', 'Unite', 'Periode', 'Commentaire'
   ]];
   if (!etab) return rows;
 
@@ -19163,7 +20012,8 @@ function buildPrepaieRows(etab, year, month) {
     'TRAJET','COLLOQUES','CONCOURS','DON_SANG','GREVE','RENTREE','FORM_SYND','AARS','HSM','HSS','HSJ'
   ];
 
-  (etab.agents || []).filter(a => a.actif).forEach(agent => {
+  const agentsList = Array.isArray(agentsSource) ? agentsSource : getComptageFilteredAgents(etab, '');
+  agentsList.forEach(agent => {
     const rh = buildRhCounter(agent, etab, year, month);
     const cpt = rh.cpt || {};
     const spec = getAgentSpecValue(agent);
@@ -19181,7 +20031,7 @@ function buildPrepaieRows(etab, year, month) {
       const value = Math.round((Number(qty) || 0) * 100) / 100;
       if (!value) return;
       const family = getAbsFamilyMeta(familyKey || code);
-      rows.push([...base, code, label, family.label, family.color, value, unit, monthLabel, comment || '']);
+      rows.push([...base, code, label, family.label, addLegendPrefix(label, family.key || family.label, family.color), family.color, value, unit, monthLabel, comment || '']);
     };
 
     add('HS_MOIS', 'Heures supplementaires', cpt.heuresSupMois || 0, 'h', 'A valider avant import paie', 'travail');
@@ -19206,7 +20056,7 @@ function buildPrepaieRows(etab, year, month) {
   });
 
   if (rows.length === 1) {
-    rows.push(['', '', '', '', '', '', 'RAS', 'Aucune variable paie detectee', '', '', 0, '', monthLabel, '']);
+    rows.push(['', '', '', '', '', '', 'RAS', 'Aucune variable paie detectee', '', '', '', 0, '', monthLabel, '']);
   }
   return rows;
 }
@@ -19214,6 +20064,9 @@ function buildPrepaieRows(etab, year, month) {
 function exportRH() {
   const etab = getEtab();
   if (!etab) return;
+  const specFilter = document.getElementById('filter-spec-comptage')?.value || '';
+  const agentsFiltres = getComptageFilteredAgents(etab, specFilter);
+  const agentIdsFiltres = new Set(agentsFiltres.map(agent => agent.id));
 
   const wb = XLSX.utils.book_new();
   const monthNames = ['Janvier','FÃ©vrier','Mars','Avril','Mai','Juin','Juillet','AoÃ»t','Septembre','Octobre','Novembre','DÃ©cembre'];
@@ -19244,7 +20097,7 @@ function exportRH() {
   const feries = getJoursFeries(currentYear);
   const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const cpt = calcComptageAgent(agent, planMonth, etab, currentYear, currentMonth);
     const droits = calcDroitsConges(agent, planMonth, etab, currentYear, currentMonth);
 
@@ -19299,7 +20152,7 @@ function exportRH() {
     header2.push(['Lu','Ma','Me','Je','Ve','Sa','Di'][(dt.getDay()+6)%7] + d);
   }
   const planRows = [header2];
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const agPlan = planMonth[agent.id] || {};
     const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
     const sect = etab.secteurs ? etab.secteurs.find(s => s.id === sectId) : null;
@@ -19316,7 +20169,9 @@ function exportRH() {
   ];
   (etab.demandesConges || []).filter(d => {
     const debut = new Date(d.debut);
-    return debut.getFullYear() === currentYear && debut.getMonth() === currentMonth;
+    return debut.getFullYear() === currentYear
+      && debut.getMonth() === currentMonth
+      && agentIdsFiltres.has(d.agentId);
   }).sort((a,b) => {
     const agA = etab.agents.find(x => x.id === a.agentId);
     const agB = etab.agents.find(x => x.id === b.agentId);
@@ -19353,7 +20208,7 @@ function exportRH() {
     sheet4Header
   ];
 
-  etab.agents.filter(a => a.actif).forEach(agent => {
+  agentsFiltres.forEach(agent => {
     const agPlan = planMonth[agent.id] || {};
     const sectId = agent.secteurFixe || getSecteurDuMois(agent, currentYear, currentMonth, etab);
     const sect = etab.secteurs ? etab.secteurs.find(s => s.id === sectId) : null;
@@ -19400,25 +20255,102 @@ function exportRH() {
   XLSX.utils.book_append_sheet(wb, ws4, 'RÃ©cap absences');
 
   const refAbsRows = [
-    ['Code', 'LibellÃ©', 'Famille', 'Couleur famille', 'Heures', 'Impact RH']
+    ['Code', 'LibellÃ©', 'Famille', 'Repere visuel', 'Couleur famille', 'Heures', 'Impact RH']
   ];
   [...new Set(allAbsCodes)].forEach(code => {
     const found = (etab.absenceCodes || []).find(a => String(a.code || '').toUpperCase() === String(code || '').toUpperCase());
     const impact = found ? found.impact : (['CA','CF','RC','R'].includes(String(code || '').toUpperCase()) ? 'repos' : (['FORMATIONS','FORM_SYND','AARS','COLLOQUES','CONCOURS','HSM','HSS','HSJ'].includes(String(code || '').toUpperCase()) ? 'travail' : (['MO','AM','EM','AT','GR','CET','SOLIDARITE','AUTRES_ABS','DEMENAGEMENT','MARIAGE','NAISSANCE','DECES','TRAJET','DON_SANG','RENTREE'].includes(String(code || '').toUpperCase()) ? 'absent' : 'autre')));
     const meta = getAbsFamilyMeta(impact);
-    refAbsRows.push([code, found ? found.label : code, meta.label, meta.color, found && found.heures !== undefined ? found.heures : '', impact]);
+    refAbsRows.push([code, found ? found.label : code, meta.label, addLegendPrefix(found ? found.label : code, meta.key || meta.label, meta.color), meta.color, found && found.heures !== undefined ? found.heures : '', impact]);
   });
   const wsRef = XLSX.utils.aoa_to_sheet(refAbsRows);
-  wsRef['!cols'] = [16,28,20,14,10,16].map(w => ({ wch: w }));
+  wsRef['!cols'] = [16,28,20,28,14,10,16].map(w => ({ wch: w }));
+  enhanceExportSheet(wsRef, 0);
   XLSX.utils.book_append_sheet(wb, wsRef, 'RÃ©f. absences');
 
-  const prepaieRows = buildPrepaieRows(etab, currentYear, currentMonth);
+  const prepaieRows = buildPrepaieRows(etab, currentYear, currentMonth, agentsFiltres);
   const ws5 = XLSX.utils.aoa_to_sheet(prepaieRows);
-  ws5['!cols'] = [12,18,14,10,12,8,16,24,18,14,10,8,12,34].map(w => ({ wch: w }));
+  ws5['!cols'] = [12,18,14,10,12,8,16,24,18,28,14,10,8,12,34].map(w => ({ wch: w }));
+  enhanceExportSheet(ws5, 0);
   XLSX.utils.book_append_sheet(wb, ws5, 'Prepaie');
 
-  XLSX.writeFile(wb, `Export_RH_${esc(etab.nom)}_${monthLabel.replace(' ','_')}.xlsx`);
-  showToast('Export RH telecharge (' + (recapRows.length - 1) + ' absences / famille incluse)', 'success');
+  const controleRows = [
+    ['ETABLISSEMENT', etab.nom],
+    ['MOIS', monthLabel],
+    ['FILTRE SPECIALITE', specFilter || 'Toutes specialites'],
+    [],
+    ['Vue', 'Specialite', 'Code', 'Libelle', 'Famille', 'Repere visuel', 'Agents concernes', 'Quantite totale', 'Unite']
+  ];
+  const controleMap = new Map();
+  prepaieRows.slice(1).forEach(row => {
+    const spec = row[3] || '';
+    const code = row[6] || '';
+    const libelle = row[7] || '';
+    const famille = row[8] || '';
+    const repere = row[9] || '';
+    const quantite = Number(row[11]) || 0;
+    const unite = row[12] || '';
+    const agentId = row[0] || '';
+    if (!code || code === 'RAS' || !quantite) return;
+    const keys = [
+      ['Global', 'Toutes specialites', code, libelle, famille, repere, unite],
+      ['Par specialite', spec || 'Non renseignee', code, libelle, famille, repere, unite]
+    ];
+    keys.forEach(parts => {
+      const mapKey = parts.join('||');
+      if (!controleMap.has(mapKey)) {
+        controleMap.set(mapKey, {
+          vue: parts[0],
+          specialite: parts[1],
+          code,
+          libelle,
+          famille,
+          repere,
+          unite,
+          total: 0,
+          agents: new Set()
+        });
+      }
+      const item = controleMap.get(mapKey);
+      item.total += quantite;
+      if (agentId) item.agents.add(agentId);
+    });
+  });
+  Array.from(controleMap.values())
+    .sort((a, b) =>
+      a.vue.localeCompare(b.vue)
+      || a.specialite.localeCompare(b.specialite)
+      || a.code.localeCompare(b.code)
+    )
+    .forEach(item => {
+      controleRows.push([
+        item.vue,
+        item.specialite,
+        item.code,
+        item.libelle,
+        item.famille,
+        item.repere,
+        item.agents.size,
+        Math.round(item.total * 100) / 100,
+        item.unite
+      ]);
+    });
+  if (controleRows.length === 5) {
+    controleRows.push(['Global', specFilter || 'Toutes specialites', 'RAS', 'Aucune variable sur la periode', '', '', 0, 0, '']);
+  }
+  const overviewRows = buildExportOverviewRows(etab, monthLabel, specFilter, agentsFiltres, prepaieRows, recapRows);
+  const wsOverview = XLSX.utils.aoa_to_sheet(overviewRows);
+  wsOverview['!cols'] = [22,44].map(w => ({ wch: w }));
+  enhanceExportSheet(wsOverview, 9);
+  XLSX.utils.book_append_sheet(wb, wsOverview, 'Synthese export');
+  const wsControle = XLSX.utils.aoa_to_sheet(controleRows);
+  wsControle['!cols'] = [16,16,14,24,18,28,16,16,10].map(w => ({ wch: w }));
+  enhanceExportSheet(wsControle, 4);
+  XLSX.utils.book_append_sheet(wb, wsControle, 'Controle paie');
+
+  const exportSuffix = specFilter ? '_' + specFilter : '';
+  XLSX.writeFile(wb, `Export_RH_${esc(etab.nom)}_${monthLabel.replace(' ','_')}${exportSuffix}.xlsx`);
+  showToast(specFilter ? ('Export RH ' + specFilter + ' telecharge') : ('Export RH telecharge (' + (recapRows.length - 1) + ' absences / famille incluse)'), 'success');
 }
   </script>
   <!-- HEADER MOBILE FIXE -->
