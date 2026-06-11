@@ -17377,6 +17377,16 @@ function handleImportFile(file, dryRun) {
       if (dryRun) {
         statusHtml += `<div class="alert alert-info">🧪 Aucun enregistrement n'a été fait. Le fichier est seulement validé en mode test.</div>`;
       }
+      statusHtml = statusHtml
+        .replace(/Ã¢â‚¬Â¢/g, '•')
+        .replace(/â€¢/g, '•')
+        .replace(/a€¢/g, '•')
+        .replace(/Ã¢â‚¬â€/g, '—')
+        .replace(/â€”/g, '—')
+        .replace(/âš ï¸/g, '⚠️')
+        .replace(/ðŸ“…/g, '📅')
+        .replace(/ðŸ§ª/g, '🧪')
+        .replace(/Ã°Å¸Å¡Â«/g, '🚫');
       document.getElementById('import-status').innerHTML = statusHtml;
       window._lastImportDiagnostic = {
         fileName: file.name || 'Excel',
