@@ -5006,9 +5006,25 @@ const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {
 
 // â”€â”€ Helpers Supabase Auth â”€â”€
 // GÃ©nÃ¨re un email fictif unique par login+Ã©tablissement
+const SUPA_AUTH_EMAIL_OVERRIDES = Object.freeze({
+  'etab_1783105832675|admin.airelles': 'admin.airelles2+etab_1783105832675@horizon-planning.fr'
+});
+
+function getSupaAuthEmailOverride(login, etabId) {
+  const normalizedLogin = String(login || '').trim().toLowerCase();
+  const normalizedEtabId = String(etabId || '').trim();
+  return SUPA_AUTH_EMAIL_OVERRIDES[normalizedEtabId + '|' + normalizedLogin] || '';
+}
+
+function hasSupaAuthEmailOverride(login, etabId) {
+  return !!getSupaAuthEmailOverride(login, etabId);
+}
+
 function supaAuthEmail(login, etabId) {
-  const safe = login.toLowerCase().replace(/[^a-z0-9._-]/g, '_');
-  const etabSafe = (etabId||'etab').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+  const overrideEmail = getSupaAuthEmailOverride(login, etabId);
+  if (overrideEmail) return overrideEmail;
+  const safe = String(login || '').toLowerCase().replace(/[^a-z0-9._-]/g, '_');
+  const etabSafe = String(etabId || 'etab').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
   return safe + '+' + etabSafe + '@horizon-planning.fr';
 }
 
@@ -5672,6 +5688,54 @@ function populateLoginEtabs() {
   }
 }
 
+async function trySupaAuthOverrideLogin(etabId, user, pwdPlain, etab) {
+  if (!etabId || !user || !pwdPlain || !hasSupaAuthEmailOverride(user, etabId)) return null;
+  let authResult = null;
+  try {
+    authResult = await supaAuthSignIn(user, etabId, pwdPlain);
+  } catch(e) {
+    console.warn('Auth override impossible:', e);
+    return null;
+  }
+  if (!authResult || !authResult.user) return null;
+
+  let targetEtab = etab || (DB.etablissements && DB.etablissements[etabId]);
+  if (!targetEtab) {
+    try {
+      const fresh = await supaLoadEtab(etabId);
+      if (fresh) targetEtab = fresh;
+    } catch(e) {}
+  }
+  if (!targetEtab) return null;
+  if (!Array.isArray(targetEtab.logins)) targetEtab.logins = [];
+
+  const normalizedUser = String(user || '').trim().toLowerCase();
+  let login = targetEtab.logins.find(function(l) {
+    return String(l.login || '').trim().toLowerCase() === normalizedUser;
+  });
+  if (!login && String(etabId) === 'etab_1783105832675' && normalizedUser === 'admin.airelles') {
+    login = { nom: 'Administrateur', login: 'admin.airelles', role: 'admin', mustChangePassword: false };
+    targetEtab.logins.push(login);
+  }
+  if (!login) return null;
+
+  login.pwd = await hashPwd(pwdPlain);
+  login.mustChangePassword = false;
+  if (!login.role) login.role = 'admin';
+  DB.etablissements[etabId] = targetEtab;
+  try { saveToStorage(); } catch(e) {}
+  try {
+    await supa.from('horizon_data').upsert({
+      etab_id: etabId,
+      data: targetEtab,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'etab_id' });
+  } catch(e) {
+    console.warn('Reparation login admin.airelles non synchronisee:', e);
+  }
+  return { etab: targetEtab, login: login, authResult: authResult };
+}
+
 async function doLogin() {
   const etabId = document.getElementById('login-etab').value;
   const user = document.getElementById('login-user').value.trim();
@@ -5712,7 +5776,16 @@ async function doLogin() {
 
   // â”€â”€ VÃ©rification locale (hash SHA-256) â”€â”€
   const pwdHash = await hashPwd(pwd);
-  const login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
+  let login = etab.logins.find(l => l.login === user && l.pwd === pwdHash);
+  let authResult = null;
+  if (!login) {
+    const overrideLogin = await trySupaAuthOverrideLogin(etabId, user, pwd, etab);
+    if (overrideLogin) {
+      etab = overrideLogin.etab || etab;
+      login = overrideLogin.login || login;
+      authResult = overrideLogin.authResult || null;
+    }
+  }
   if (!login) { err.textContent = 'Identifiant ou mot de passe incorrect.'; return; }
 
   // â”€â”€ Avertissement/blocage si mot de passe trop faible â”€â”€
@@ -5734,7 +5807,7 @@ async function doLogin() {
   // â”€â”€ Supabase Auth â€” connexion/crÃ©ation en arriÃ¨re-plan â”€â”€
   // Transparente pour l'utilisateur â€” son identifiant texte est prÃ©servÃ©
   try {
-    const authResult = await supaAuthSignIn(user, etabId, pwd);
+    if (!authResult) authResult = await supaAuthSignIn(user, etabId, pwd);
     if (authResult) {
       // Stocker le token JWT Supabase pour les futures requÃªtes sÃ©curisÃ©es
       try {
@@ -5895,35 +5968,14 @@ async function resetSelectedEtabPassword() {
     return;
   }
 
-  const newPwd = prompt('Nouveau mot de passe pour ' + login.login + ' :');
-  if (!newPwd) return;
-  if (newPwd.length < 6) {
-    err.textContent = 'Choisissez au moins 6 caractÃ¨res pour ce mot de passe.';
+  if (hasSupaAuthEmailOverride(login.login, etabId)) {
+    document.getElementById('login-user').value = login.login;
+    err.textContent = 'Pour admin.airelles, utilisez directement Se connecter : le secours Supabase est actif sur ce compte.';
     return;
   }
 
-  login.pwd = await hashPwd(newPwd);
-  login.mustChangePassword = false;
-  DB.etablissements[etabId] = etab;
-
-  try { localStorage.removeItem('horizon_session'); } catch(e) {}
-  try { localStorage.removeItem('horizon_auth_token'); } catch(e) {}
-  try { localStorage.setItem('horizon_db', JSON.stringify(DB)); } catch(e) {}
-
-  try {
-    await supa.from('horizon_data').upsert({
-      etab_id: etabId,
-      data: etab,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'etab_id' });
-  } catch(e) {
-    console.warn('RÃ©initialisation Supabase impossible:', e);
-  }
-
-  document.getElementById('login-user').value = login.login;
-  document.getElementById('login-pwd').value = newPwd;
-  err.textContent = 'Mot de passe rÃ©initialisÃ©. Cliquez sur Se connecter.';
-  showToast('Mot de passe rÃ©initialisÃ© pour ' + login.login, 'success');
+  err.textContent = 'Réinitialisation directe désactivée sur la page publique. Connectez-vous avec un compte admin puis changez le mot de passe dans Configuration > Accès utilisateurs.';
+  showToast('Réinitialisation directe désactivée pour plus de sécurité.', 'warning');
 }
 
 // ============================================================
